@@ -2,8 +2,9 @@ import pickle
 import pandas as pd
 import bertopic
 import os
-import  matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import matplotlib as mpl
+import datamapplot
 
 from scipy.cluster import hierarchy as sch
 from collections import Counter
@@ -59,8 +60,14 @@ def model_topics(corpus, dates, min_cluster_size=3):
         topic_model = bertopic.BERTopic.load("output/topic_model.p")
 
     print(topic_model.get_document_info(corpus))
-    hierarchical_topics = topic_model.hierarchical_topics(corpus)
     fig = topic_model.visualize_topics()
+    fig.write_html("output/topics.html")
+    fig.show()
+
+    fig = topic_model.visualize_document_datamap(corpus,
+                                                 title="AI Safety Review Document and Topic Visualisations",
+                                                 embeddings=embeddings)
+    fig.savefig("output/datamap.pdf")
     fig.show()
 
     linkage_function = lambda x: sch.linkage(x, 'single', optimal_ordering=True)
@@ -84,4 +91,5 @@ def model_topics(corpus, dates, min_cluster_size=3):
 
     topics_over_time = topic_model.topics_over_time(corpus, dates)
     fig = topic_model.visualize_topics_over_time(topics_over_time, top_n_topics=10)
+    fig.write_html("output/topics-over-time.html")
     fig.show()
