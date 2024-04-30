@@ -25,6 +25,9 @@ def load_data():
     anns = []
     for an in ann:
         # print(an)
+        if an["Title"].lower() in responsible_titles:
+            continue
+
         result = {
                 "title": an["Title"],
                 "year": int(an["Year"]),

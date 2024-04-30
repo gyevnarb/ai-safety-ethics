@@ -42,3 +42,19 @@ def methods_map(kw, rl=False):
         return "reinforcement learning"
 
     return kw
+
+responsible_titles = [x.lower() for x in [
+    "Toward safe AI",
+    "Responsible-AI-by-Design: A Pattern Collection for Designing Responsible Artificial Intelligence Systems",
+    "Toward Trustworthy AI: Blockchain-Based Architecture Design for Accountability and Fairness of Federated Learning Systems",
+    "Artificial Intelligence Systems, Responsibility and Agential Self-Awareness",
+    "Establishing Data Provenance for Responsible Artificial Intelligence Systems",
+    "Mind the gaps: Assuring the safety of autonomous systems from an engineering, ethical, and legal perspective",
+    "Responsible Agency Through Answerability",
+    "Embedding responsibility in intelligent systems: from AI ethics to responsible AI ecosystems",
+    "Computational Transcendence: Responsibility and agency",
+    "Closing the AI Accountability Gap: Defining an End-to-End Framework for Internal Algorithmic Auditing",
+    "Model Checking Human-Agent Collectives for Responsible AI",
+    "FairRover: Explorative model building for fair and responsible machine learning",
+    "The responsibility gap: Ascribing responsibility for the actions of learning automata",
+]]
