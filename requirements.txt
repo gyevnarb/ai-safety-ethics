@@ -1,0 +1,17 @@
+bertopic==0.16.0
+hdbscan==0.8.33
+matplotlib==3.8.0
+matplotlib==3.8.2
+networkx==3.1
+networkx==3.2.1
+nltk==3.8.1
+numpy==1.26.4
+pandas==2.2.2
+plotly==5.18.0
+plotly==5.19.0
+scikit_learn==1.2.2
+scipy==1.11.4
+seaborn==0.13.2
+sentence_transformers==2.6.1
+umap_learn==0.5.5
+wordcloud==1.9.3
