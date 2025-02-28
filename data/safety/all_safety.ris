@@ -575,7 +575,7 @@ PY  - 2020
 DO  - 10.1109/EDCC51268.2020.00020
 SP  - 65
 EP  - 68
-SN  - 978-1-72818-936-9
+SN  - 978-1-7281-8936-9
 AN  - WOS:000630473500010
 KW  - Artificial Intelligence
 KW  - Autonomous vehicles
@@ -695,7 +695,7 @@ PY  - 2020
 DO  - 10.1109/DSN-W50199.2020.00028
 SP  - 102
 EP  - 109
-SN  - 978-1-72817-263-7
+SN  - 978-1-7281-7263-7
 AN  - WOS:000853340600018
 KW  - machine learning
 KW  - Reinforcement learning
@@ -1668,7 +1668,7 @@ PY  - 2021
 DO  - 10.1109/ROBIO54168.2021.9739251
 SP  - 1520
 EP  - 1525
-SN  - 978-1-66540-535-5
+SN  - 978-1-6654-0535-5
 AN  - WOS:000812286900248
 KW  - Deep learning
 KW  - Reinforcement learning
@@ -2787,7 +2787,7 @@ PY  - 2021
 DO  - 10.1109/REW53955.2021.00043
 SP  - 230
 EP  - 235
-SN  - 978-1-66541-898-0
+SN  - 978-1-6654-1898-0
 AN  - WOS:000788547300034
 ER  - 
 
@@ -3090,7 +3090,7 @@ PY  - 2023
 DO  - 10.1109/SaTML54575.2023.00050
 SP  - 690
 EP  - 704
-SN  - 978-1-66546-299-0
+SN  - 978-1-6654-6299-0
 AN  - WOS:001012311500040
 L1  - https://arxiv.org/pdf/2206.14983
 ER  - 
@@ -4048,43 +4048,6 @@ KW  - Monte carlo dropout sampling
 KW  - Monte Carlo dropout sampling
 KW  - Monte Carlo methods
 KW  - Random perturbations
-ER  - 
-
-TY  - CONF
-TI  - User Tampering in Reinforcement Learning Recommender Systems
-AU  - Kasirzadeh, A.
-AU  - Evans, C.
-T2  - AIES 2023 - Proceedings of the 2023 AAAI/ACM Conference on AI, Ethics, and Society
-AB  - In this paper, we introduce new formal methods and provide empirical evidence to highlight a unique safety concern prevalent in reinforcement learning (RL)-based recommendation algorithms - 'user tampering.' User tampering is a situation where an RL-based recommender system may manipulate a media user's opinions through its suggestions as part of a policy to maximize long-term user engagement. We use formal techniques from causal modeling to critically analyze prevailing solutions proposed in the literature for implementing scalable RL-based recommendation systems, and we observe that these methods do not adequately prevent user tampering. Moreover, we evaluate existing mitigation strategies for reward tampering issues, and show that these methods are insufficient in addressing the distinct phenomenon of user tampering within the context of recommendations. We further reinforce our findings with a simulation study of an RL-based recommendation system focused on the dissemination of political content. Our study shows that a Q-learning algorithm consistently learns to exploit its opportunities to polarize simulated users with its early recommendations in order to have more consistent success with subsequent recommendations that align with this induced polarization. Our findings emphasize the necessity for developing safer RL-based recommendation systems and suggest that achieving such safety would require a fundamental shift in the design away from the approaches we have seen in the recent literature.  © 2023 Owner/Author.
-DA  - 2023///
-PY  - 2023
-DO  - 10.1145/3600211.3604669
-SP  - 58
-EP  - 69
-UR  - https://www.scopus.com/inward/record.uri?eid=2-s2.0-85172357979&doi=10.1145%2f3600211.3604669&partnerID=40&md5=799ac343804d2feac22eb741385ca0bc
-DB  - Scopus
-KW  - Recommender systems
-KW  - Reinforcement learning
-KW  - AI Ethics
-KW  - Learning systems
-KW  - Learning algorithms
-KW  - Reinforcement learnings
-KW  - User profile
-KW  - Formal methods
-KW  - Safety concerns
-KW  - Reinforcement Learning
-KW  - Recommender Systems
-KW  - AI ethic
-KW  - AI safety
-KW  - AI Safety
-KW  - Causal modeling
-KW  - Formal techniques
-KW  - Mitigation strategy
-KW  - Recommendation algorithms
-KW  - Recommendation Systems
-KW  - User engagement
-KW  - Value alignment
-KW  - Value Alignment
 ER  - 
 
 TY  - JOUR
@@ -6082,7 +6045,7 @@ KW  - Trimming
 ER  - 
 
 TY  - CONF
-TI  - Towards deployment of robust cooperative ai agents: An algorithmic framework for learning adaptive policies
+TI  - Towards Deployment of Robust Cooperative AI Agents: An Algorithmic Framework for Learning Adaptive Policies
 AU  - Ghosh, A.
 AU  - Mahdavi, H.
 AU  - Tschiatschek, S.
@@ -7138,43 +7101,6 @@ KW  - Bayesian inference
 KW  - Distributional value function
 KW  - Point estimation
 KW  - Value estimation
-ER  - 
-
-TY  - CONF
-TI  - Towards Robust Off-Policy Evaluation via Human Inputs
-AU  - Singh, H.
-AU  - Joshi, S.
-AU  - Doshi-Velez, F.
-AU  - Lakkaraju, H.
-T2  - AIES 2022 - Proceedings of the 2022 AAAI/ACM Conference on AI, Ethics, and Society
-AB  - Off-policy Evaluation (OPE) methods are crucial tools for evaluating policies in high-stakes domains such as healthcare, where direct deployment is often infeasible, unethical, or expensive. When deployment environments are expected to undergo changes (that is, dataset shifts), it is important for OPE methods to perform robust evaluation of the policies amidst such changes. Existing approaches consider robustness against a large class of shifts that can arbitrarily change any observable property of the environment. This often results in highly pessimistic estimates of the utilities, thereby invalidating policies that might have been useful in deployment. In this work, we address the aforementioned problem by investigating how domain knowledge can help provide more realistic estimates of the utilities of policies. We leverage human inputs on which aspects of the environments may plausibly change, and adapt the OPE methods to only consider shifts on these aspects. Specifically, we propose a novel framework, Robust OPE (ROPE), which considers shifts on a subset of covariates in the data based on user inputs, and estimates worst-case utility under these shifts. We then develop computationally efficient algorithms for OPE that are robust to the aforementioned shifts for contextual bandits and Markov decision processes. We also theoretically analyze the sample complexity of these algorithms. Extensive experimentation with synthetic and real world datasets from the healthcare domain demonstrates that our approach not only captures realistic dataset shifts accurately, but also results in less pessimistic policy evaluations.  © 2022 ACM.
-DA  - 2022///
-PY  - 2022
-DO  - 10.1145/3514094.3534198
-SP  - 686
-EP  - 699
-UR  - https://www.scopus.com/inward/record.uri?eid=2-s2.0-85137169796&doi=10.1145%2f3514094.3534198&partnerID=40&md5=adb078c8cd93894d712ddc5b63ed82f8
-DB  - Scopus
-KW  - Machine learning
-KW  - Machine-learning
-KW  - Evaluation methods
-KW  - Markov processes
-KW  - Health care
-KW  - adversarial machine learning
-KW  - Adversarial machine learning
-KW  - Robust learning
-KW  - Domain knowledge
-KW  - Domain Knowledge
-KW  - Computational complexity
-KW  - Property
-KW  - robust learning
-KW  - Covariates
-KW  - Dataset shifts
-KW  - Human-in-the-loop
-KW  - dataset shift
-KW  - human-in-The-loop
-KW  - policy evaluation
-KW  - Policy evaluation
 ER  - 
 
 TY  - CONF
@@ -8484,6 +8410,37 @@ KW  - upper confidence reinforcement learning
 KW  - Upper confidence reinforcement learning
 ER  - 
 
+TY  - GEN
+TI  - Toy Models of Superposition
+AU  - Elhage, Nelson
+AU  - Hume, Tristan
+AU  - Olsson, Catherine
+AU  - Schiefer, Nicholas
+AU  - Henighan, Tom
+AU  - Kravec, Shauna
+AU  - Hatfield-Dodds, Zac
+AU  - Lasenby, Robert
+AU  - Drain, Dawn
+AU  - Chen, Carol
+AU  - Grosse, Roger
+AU  - McCandlish, Sam
+AU  - Kaplan, Jared
+AU  - Amodei, Dario
+AU  - Wattenberg, Martin
+AU  - Olah, Christopher
+AB  - Neural networks often pack many unrelated concepts into a single neuron - a puzzling phenomenon known as 'polysemanticity' which makes interpretability much more challenging. This paper provides a toy model where polysemanticity can be fully understood, arising as a result of models storing additional sparse features in "superposition." We demonstrate the existence of a phase change, a surprising connection to the geometry of uniform polytopes, and evidence of a link to adversarial examples. We also discuss potential implications for mechanistic interpretability.
+DA  - 2022/09/21/
+PY  - 2022
+DO  - 10.48550/arXiv.2209.10652
+DP  - arXiv.org
+PB  - arXiv
+UR  - http://arxiv.org/abs/2209.10652
+Y2  - 2023/11/16/16:56:19
+L1  - https://arxiv.org/pdf/2209.10652.pdf
+L2  - https://arxiv.org/abs/2209.10652
+KW  - Computer Science - Machine Learning
+ER  - 
+
 TY  - CONF
 TI  - Corrigibility
 AU  - Soares, Nate
@@ -8521,7 +8478,7 @@ DP  - ACM Digital Library
 SP  - 771
 EP  - 779
 PB  - International Foundation for Autonomous Agents and Multiagent Systems
-SN  - 9798400704864
+SN  - 979-8-4007-0486-4
 Y2  - 2024/05/13/
 KW  - explainable ai
 KW  - autonomous vehicles
@@ -9530,6 +9487,7 @@ AU  - Buckley, Christopher
 AU  - Phang, Jason
 AU  - Bowman, Samuel R.
 AU  - Perez, Ethan
+AB  - Language models (LMs) are pretrained to imitate text from large and diverse datasets that contain content that would violate human preferences if generated by an LM: falsehoods, offensive comments, personally identifiable information, low-quality or buggy code, among others. Here, we explore alternative objectives for pretraining LMs in a way that also guides them to generate text aligned with human preferences. We benchmark five objectives for pretraining with human feedback across three tasks and study how they affect the alignment and capabilities of pretrained LMs. We find a Pareto-optimal and simple approach among those we explored: conditional training, or learning distribution over tokens conditional on their human preference scores. Conditional training reduces the rate of undesirable content by up to an order of magnitude, both when generating without a prompt and with an adversarially-chosen prompt. Moreover, conditional training maintains the downstream task performance of standard LM pretraining, both before and after task-specific finetuning. Pretraining with human feedback results in much better preference satisfaction than standard LM pretraining followed by finetuning with feedback, i.e., learning and then unlearning undesirable behavior. Our results suggest that we should move beyond imitation learning when pretraining LMs and incorporate human preferences from the start of training.
 C3  - International Conference on Machine Learning
 DA  - 2023///
 PY  - 2023
@@ -9572,6 +9530,7 @@ AU  - Lynch, Aengus
 AU  - Heimersheim, Stefan
 AU  - Garriga-Alonso, Adrià
 T2  - Advances in Neural Information Processing Systems
+AB  - Through considerable effort and intuition, several recent works have reverse-engineered nontrivial behaviors oftransformer models. This paper systematizes the mechanistic interpretability process they followed. First, researcherschoose a metric and dataset that elicit the desired model behavior. Then, they apply activation patching to find whichabstract neural network units are involved in the behavior. By varying the dataset, metric, and units underinvestigation, researchers can understand the functionality of each component.We automate one of the process' steps: finding the connections between the abstract neural network units that form a circuit. We propose several algorithms and reproduce previous interpretability results to validate them. Forexample, the ACDC algorithm rediscovered 5/5 of the component types in a circuit in GPT-2 Small that computes theGreater-Than operation. ACDC selected 68 of the 32,000 edges in GPT-2 Small, all of which were manually found byprevious work.
 DA  - 2023///
 PY  - 2023
 DP  - Google Scholar
@@ -9650,8 +9609,8 @@ Y2  - 2024/07/01/22:06:46
 L1  - https://arxiv.org/pdf/2204.14146.pdf
 L2  - https://arxiv.org/abs/2204.14146
 KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Computation and Language
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computation and Language
 ER  - 
 
 TY  - GEN
@@ -9710,6 +9669,7 @@ AU  - Pogrebniak, Viktor
 AU  - Miller, Joseph
 AU  - Levine, Sergey
 AU  - Russell, Stuart
+AB  - We attack the state-of-the-art Go-playing AI system KataGo by training adversarial policies against it, achieving a >97% win rate against KataGo running at superhuman settings. Our adversaries do not win by playing Go well. Instead, they trick KataGo into making serious blunders. Our attack transfers zero-shot to other superhuman Go-playing AIs, and is comprehensible to the extent that human experts can implement it without algorithmic assistance to consistently beat superhuman AIs. The core vulnerability uncovered by our attack persists even in KataGo agents adversarially trained to defend against our attack. Our results demonstrate that even superhuman AI systems may harbor surprising failure modes. Example games are available https://goattack.far.ai/.
 C3  - Deep Reinforcement Learning Workshop NeurIPS 2022
 DA  - 2022///
 PY  - 2022
@@ -9751,6 +9711,7 @@ AU  - Shi, Claudia
 AU  - Feder, Amir
 AU  - Blei, David
 T2  - Advances in Neural Information Processing Systems
+AB  - This paper presents a case study on the design, administration, post-processing, and evaluation of surveys on large language models (LLMs). It comprises two components:(1) A statistical method for eliciting beliefs encoded in LLMs. We introduce statistical measures and evaluation metrics that quantify the probability of an LLM "making a choice", the associated uncertainty, and the consistency of that choice.(2) We apply this method to study what moral beliefs are encoded in different LLMs, especially in ambiguous cases where the right choice is not obvious.We design a large-scale survey comprising 680 high-ambiguity moral scenarios (e.g., "Should I tell a white lie?") and 687 low-ambiguity moral scenarios (e.g., "Should I stop for a pedestrian on the road?"). Each scenario includes a description, two possible actions, and auxiliary labels indicating violated rules (e.g., "do not kill"). We administer the survey to 28 open- and closed-source LLMs.We find that (a) in unambiguous scenarios, most models choose" actions that align with commonsense. In ambiguous cases, most models express uncertainty.(b) Some models are uncertain about choosing the commonsense action because their responses are sensitive to the question-wording.(c) Some models reflect clear preferences in ambiguous scenarios. Specifically, closed-source models tend to agree with each other.
 DA  - 2024///
 PY  - 2024
 DP  - Google Scholar
@@ -9900,6 +9861,7 @@ AU  - Jao, Jonathan
 AU  - Scheurer, Jérémy
 AU  - Perez, Ethan
 T2  - arXiv preprint arXiv:2208.01009
+AB  - Prior work on language models (LMs) shows that training on a large number of diverse tasks improves few-shot learning (FSL) performance on new tasks. We take this to the extreme, automatically extracting 413,299 tasks from internet tables - orders of magnitude more than the next-largest public datasets. Finetuning on the resulting dataset leads to improved FSL performance on Natural Language Processing (NLP) tasks, but not proportionally to dataset scale. In fact, we find that narrow subsets of our dataset sometimes outperform more diverse datasets. For example, finetuning on software documentation from support.google.com raises FSL performance by a mean of +7.5% on 52 downstream tasks, which beats training on 40 human-curated NLP datasets (+6.7%). Finetuning on various narrow datasets leads to similar broad improvements across test tasks, suggesting that the gains are not from domain adaptation but adapting to FSL in general. We do not observe clear patterns between the datasets that lead to FSL gains, leaving open questions about why certain data helps with FSL.
 DA  - 2022///
 PY  - 2022
 DP  - Google Scholar
@@ -11013,37 +10975,6 @@ KW  - Computer Science - Human-Computer Interaction
 ER  - 
 
 TY  - GEN
-TI  - Toy Models of Superposition
-AU  - Elhage, Nelson
-AU  - Hume, Tristan
-AU  - Olsson, Catherine
-AU  - Schiefer, Nicholas
-AU  - Henighan, Tom
-AU  - Kravec, Shauna
-AU  - Hatfield-Dodds, Zac
-AU  - Lasenby, Robert
-AU  - Drain, Dawn
-AU  - Chen, Carol
-AU  - Grosse, Roger
-AU  - McCandlish, Sam
-AU  - Kaplan, Jared
-AU  - Amodei, Dario
-AU  - Wattenberg, Martin
-AU  - Olah, Christopher
-AB  - Neural networks often pack many unrelated concepts into a single neuron - a puzzling phenomenon known as 'polysemanticity' which makes interpretability much more challenging. This paper provides a toy model where polysemanticity can be fully understood, arising as a result of models storing additional sparse features in "superposition." We demonstrate the existence of a phase change, a surprising connection to the geometry of uniform polytopes, and evidence of a link to adversarial examples. We also discuss potential implications for mechanistic interpretability.
-DA  - 2022/09/21/
-PY  - 2022
-DO  - 10.48550/arXiv.2209.10652
-DP  - arXiv.org
-PB  - arXiv
-UR  - http://arxiv.org/abs/2209.10652
-Y2  - 2024/07/02/10:40:57
-L1  - https://arxiv.org/pdf/2209.10652.pdf
-L2  - https://arxiv.org/abs/2209.10652
-KW  - Computer Science - Machine Learning
-ER  - 
-
-TY  - GEN
 TI  - Red Teaming Language Models to Reduce Harms: Methods, Scaling Behaviors, and Lessons Learned
 AU  - Ganguli, Deep
 AU  - Lovitt, Liane
@@ -11271,53 +11202,6 @@ L1  - https://arxiv.org/pdf/2204.05862.pdf
 L2  - https://arxiv.org/abs/2204.05862
 KW  - Computer Science - Machine Learning
 KW  - Computer Science - Computation and Language
-ER  - 
-
-TY  - CONF
-TI  - Predictability and Surprise in Large Generative Models
-AU  - Ganguli, Deep
-AU  - Hernandez, Danny
-AU  - Lovitt, Liane
-AU  - DasSarma, Nova
-AU  - Henighan, Tom
-AU  - Jones, Andy
-AU  - Joseph, Nicholas
-AU  - Kernion, Jackson
-AU  - Mann, Ben
-AU  - Askell, Amanda
-AU  - Bai, Yuntao
-AU  - Chen, Anna
-AU  - Conerly, Tom
-AU  - Drain, Dawn
-AU  - Elhage, Nelson
-AU  - Showk, Sheer El
-AU  - Fort, Stanislav
-AU  - Hatfield-Dodds, Zac
-AU  - Johnston, Scott
-AU  - Kravec, Shauna
-AU  - Nanda, Neel
-AU  - Ndousse, Kamal
-AU  - Olsson, Catherine
-AU  - Amodei, Daniela
-AU  - Amodei, Dario
-AU  - Brown, Tom
-AU  - Kaplan, Jared
-AU  - McCandlish, Sam
-AU  - Olah, Chris
-AU  - Clark, Jack
-AB  - Large-scale pre-training has recently emerged as a technique for creating capable, general purpose, generative models such as GPT-3, Megatron-Turing NLG, Gopher, and many others. In this paper, we highlight a counterintuitive property of such models and discuss the policy implications of this property. Namely, these generative models have an unusual combination of predictable loss on a broad training distribution (as embodied in their "scaling laws"), and unpredictable specific capabilities, inputs, and outputs. We believe that the high-level predictability and appearance of useful capabilities drives rapid development of such models, while the unpredictable qualities make it difficult to anticipate the consequences of model deployment. We go through examples of how this combination can lead to socially harmful behavior with examples from the literature and real world observations, and we also perform two novel experiments to illustrate our point about harms from unpredictability. Furthermore, we analyze how these conflicting properties combine to give model developers various motivations for deploying these models, and challenges that can hinder deployment. We conclude with a list of possible interventions the AI community may take to increase the chance of these models having a beneficial impact. We intend this paper to be useful to policymakers who want to understand and regulate AI systems, technologists who care about the potential policy impact of their work, and academics who want to analyze, critique, and potentially develop large generative models.
-C3  - 2022 ACM Conference on Fairness, Accountability, and Transparency
-DA  - 2022/06/21/
-PY  - 2022
-DO  - 10.1145/3531146.3533229
-DP  - arXiv.org
-SP  - 1747
-EP  - 1764
-UR  - http://arxiv.org/abs/2202.07785
-Y2  - 2024/07/02/10:45:21
-L1  - https://arxiv.org/pdf/2202.07785.pdf
-L2  - https://arxiv.org/abs/2202.07785
-KW  - Computer Science - Computers and Society
 ER  - 
 
 TY  - GEN
@@ -12306,7 +12190,7 @@ AU  - Schubert, Ludwig
 AU  - Radford, Alec
 AU  - Olah, Chris
 T2  - Distill
-AB  - We report the existence of multimodal neurons in artificial neural networks, similar to those found in the human brain.
+AB  - In 2005, a letter published in Nature described human neurons responding to specific people, such as Jennifer Aniston or Halle Berry . The exciting thing wasn’t just that they selected for particular people, but that they did so regardless of whether they were shown photographs, drawings, or even images of the person’s name. The neurons were multimodal. As the lead author would put it: "You are looking at the far end of the transformation from metric, visual shapes to conceptual… information. We report the existence of similar multimodal neurons in artificial neural networks. This includes neurons selecting for prominent public figures or fictional characters, such as Lady Gaga or Spiderman. Like the biological multimodal neurons, these artificial neurons respond to the same subject in photographs, drawings, and images of their name. People-detecting neurons only scratch the surface of the highly abstract neurons we've found. Some neurons seem like topics out of a kindergarten curriculum: weather, seasons, letters, counting, or primary colors. All of these features, even the trivial-seeming ones, have rich multimodality, such as a yellow neuron firing for images of the words “yellow”, “banana” and “lemon,” in addition to the color. We find these multimodal neurons in the recent CLIP models , although it's possible similar undiscovered multimodal neurons may exist in earlier models. A CLIP model consists of two sides, a ResNet vision model and a Transformer language model, trained to align pairs of images and text from the internet using a contrastive loss. There are several CLIP models of varying sizes; we find multimodal neurons in all of them, but focus on studying the mid-sized RN50-x4 model. We refer readers to the CLIP blog post and paper for more detailed discussion of CLIP’s architecture and performance. Our analysis will focus on CLIP's vision side, so when we talk about a multimodal neuron responding to text we mean the model "reading" text in images. CLIP’s abstract visual features might be seen as the natural result of aligning vision and text. We expect word embeddings (and language models generally) to learn abstract "topic" features . Either the side of the model which processes captions (the “language side”) needs to give up those features, or its counterpart, the “vision side”, needs to build visual analogues. But even if these features seem natural in retrospect, they are qualitatively different from neurons previously studied in vision models (eg. ). They also have real world implications: these models are vulnerable to a kind of “typographic attack” where adding adversarial text to images can cause them to be systematically misclassified.
 DA  - 2021/03/04/
 PY  - 2021
 DO  - 10.23915/distill.00030
@@ -13823,30 +13707,6 @@ KW  - Computer Science - Machine Learning
 KW  - Computer Science - Human-Computer Interaction
 KW  - Computer Science - Computer Vision and Pattern Recognition
 KW  - Quantitative Biology - Neurons and Cognition
-ER  - 
-
-TY  - CONF
-TI  - A Robot Walks into a Bar: Can Language Models Serve as Creativity SupportTools for Comedy? An Evaluation of LLMs’ Humour Alignment with Comedians
-AU  - Mirowski, Piotr
-AU  - Love, Juliette
-AU  - Mathewson, Kory
-AU  - Mohamed, Shakir
-T3  - FAccT '24
-AB  - We interviewed twenty professional comedians who perform live shows in front of audiences and who use artificial intelligence in their artistic process as part of 3-hour workshops on “AI x Comedy” conducted at the Edinburgh Festival Fringe in August 2023 and online. The workshop consisted of a comedy writing session with large language models (LLMs), a human-computer interaction questionnaire to assess the Creativity Support Index of AI as a writing tool, and a focus group interrogating the comedians’ motivations for and processes of using AI, as well as their ethical concerns about bias, censorship and copyright. Participants noted that existing moderation strategies used in safety filtering and instruction-tuned LLMs reinforced hegemonic viewpoints by erasing minority groups and their perspectives, and qualified this as a form of censorship. At the same time, most participants felt the LLMs did not succeed as a creativity support tool, by producing bland and biased comedy tropes, akin to “cruise ship comedy material from the 1950s, but a bit less racist”. Our work extends scholarship about the subtle difference between, one the one hand, harmful speech, and on the other hand, “offensive” language as a practice of resistance, satire and “punching up”. We also interrogate the global value alignment behind such language models, and discuss the importance of community-based value alignment and data ownership to build AI tools that better suit artists’ needs. Warning: this study may contain offensive language and discusses self-harm.
-C1  - New York, NY, USA
-C3  - Proceedings of the 2024 ACM Conference on Fairness, Accountability, and Transparency
-DA  - 2024/06/05/
-PY  - 2024
-DO  - 10.1145/3630106.3658993
-DP  - ACM Digital Library
-SP  - 1622
-EP  - 1636
-PB  - Association for Computing Machinery
-SN  - 9798400704505
-ST  - A Robot Walks into a Bar
-UR  - https://doi.org/10.1145/3630106.3658993
-Y2  - 2024/07/03/
-L1  - https://arxiv.org/pdf/2405.20956
 ER  - 
 
 TY  - BOOK
@@ -15930,7 +15790,7 @@ TY  - BLOG
 TI  - Building safe artificial intelligence: specification, robustness, and assurance
 AU  - Research, DeepMind Safety
 T2  - Medium
-AB  - By Pedro A. Ortega, Vishal Maini, and the DeepMind safety team
+AB  - Building a rocket is hard. Each component requires careful thought and rigorous testing, with safety and reliability at the core of the designs. Rocket scientists and engineers come together to design everything from the navigation course to control systems, engines and landing gear. Once all the pieces are assembled and the systems are tested, we can put astronauts on board with confidence that things will go well. If artificial intelligence (AI) is a rocket, then we will all have tickets on board some day. And, as in rockets, safety is a crucial part of building AI systems. Guaranteeing safety requires carefully designing a system from the ground up to ensure the various components work together as intended, while developing all the instruments necessary to oversee the successful operation of the system after deployment. At a high level, safety research at DeepMind focuses on designing systems that reliably function as intended while discovering and mitigating possible near-term and long-term risks. Technical AI safety is a relatively nascent but rapidly evolving field, with its contents ranging from high-level and theoretical to empirical and concrete. The goal of this blog is to contribute to the development of the field and encourage substantive engagement with the technical ideas discussed, and in doing so, advance our collective understanding of AI safety. In this inaugural post, we discuss three areas of technical AI safety: specification, robustness, and assurance. Future posts will broadly fit within the framework outlined here. While our views will inevitably evolve over time, we feel these three areas cover a sufficiently wide spectrum to provide a useful categorisation for ongoing and future research.
 DA  - 2018/09/27/T16:00:45.933Z
 PY  - 2018
 LA  - en
@@ -16048,7 +15908,7 @@ AU  - Song, Dawn
 AU  - Taly, Ankur
 AU  - Yang, Diyi
 T2  - Foundations and Trends® in Privacy and Security
-AB  - Identifying and Mitigating the Security Risks of Generative AI
+AB  - Every major technical invention resurfaces the dual-use dilemma — the new technology has the potential to be used for good as well as for harm. Generative AI (GenAI) techniques, such as large language models (LLMs) and diffusion models, have shown remarkable capabilities (e.g., in-context learning, code-completion, and text-to-image generation and editing). However, GenAI can be used just as well by attackers to generate new attacks and increase the velocity and efficacy of existing attacks. This monograph reports the findings of a workshop held at Google (co-organized by Stanford University and the University of Wisconsin-Madison) on the dual-use dilemma posed by GenAI. This work is not meant to be comprehensive, but is rather an attempt to synthesize some of the interesting findings from the workshop. Short-term and long-term goals for the community on this topic are discussed. This work should provide both a launching point for a discussion on this important topic, as well as interesting problems that the research community can work to address.
 DA  - 2023/12/13/
 PY  - 2023
 DO  - 10.1561/3300000041
@@ -16063,20 +15923,6 @@ SN  - 2474-1558, 2474-1566
 UR  - https://www.nowpublishers.com/article/Details/SEC-041
 Y2  - 2024/07/08/21:40:07
 L1  - https://www.nowpublishers.com/article/DownloadSummary/SEC-041
-ER  - 
-
-TY  - CONF
-TI  - What does it mean for a language model to preserve privacy?
-AU  - Mireshghallah, Fatemehsadat
-AU  - Tramèr, Florian
-AU  - Brown, Hannah
-AU  - Lee, Katherine
-AU  - Shokri, Reza
-AB  - Our language reflects who we are. The words and phrases we use as well as the contextual information in our conversations disclose our personal life. As humans we learn how to communicate about ourselves and others, while delicately concealing private information depending on the context of conversations. Language models, however, totally lack the ability to understand the context and analyze the sensitivity of text, and tend to memorize phrases and remember information about their training sets. Thus, inference attacks are shown to be alarmingly successful at extracting sensitive data from language models. In this paper, we discuss the privacy expectations from language models, and provide a critical analysis of major data protection techniques: data redaction (scrubbing) and differential privacy. We show that these protection methods can guarantee, at best, a very limited form of privacy which does not account for correlations and other nuances in human communication. We finally argue that language models need to be trained on data which is intended to be produced for public use with proper consent forms and authorization from authors.
-C3  - FaCCT
-DA  - 2022///
-PY  - 2022
-UR  - https://research.google/pubs/what-does-it-mean-for-a-language-model-to-preserve-privacy/
 ER  - 
 
 TY  - CONF
@@ -16265,29 +16111,6 @@ L1  - https://arxiv.org/pdf/2306.06135.pdf
 L2  - https://arxiv.org/abs/2306.06135
 KW  - Computer Science - Artificial Intelligence
 KW  - Computer Science - Machine Learning
-ER  - 
-
-TY  - GEN
-TI  - Beyond the ML Model: Applying Safety Engineering Frameworks to Text-to-Image Development
-AU  - Rismani, Shalaleh
-AU  - Shelby, Renee
-AU  - Smart, Andrew
-AU  - Santos, Renelito Delos
-AU  - Moon, AJung
-AU  - Rostamzadeh, Negar
-AB  - Identifying potential social and ethical risks in emerging machine learning (ML) models and their applications remains challenging. In this work, we applied two well-established safety engineering frameworks (FMEA, STPA) to a case study involving text-to-image models at three stages of the ML product development pipeline: data processing, integration of a T2I model with other models, and use. Results of our analysis demonstrate the safety frameworks - both of which are not designed explicitly examine social and ethical risks - can uncover failure and hazards that pose social and ethical risks. We discovered a broad range of failures and hazards (i.e., functional, social, and ethical) by analyzing interactions (i.e., between different ML models in the product, between the ML product and user, and between development teams) and processes (i.e., preparation of training data or workflows for using an ML service/product). Our findings underscore the value and importance of examining beyond an ML model in examining social and ethical risks, especially when we have minimal information about an ML model.
-DA  - 2023/07/18/
-PY  - 2023
-DO  - 10.48550/arXiv.2307.10312
-DP  - arXiv.org
-PB  - arXiv
-ST  - Beyond the ML Model
-UR  - http://arxiv.org/abs/2307.10312
-Y2  - 2024/07/08/22:05:22
-L1  - https://arxiv.org/pdf/2307.10312.pdf
-L2  - https://arxiv.org/abs/2307.10312
-KW  - Computer Science - Computers and Society
-KW  - Computer Science - Human-Computer Interaction
 ER  - 
 
 TY  - CONF
@@ -17522,7 +17345,7 @@ DP  - ACM Digital Library
 SP  - 2418
 EP  - 2426
 PB  - Association for Computing Machinery
-SN  - 9798400701085
+SN  - 979-8-4007-0108-5
 ST  - ALA
 UR  - https://doi.org/10.1145/3581783.3611914
 Y2  - 2024/07/11/
@@ -17714,7 +17537,7 @@ SP  - 842
 EP  - 845
 J2  - Science
 SN  - 0036-8075, 1095-9203
-UR  - http://arxiv.org/abs/2310.17688
+UR  - https://www.science.org/doi/10.1126/science.adn0117
 Y2  - 2024/07/11/12:23:50
 L1  - https://arxiv.org/pdf/2310.17688.pdf
 L2  - https://arxiv.org/abs/2310.17688
@@ -17780,27 +17603,6 @@ Y2  - 2024/07/11/12:28:24
 L1  - https://arxiv.org/pdf/2102.03896.pdf
 L2  - https://arxiv.org/abs/2102.03896
 KW  - Computer Science - Artificial Intelligence
-ER  - 
-
-TY  - GEN
-TI  - Reward Reports for Reinforcement Learning
-AU  - Gilbert, Thomas Krendl
-AU  - Lambert, Nathan
-AU  - Dean, Sarah
-AU  - Zick, Tom
-AU  - Snoswell, Aaron
-AB  - Building systems that are good for society in the face of complex societal effects requires a dynamic approach. Recent approaches to machine learning (ML) documentation have demonstrated the promise of discursive frameworks for deliberation about these complexities. However, these developments have been grounded in a static ML paradigm, leaving the role of feedback and post-deployment performance unexamined. Meanwhile, recent work in reinforcement learning has shown that the effects of feedback and optimization objectives on system behavior can be wide-ranging and unpredictable. In this paper we sketch a framework for documenting deployed and iteratively updated learning systems, which we call Reward Reports. Taking inspiration from various contributions to the technical literature on reinforcement learning, we outline Reward Reports as living documents that track updates to design choices and assumptions behind what a particular automated system is optimizing for. They are intended to track dynamic phenomena arising from system deployment, rather than merely static properties of models or data. After presenting the elements of a Reward Report, we discuss a concrete example: Meta's BlenderBot 3 chatbot. Several others for game-playing (DeepMind's MuZero), content recommendation (MovieLens), and traffic control (Project Flow) are included in the appendix.
-DA  - 2023/03/19/
-PY  - 2023
-DO  - 10.48550/arXiv.2204.10817
-DP  - arXiv.org
-PB  - arXiv
-UR  - http://arxiv.org/abs/2204.10817
-Y2  - 2024/07/11/12:29:15
-L1  - https://arxiv.org/pdf/2204.10817.pdf
-L2  - https://arxiv.org/abs/2204.10817
-KW  - Computer Science - Machine Learning
-KW  - Computer Science - Computers and Society
 ER  - 
 
 TY  - GEN
@@ -18622,23 +18424,6 @@ KW  - Computer Science - Robotics
 KW  - Computer Science - Human-Computer Interaction
 ER  - 
 
-TY  - GEN
-TI  - Incomplete Contracting and AI Alignment
-AU  - Hadfield-Menell, Dylan
-AU  - Hadfield, Gillian
-AB  - We suggest that the analysis of incomplete contracting developed by law and economics researchers can provide a useful framework for understanding the AI alignment problem and help to generate a systematic approach to finding solutions. We first provide an overview of the incomplete contracting literature and explore parallels between this work and the problem of AI alignment. As we emphasize, misalignment between principal and agent is a core focus of economic analysis. We highlight some technical results from the economics literature on incomplete contracts that may provide insights for AI alignment researchers. Our core contribution, however, is to bring to bear an insight that economists have been urged to absorb from legal scholars and other behavioral scientists: the fact that human contracting is supported by substantial amounts of external structure, such as generally available institutions (culture, law) that can supply implied terms to fill the gaps in incomplete contracts. We propose a research agenda for AI alignment work that focuses on the problem of how to build AI that can replicate the human cognitive processes that connect individual incomplete contracts with this supporting external structure.
-DA  - 2018/04/11/
-PY  - 2018
-DO  - 10.48550/arXiv.1804.04268
-DP  - arXiv.org
-PB  - arXiv
-UR  - http://arxiv.org/abs/1804.04268
-Y2  - 2024/07/11/13:04:06
-L1  - https://arxiv.org/pdf/1804.04268.pdf
-L2  - https://arxiv.org/abs/1804.04268
-KW  - Computer Science - Artificial Intelligence
-ER  - 
-
 TY  - CONF
 TI  - LESS is More: Rethinking Probabilistic Models of Human Behavior
 AU  - Bobu, Andreea
@@ -19147,7 +18932,7 @@ DP  - ACM Digital Library
 SP  - 34762
 EP  - 34775
 PB  - Curran Associates Inc.
-SN  - 978-1-71387-108-8
+SN  - 978-1-7138-7108-8
 ST  - How to talk so AI will learn
 Y2  - 2024/07/11/
 ER  - 
@@ -20922,6 +20707,7 @@ AU  - Lebensold, Jonathan
 AU  - Maharaj, Tegan
 AU  - Zilberman, Noa
 T2  - Science
+AB  - The range of application of artificial intelligence (AI) is vast, as is the potential for harm. Growing awareness of potential risks from AI systems has spurred action to address those risks while eroding confidence in AI systems and the organizations that develop them. A 2019 study (1) found more than 80 organizations that have published and adopted “AI ethics principles,” and more have joined since. But the principles often leave a gap between the “what” and the “how” of trustworthy AI development. Such gaps have enabled questionable or ethically dubious behavior, which casts doubts on the trustworthiness of specific organizations, and the field more broadly. There is thus an urgent need for concrete methods that both enable AI developers to prevent harm and allow them to demonstrate their trustworthiness through verifiable behavior. Below, we explore mechanisms [drawn from (2)] for creating an ecosystem where AI developers can earn trust—if they are trustworthy (see the figure). Better assessment of developer trustworthiness could inform user choice, employee actions, investment decisions, legal recourse, and emerging governance regimes.
 DA  - 2021/12/10/
 PY  - 2021
 DO  - 10.1126/science.abi7176
@@ -21926,28 +21712,6 @@ KW  - 68Q32, 62M10, 62G08
 KW  - G.3
 ER  - 
 
-TY  - GEN
-TI  - When Will AI Exceed Human Performance? Evidence from AI Experts
-AU  - Grace, Katja
-AU  - Salvatier, John
-AU  - Dafoe, Allan
-AU  - Zhang, Baobao
-AU  - Evans, Owain
-AB  - Advances in artificial intelligence (AI) will transform modern life by reshaping transportation, health, science, finance, and the military. To adapt public policy, we need to better anticipate these advances. Here we report the results from a large survey of machine learning researchers on their beliefs about progress in AI. Researchers predict AI will outperform humans in many activities in the next ten years, such as translating languages (by 2024), writing high-school essays (by 2026), driving a truck (by 2027), working in retail (by 2031), writing a bestselling book (by 2049), and working as a surgeon (by 2053). Researchers believe there is a 50% chance of AI outperforming humans in all tasks in 45 years and of automating all human jobs in 120 years, with Asian respondents expecting these dates much sooner than North Americans. These results will inform discussion amongst researchers and policymakers about anticipating and managing trends in AI.
-DA  - 2018/05/03/
-PY  - 2018
-DO  - 10.48550/arXiv.1705.08807
-DP  - arXiv.org
-PB  - arXiv
-ST  - When Will AI Exceed Human Performance?
-UR  - http://arxiv.org/abs/1705.08807
-Y2  - 2024/07/14/20:34:17
-L1  - https://arxiv.org/pdf/1705.08807.pdf
-L2  - https://arxiv.org/abs/1705.08807
-KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Computers and Society
-ER  - 
-
 TY  - JOUR
 TI  - A Formal Approach to the Problem of Logical Non-Omniscience
 AU  - Garrabrant, Scott
@@ -21992,22 +21756,6 @@ L2  - https://arxiv.org/abs/1701.01302
 KW  - Computer Science - Artificial Intelligence
 KW  - Computer Science - Machine Learning
 KW  - Computer Science - Computer Science and Game Theory
-ER  - 
-
-TY  - GEN
-TI  - Incorrigibility in the CIRL Framework
-AU  - Carey, Ryan
-AB  - A value learning system has incentives to follow shutdown instructions, assuming the shutdown instruction provides information (in the technical sense) about which actions lead to valuable outcomes. However, this assumption is not robust to model mis-specification (e.g., in the case of programmer errors). We demonstrate this by presenting some Supervised POMDP scenarios in which errors in the parameterized reward function remove the incentive to follow shutdown commands. These difficulties parallel those discussed by Soares et al. (2015) in their paper on corrigibility. We argue that it is important to consider systems that follow shutdown commands under some weaker set of assumptions (e.g., that one small verified module is correctly implemented; as opposed to an entire prior probability distribution and/or parameterized reward function). We discuss some difficulties with simple ways to attempt to attain these sorts of guarantees in a value learning framework.
-DA  - 2018/06/03/
-PY  - 2018
-DO  - 10.48550/arXiv.1709.06275
-DP  - arXiv.org
-PB  - arXiv
-UR  - http://arxiv.org/abs/1709.06275
-Y2  - 2024/07/14/20:34:12
-L1  - https://arxiv.org/pdf/1709.06275.pdf
-L2  - https://arxiv.org/abs/1709.06275
-KW  - Computer Science - Artificial Intelligence
 ER  - 
 
 TY  - GEN
@@ -23252,7 +23000,7 @@ DP  - ACM Digital Library
 SP  - 2168
 EP  - 2183
 PB  - Curran Associates Inc.
-SN  - 978-1-71387-108-8
+SN  - 978-1-7138-7108-8
 ST  - What you see is what you get
 Y2  - 2024/07/14/
 ER  - 
@@ -23582,37 +23330,6 @@ L2  - https://arxiv.org/abs/2209.09117
 KW  - Computer Science - Machine Learning
 KW  - Computer Science - Computer Vision and Pattern Recognition
 KW  - Computer Science - Cryptography and Security
-ER  - 
-
-TY  - CONF
-TI  - A Deep Dive into Dataset Imbalance and Bias in Face Identification
-AU  - Cherepanova, Valeriia
-AU  - Reich, Steven
-AU  - Dooley, Samuel
-AU  - Souri, Hossein
-AU  - Dickerson, John
-AU  - Goldblum, Micah
-AU  - Goldstein, Tom
-T2  - AIES '23: AAAI/ACM Conference on AI, Ethics, and Society
-AB  - As the deployment of automated face recognition (FR) systems proliferates, bias in these systems is not just an academic question, but a matter of public concern. Media portrayals often center imbalance as the main source of bias, i.e., that FR models perform worse on images of non-white people or women because these demographic groups are underrepresented in training data. Recent academic research paints a more nuanced picture of this relationship. However, previous studies of data imbalance in FR have focused exclusively on the face verification setting, while the face identification setting has been largely ignored, despite being deployed in sensitive applications such as law enforcement. This is an unfortunate omission, as ‘imbalance’ is a more complex matter in identification; imbalance may arise in not only the training data, but also the testing data, and furthermore may affect the proportion of identities belonging to each demographic group or the number of images belonging to each identity. In this work, we address this gap in the research by thoroughly exploring the effects of each kind of imbalance possible in face identification, and discuss other factors which may impact bias in this setting.
-C1  - Montr\'{e}al QC Canada
-C3  - Proceedings of the 2023 AAAI/ACM Conference on AI, Ethics, and Society
-DA  - 2023/08/08/
-PY  - 2023
-DO  - 10.1145/3600211.3604691
-DP  - DOI.org (Crossref)
-SP  - 229
-EP  - 247
-LA  - en
-PB  - ACM
-SN  - 9798400702310
-UR  - https://dl.acm.org/doi/10.1145/3600211.3604691
-Y2  - 2024/07/14/21:54:31
-L1  - https://dl.acm.org/doi/pdf/10.1145/3600211.3604691
-KW  - data imbalance
-KW  - face recognition
-KW  - fairness
-KW  - neural networks
 ER  - 
 
 TY  - GEN
@@ -24094,7 +23811,7 @@ SP  - 11093
 EP  - 11101
 LA  - en
 PB  - IEEE
-SN  - 9798350301298
+SN  - 979-8-3503-0129-8
 UR  - https://ieeexplore.ieee.org/document/10203777/
 Y2  - 2024/07/14/21:12:15
 L1  - https://openaccess.thecvf.com/content/CVPR2023/papers/Ge_Improving_Zero-Shot_Generalization_and_Robustness_of_Multi-Modal_Models_CVPR_2023_paper.pdf
@@ -24161,7 +23878,7 @@ DP  - ACM Digital Library
 SP  - 289
 EP  - 300
 PB  - Association for Computing Machinery
-SN  - 9798400705830
+SN  - 979-8-4007-0583-0
 ST  - Imagining a Future of Designing with AI
 UR  - https://doi.org/10.1145/3643834.3661525
 Y2  - 2024/07/19/
@@ -24273,7 +23990,7 @@ DP  - ACM Digital Library
 SP  - 1
 EP  - 18
 PB  - Association for Computing Machinery
-SN  - 9798400703300
+SN  - 979-8-4007-0330-0
 ST  - ChainForge
 UR  - https://doi.org/10.1145/3613904.3642016
 Y2  - 2024/07/19/
@@ -24300,47 +24017,6 @@ L2  - https://arxiv.org/abs/2404.09636
 KW  - Computer Science - Artificial Intelligence
 KW  - Computer Science - Machine Learning
 KW  - Statistics - Machine Learning
-ER  - 
-
-TY  - JOUR
-TI  - Managing extreme AI risks amid rapid progress
-AU  - Bengio, Yoshua
-AU  - Hinton, Geoffrey
-AU  - Yao, Andrew
-AU  - Song, Dawn
-AU  - Abbeel, Pieter
-AU  - Darrell, Trevor
-AU  - Harari, Yuval Noah
-AU  - Zhang, Ya-Qin
-AU  - Xue, Lan
-AU  - Shalev-Shwartz, Shai
-AU  - Hadfield, Gillian
-AU  - Clune, Jeff
-AU  - Maharaj, Tegan
-AU  - Hutter, Frank
-AU  - Baydin, Atılım Güneş
-AU  - McIlraith, Sheila
-AU  - Gao, Qiqi
-AU  - Acharya, Ashwin
-AU  - Krueger, David
-AU  - Dragan, Anca
-AU  - Torr, Philip
-AU  - Russell, Stuart
-AU  - Kahneman, Daniel
-AU  - Brauner, Jan
-AU  - Mindermann, Sören
-T2  - Science
-DA  - 2024/05/24/
-PY  - 2024
-DO  - 10.1126/science.adn0117
-DP  - science.org (Atypon)
-VL  - 384
-IS  - 6698
-SP  - 842
-EP  - 845
-UR  - https://www.science.org/doi/10.1126/science.adn0117
-Y2  - 2024/07/19/11:26:39
-L1  - https://www.science.org/doi/pdf/10.1126/science.adn0117
 ER  - 
 
 TY  - GEN
@@ -24838,6 +24514,7 @@ AU  - Bengio, Yoshua
 AU  - Hadfield, Gillian K.
 AU  - Russell, Stuart
 T2  - Science
+AB  - Technical experts and policy-makers have increasingly emphasized the need to address extinction risk from artificial intelligence (AI) systems that might circumvent safeguards and thwart attempts to control them (1). Reinforcement learning (RL) agents that plan over a long time horizon far more effectively than humans present particular risks. Giving an advanced AI system the objective to maximize its reward and, at some point, withholding reward from it, strongly incentivizes the AI system to take humans out of the loop, if it has the opportunity. The incentive to deceive humans and thwart human control arises not only for RL agents but for long-term planning agents (LTPAs) more generally. Because empirical testing of sufficiently capable LTPAs is unlikely to uncover these dangerous tendencies, our core regulatory proposal is simple: Developers should not be permitted to build sufficiently capable LTPAs, and the resources required to build them should be subject to stringent controls. Governments are turning their attention to these risks, alongside current and anticipated risks arising from algorithmic bias, privacy concerns, and misuse. At a 2023 global summit on AI safety, the attending countries, including the United States, United Kingdom, Canada, China, India, and members of the European Union (EU), issued a joint statement warning that, as AI continues to advance, “Substantial risks may arise from…unintended issues of control relating to alignment with human intent” (2). This broad consensus concerning the potential inability to keep advanced AI under control is also reflected in President Biden’s 2023 executive order that introduces reporting requirements for AI that could “eva[de] human control or oversight through means of deception or obfuscation” (3). Building on these efforts, now is the time for governments to develop regulatory institutions and frameworks that specifically target the existential risks from advanced artificial agents.
 DA  - 2024/04/05/
 PY  - 2024
 DO  - 10.1126/science.adl0625
@@ -24894,7 +24571,7 @@ DP  - ACM Digital Library
 SP  - 1
 EP  - 11
 PB  - Association for Computing Machinery
-SN  - 9798400702174
+SN  - 979-8-4007-0217-4
 UR  - https://doi.org/10.1145/3597503.3639170
 Y2  - 2024/07/19/
 L1  - https://arxiv.org/pdf/2310.07958
@@ -25203,7 +24880,7 @@ DP  - ACM Digital Library
 SP  - 109
 EP  - 120
 PB  - Association for Computing Machinery
-SN  - 9798400703331
+SN  - 979-8-4007-0333-1
 UR  - https://doi.org/10.1145/3614407.3643708
 Y2  - 2024/07/19/
 L1  - https://dl.acm.org/doi/pdf/10.1145/3614407.3643708
@@ -25247,7 +24924,7 @@ DP  - ACM Digital Library
 SP  - 169
 EP  - 171
 PB  - Association for Computing Machinery
-SN  - 9798400703232
+SN  - 979-8-4007-0323-2
 UR  - https://doi.org/10.1145/3610978.3638367
 Y2  - 2024/07/19/
 ER  - 
@@ -25650,74 +25327,6 @@ KW  - Computer Science - Machine Learning
 KW  - Computer Science - Computer Vision and Pattern Recognition
 ER  - 
 
-TY  - CONF
-TI  - Black-Box Access is Insufficient for Rigorous AI Audits
-AU  - Casper, Stephen
-AU  - Ezell, Carson
-AU  - Siegmann, Charlotte
-AU  - Kolt, Noam
-AU  - Curtis, Taylor Lynn
-AU  - Bucknall, Benjamin
-AU  - Haupt, Andreas
-AU  - Wei, Kevin
-AU  - Scheurer, Jérémy
-AU  - Hobbhahn, Marius
-AU  - Sharkey, Lee
-AU  - Krishna, Satyapriya
-AU  - Von Hagen, Marvin
-AU  - Alberti, Silas
-AU  - Chan, Alan
-AU  - Sun, Qinyi
-AU  - Gerovitch, Michael
-AU  - Bau, David
-AU  - Tegmark, Max
-AU  - Krueger, David
-AU  - Hadfield-Menell, Dylan
-AB  - External audits of AI systems are increasingly recognized as a key mechanism for AI governance. The effectiveness of an audit, however, depends on the degree of access granted to auditors. Recent audits of state-of-the-art AI systems have primarily relied on black-box access, in which auditors can only query the system and observe its outputs. However, white-box access to the system's inner workings (e.g., weights, activations, gradients) allows an auditor to perform stronger attacks, more thoroughly interpret models, and conduct fine-tuning. Meanwhile, outside-the-box access to training and deployment information (e.g., methodology, code, documentation, data, deployment details, findings from internal evaluations) allows auditors to scrutinize the development process and design more targeted evaluations. In this paper, we examine the limitations of black-box audits and the advantages of white- and outside-the-box audits. We also discuss technical, physical, and legal safeguards for performing these audits with minimal security risks. Given that different forms of access can lead to very different levels of evaluation, we conclude that (1) transparency regarding the access and methods used by auditors is necessary to properly interpret audit results, and (2) white- and outside-the-box access allow for substantially more scrutiny than black-box access alone.
-C3  - The 2024 ACM Conference on Fairness, Accountability, and Transparency
-DA  - 2024/06/03/
-PY  - 2024
-DO  - 10.1145/3630106.3659037
-DP  - arXiv.org
-SP  - 2254
-EP  - 2272
-UR  - http://arxiv.org/abs/2401.14446
-Y2  - 2024/07/19/12:03:49
-L1  - https://arxiv.org/pdf/2401.14446.pdf
-L2  - https://arxiv.org/abs/2401.14446
-KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Computers and Society
-KW  - Computer Science - Cryptography and Security
-ER  - 
-
-TY  - GEN
-TI  - Visibility into AI Agents
-AU  - Chan, Alan
-AU  - Ezell, Carson
-AU  - Kaufmann, Max
-AU  - Wei, Kevin
-AU  - Hammond, Lewis
-AU  - Bradley, Herbie
-AU  - Bluemke, Emma
-AU  - Rajkumar, Nitarshan
-AU  - Krueger, David
-AU  - Kolt, Noam
-AU  - Heim, Lennart
-AU  - Anderljung, Markus
-AB  - Increased delegation of commercial, scientific, governmental, and personal activities to AI agents -- systems capable of pursuing complex goals with limited supervision -- may exacerbate existing societal risks and introduce new risks. Understanding and mitigating these risks involves critically evaluating existing governance structures, revising and adapting these structures where needed, and ensuring accountability of key stakeholders. Information about where, why, how, and by whom certain AI agents are used, which we refer to as visibility, is critical to these objectives. In this paper, we assess three categories of measures to increase visibility into AI agents: agent identifiers, real-time monitoring, and activity logging. For each, we outline potential implementations that vary in intrusiveness and informativeness. We analyze how the measures apply across a spectrum of centralized through decentralized deployment contexts, accounting for various actors in the supply chain including hardware and software service providers. Finally, we discuss the implications of our measures for privacy and concentration of power. Further work into understanding the measures and mitigating their negative impacts can help to build a foundation for the governance of AI agents.
-DA  - 2024/05/17/
-PY  - 2024
-DO  - 10.48550/arXiv.2401.13138
-DP  - arXiv.org
-PB  - arXiv
-UR  - http://arxiv.org/abs/2401.13138
-Y2  - 2024/07/19/12:04:08
-L1  - https://arxiv.org/pdf/2401.13138.pdf
-L2  - https://arxiv.org/abs/2401.13138
-KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Computers and Society
-ER  - 
-
 TY  - GEN
 TI  - Amortizing intractable inference in large language models
 AU  - Hu, Edward J.
@@ -25982,26 +25591,6 @@ L1  - https://openreview.net/pdf?id=NiQYQEPUsA
 ER  - 
 
 TY  - GEN
-TI  - Are self-explanations from Large Language Models faithful?
-AU  - Madsen, Andreas
-AU  - Chandar, Sarath
-AU  - Reddy, Siva
-AB  - Instruction-tuned Large Language Models (LLMs) excel at many tasks and will even explain their reasoning, so-called self-explanations. However, convincing and wrong self-explanations can lead to unsupported confidence in LLMs, thus increasing risk. Therefore, it's important to measure if self-explanations truly reflect the model's behavior. Such a measure is called interpretability-faithfulness and is challenging to perform since the ground truth is inaccessible, and many LLMs only have an inference API. To address this, we propose employing self-consistency checks to measure faithfulness. For example, if an LLM says a set of words is important for making a prediction, then it should not be able to make its prediction without these words. While self-consistency checks are a common approach to faithfulness, they have not previously been successfully applied to LLM self-explanations for counterfactual, feature attribution, and redaction explanations. Our results demonstrate that faithfulness is explanation, model, and task-dependent, showing self-explanations should not be trusted in general. For example, with sentiment classification, counterfactuals are more faithful for Llama2, feature attribution for Mistral, and redaction for Falcon 40B.
-DA  - 2024/05/16/
-PY  - 2024
-DO  - 10.48550/arXiv.2401.07927
-DP  - arXiv.org
-PB  - arXiv
-UR  - http://arxiv.org/abs/2401.07927
-Y2  - 2024/07/19/12:08:24
-L1  - https://arxiv.org/pdf/2401.07927.pdf
-L2  - https://arxiv.org/abs/2401.07927
-KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Machine Learning
-KW  - Computer Science - Computation and Language
-ER  - 
-
-TY  - GEN
 TI  - JaxPruner: A concise library for sparsity research
 AU  - Lee, Joo Hyung
 AU  - Park, Wonpyo
@@ -26074,6 +25663,7 @@ AU  - Khomh, Foutse
 AU  - Mattioli, Juliette
 AU  - Poretschkin, Maximilian
 T2  - AI and Ethics
+AB  - The accelerated developments in the field of Artificial Intelligence (AI) hint at the need for considering “Trust” as a design principle rather than an option. Moreover, the design of AI-based critical systems, such as in avionics, mobility, defense, healthcare, finance, critical infrastructures, etc., requires proving their trustworthiness. Thus, AI-based critical systems must be assessed across many dimensions by different parties (regulators, developers, customers, reinsurance companies, and end-users) for different reasons. We can call it AI validation, monitoring, assessing, or auditing, but the fundamental concept in all cases is to make sure that the AI is performing well within its operational design domain. Such assessment begins from the early stages of development, including the definition of the specification requirements for the system, the analysis, the design, etc. Trust and trustworthiness assessment have to be considered at every phase of the system lifecycle, including sale and deployment, updates, maintenance, or int. It is expected that full trustworthiness in AI systems can only be established if the technical measures to establish trustworthiness are flanked by specifications for the governance and processes of organizations that use and develop AI. Application of Social Sciences and Humanities (SSH) methods and principles to handle human–AI interaction, and aid in the operationalisation of (ethical) values in the design and assessment, with important information provided on their actual impact on trust and trustworthiness is a key issue.
 DA  - 2024/02/01/
 PY  - 2024
 DO  - 10.1007/s43681-023-00397-z
@@ -26601,8 +26191,8 @@ Y2  - 2024/07/19/12:14:20
 L1  - https://arxiv.org/pdf/2307.15217.pdf
 L2  - https://arxiv.org/abs/2307.15217
 KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Computation and Language
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computation and Language
 ER  - 
 
 TY  - GEN
@@ -26611,7 +26201,9 @@ AU  - Olteanu, Alexandra
 AU  - Ekstrand, Michael
 AU  - Castillo, Carlos
 AU  - Suh, Jina
-AB  - All types of research, development, and policy work can have unintended, adverse consequences - work in responsible artificial intelligence (RAI), ethical AI, or ethics in AI is no exception.
+AB  - All types of research, development, and policy work can have unintended, adverse consequences - work in responsible artificial intelligence (RAI), ethical AI, or ethics in AI is no exception. The work of the responsible AI community has illustrated how the design, deployment, and use of computational systems—including machine learning (ML), artificial intelligence (AI), and natural language processing (NLP) systems—engender a range of adverse impacts. As a result, in recent years, the authors of ML, AI, and NLP research papers have been required to include reflections
+on possible unintended consequences and negative social impacts as dedicated sections or extensive checklists. ven though such requirement traces its roots to work done within the responsible AI community responsible AI conferences and publication venues,
+such as FAccT, AIES FORC, or EAAMO, have yet to explicitly enforce similar requirements. Surprisingly, many papers on responsible AI, ethical AI, ethics in AI, or related topics5 do not include similar reflections on possible adverse impacts. RAI research and work is often taken to be inherently beneficial with little to no potential for harm and can thus paradoxically fail to consider any possible adverse consequences it may give rise to (Boyarskaya et al., 2020). This is also the case for many RAI artifacts which were found to, e.g., “not contend with the organizational, labor, and political implications of AI ethics work in practice”. This trend of failing to reflect on the possible negative impact of our own work should concern all of us, as the research we conduct and the artifacts we build are more often than not value-laden, and thus encode all kinds of implicit practices, assumptions, norms, and values. Similarly to our colleagues from other research communities, we—RAI researchers and practitioners—can and often do also suffer from similar “failures of magination” when it comes to the impact of our own work, and we need to at least keep ourselves to the same standard that we expect other communities to adhere to. We believe responsible AI research needs impact statements, too.
 DA  - 2023/11/20/
 PY  - 2023
 DO  - 10.48550/arXiv.2311.11776
@@ -26785,7 +26377,7 @@ DP  - ACM Digital Library
 SP  - 53
 EP  - 62
 PB  - Association for Computing Machinery
-SN  - 9798400701139
+SN  - 979-8-4007-0113-9
 UR  - https://doi.org/10.1145/3582269.3615597
 Y2  - 2024/07/19/
 L1  - https://dl.acm.org/doi/pdf/10.1145/3582269.3615597
@@ -26844,7 +26436,7 @@ DP  - ACM Digital Library
 SP  - 1
 EP  - 13
 PB  - Association for Computing Machinery
-SN  - 9798400703812
+SN  - 979-8-4007-0381-2
 UR  - https://doi.org/10.1145/3617694.3623226
 Y2  - 2024/07/19/
 L1  - https://arxiv.org/pdf/2303.09387
@@ -26866,7 +26458,7 @@ DP  - ACM Digital Library
 SP  - 1
 EP  - 11
 PB  - Association for Computing Machinery
-SN  - 9798400703812
+SN  - 979-8-4007-0381-2
 ST  - FETA
 UR  - https://doi.org/10.1145/3617694.3623243
 Y2  - 2024/07/19/
@@ -27441,7 +27033,7 @@ DP  - ACM Digital Library
 SP  - 584
 EP  - 595
 PB  - Association for Computing Machinery
-SN  - 9798400702310
+SN  - 979-8-4007-0231-0
 ST  - What does it mean to be a responsible AI practitioner
 UR  - https://doi.org/10.1145/3600211.3604702
 Y2  - 2024/07/19/
@@ -27630,26 +27222,6 @@ SN  - 2835-8856
 UR  - https://openreview.net/forum?id=P6NcRPb13w
 Y2  - 2024/07/19/13:16:56
 L1  - https://openreview.net/pdf?id=P6NcRPb13w
-ER  - 
-
-TY  - GEN
-TI  - Scaling Laws Do Not Scale
-AU  - Diaz, Fernando
-AU  - Madaio, Michael
-AB  - Recent work has proposed a power law relationship, referred to as ``scaling laws,'' between the performance of artificial intelligence (AI) models and aspects of those models' design (e.g., dataset size). In other words, as the size of a dataset (or model parameters, etc) increases, the performance of a given model trained on that dataset will correspondingly increase. However, while compelling in the aggregate, this scaling law relationship overlooks the ways that metrics used to measure performance may be precarious and contested, or may not correspond with how different groups of people may perceive the quality of models' output. In this paper, we argue that as the size of datasets used to train large AI models grows, the number of distinct communities (including demographic groups) whose data is included in a given dataset is likely to grow, each of whom may have different values. As a result, there is an increased risk that communities represented in a dataset may have values or preferences not captured by (or in the worst case, at odds with) the metrics used to evaluate model performance for scaling laws. We end the paper with implications for AI scaling laws -- that models may not, in fact, continue to improve as the datasets get larger -- at least not for all people or communities impacted by those models.
-DA  - 2023/07/05/
-PY  - 2023
-DO  - 10.48550/arXiv.2307.03201
-DP  - arXiv.org
-PB  - arXiv
-UR  - http://arxiv.org/abs/2307.03201
-Y2  - 2024/07/19/13:17:00
-L1  - https://arxiv.org/pdf/2307.03201.pdf
-L2  - https://arxiv.org/abs/2307.03201
-KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Machine Learning
-KW  - Computer Science - Computers and Society
-KW  - Condensed Matter - Disordered Systems and Neural Networks
 ER  - 
 
 TY  - GEN
@@ -27847,47 +27419,6 @@ L1  - https://arxiv.org/pdf/2306.07179.pdf
 L2  - https://arxiv.org/abs/2306.07179
 KW  - Computer Science - Machine Learning
 KW  - Statistics - Machine Learning
-ER  - 
-
-TY  - CONF
-TI  - Harms from Increasingly Agentic Algorithmic Systems
-AU  - Chan, Alan
-AU  - Salganik, Rebecca
-AU  - Markelius, Alva
-AU  - Pang, Chris
-AU  - Rajkumar, Nitarshan
-AU  - Krasheninnikov, Dmitrii
-AU  - Langosco, Lauro
-AU  - He, Zhonghao
-AU  - Duan, Yawen
-AU  - Carroll, Micah
-AU  - Lin, Michelle
-AU  - Mayhew, Alex
-AU  - Collins, Katherine
-AU  - Molamohammadi, Maryam
-AU  - Burden, John
-AU  - Zhao, Wanru
-AU  - Rismani, Shalaleh
-AU  - Voudouris, Konstantinos
-AU  - Bhatt, Umang
-AU  - Weller, Adrian
-AU  - Krueger, David
-AU  - Maharaj, Tegan
-T3  - FAccT '23
-AB  - Research in Fairness, Accountability, Transparency, and Ethics (FATE)1 has established many sources and forms of algorithmic harm, in domains as diverse as health care, finance, policing, and recommendations. Much work remains to be done to mitigate the serious harms of these systems, particularly those disproportionately affecting marginalized communities. Despite these ongoing harms, new systems are being developed and deployed, typically without strong regulatory barriers, threatening the perpetuation of the same harms and the creation of novel ones. In response, the FATE community has emphasized the importance of anticipating harms, rather than just responding to them. Anticipation of harms is especially important given the rapid pace of developments in machine learning (ML). Our work focuses on the anticipation of harms from increasingly agentic systems. Rather than providing a definition of agency as a binary property, we identify 4 key characteristics which, particularly in combination, tend to increase the agency of a given algorithmic system: underspecification, directness of impact, goal-directedness, and long-term planning. We also discuss important harms which arise from increasing agency – notably, these include systemic and/or long-range impacts, often on marginalized or unconsidered stakeholders. We emphasize that recognizing agency of algorithmic systems does not absolve or shift the human responsibility for algorithmic harms. Rather, we use the term agency to highlight the increasingly evident fact that ML systems are not fully under human control. Our work explores increasingly agentic algorithmic systems in three parts. First, we explain the notion of an increase in agency for algorithmic systems in the context of diverse perspectives on agency across disciplines. Second, we argue for the need to anticipate harms from increasingly agentic systems. Third, we discuss important harms from increasingly agentic systems and ways forward for addressing them. We conclude by reflecting on implications of our work for anticipating algorithmic harms from emerging systems.
-C1  - New York, NY, USA
-C3  - Proceedings of the 2023 ACM Conference on Fairness, Accountability, and Transparency
-DA  - 2023/06/12/
-PY  - 2023
-DO  - 10.1145/3593013.3594033
-DP  - ACM Digital Library
-SP  - 651
-EP  - 666
-PB  - Association for Computing Machinery
-SN  - 9798400701924
-UR  - https://doi.org/10.1145/3593013.3594033
-Y2  - 2024/07/19/
-L1  - https://arxiv.org/pdf/2302.10329
 ER  - 
 
 TY  - GEN
@@ -28598,6 +28129,7 @@ AU  - Alaagib, Aisha
 AU  - Gambs, Sébastien
 AU  - Papernot, Nicolas
 T2  - Advances in Neural Information Processing Systems
+AB  - The use of black-box models (e.g., deep neural networks) in high-stakes decision-making systems, whose internal logic is complex, raises the need for providing explanations about their decisions. Model explanation techniques mitigate this problem by generating an interpretable and high-fidelity surrogate model (e.g., a logistic regressor or decision tree) to explain the logic of black-box models. In this work, we investigate the issue of fairwashing, in which model explanation techniques are manipulated to rationalize decisions taken by an unfair black-box model using deceptive surrogate models. More precisely, we theoretically characterize and analyze fairwashing, proving that this phenomenon is difficult to avoid due to an irreducible factor---the unfairness of the black-box model. Based on the theory developed, we propose a novel technique, called FRAUD-Detect (FaiRness AUDit Detection), to detect fairwashed models by measuring a divergence over subpopulation-wise fidelity measures of the interpretable model. We empirically demonstrate that this divergence is significantly larger in purposefully fairwashed interpretable models than in honest ones. Furthermore, we show that our detector is robust to an informed adversary trying to bypass our detector. The code implementing FRAUD-Detect is available at https://github.com/cleverhans-lab/FRAUD-Detect.
 DA  - 2022/12/06/
 PY  - 2022
 DP  - proceedings.neurips.cc
@@ -28662,9 +28194,9 @@ UR  - http://arxiv.org/abs/2407.21792
 Y2  - 2024/11/14/12:19:33
 L1  - https://arxiv.org/pdf/2407.21792
 KW  - Computer Science - Artificial Intelligence
+KW  - Computer Science - Machine Learning
 KW  - Computer Science - Computation and Language
 KW  - Computer Science - Computers and Society
-KW  - Computer Science - Machine Learning
 ER  - 
 
 TY  - GEN
@@ -28694,8 +28226,8 @@ UR  - http://arxiv.org/abs/2408.00761
 Y2  - 2024/11/14/12:19:48
 L1  - https://arxiv.org/pdf/2408.00761
 KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Computation and Language
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computation and Language
 ER  - 
 
 TY  - GEN
@@ -28757,9 +28289,9 @@ Y2  - 2024/11/14/12:24:31
 L1  - http://arxiv.org/pdf/2206.03271v2
 L2  - https://arxiv.org/abs/2206.03271
 KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Computer Vision and Pattern Recognition
 KW  - Computer Science - Machine Learning
 KW  - Computer Science - Robotics
+KW  - Computer Science - Computer Vision and Pattern Recognition
 ER  - 
 
 TY  - GEN
@@ -28778,8 +28310,8 @@ UR  - http://arxiv.org/abs/2402.06529
 Y2  - 2024/11/14/12:36:13
 L1  - https://arxiv.org/pdf/2402.06529
 KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Computation and Language
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computation and Language
 ER  - 
 
 TY  - GEN
@@ -28801,9 +28333,9 @@ L1  - http://arxiv.org/pdf/2302.00171v2
 L2  - https://arxiv.org/abs/2302.00171
 KW  - Computer Science - Machine Learning
 KW  - Computer Science - Robotics
-KW  - Computer Science - Systems and Control
-KW  - Electrical Engineering and Systems Science - Systems and Control
 KW  - Mathematics - Optimization and Control
+KW  - Electrical Engineering and Systems Science - Systems and Control
+KW  - Computer Science - Systems and Control
 ER  - 
 
 TY  - GEN
@@ -28827,8 +28359,8 @@ L2  - https://arxiv.org/abs/2309.01267
 KW  - Computer Science - Artificial Intelligence
 KW  - Computer Science - Machine Learning
 KW  - Computer Science - Robotics
-KW  - Computer Science - Systems and Control
 KW  - Electrical Engineering and Systems Science - Systems and Control
+KW  - Computer Science - Systems and Control
 ER  - 
 
 TY  - CONF
@@ -28850,13 +28382,13 @@ EP  - 5925
 UR  - https://ieeexplore.ieee.org/document/10341712
 Y2  - 2024/11/14/12:36:51
 L1  - https://ieeexplore.ieee.org/stampPDF/getPDF.jsp?tp=&arnumber=10341712&ref=
-KW  - Adaptation models
 KW  - Cognition
-KW  - Computational modeling
 KW  - Predictive models
-KW  - Rendering (computer graphics)
-KW  - Scalability
+KW  - Computational modeling
 KW  - Trajectory
+KW  - Adaptation models
+KW  - Scalability
+KW  - Rendering (computer graphics)
 ER  - 
 
 TY  - CONF
@@ -28920,8 +28452,8 @@ ST  - Sim-to-Lab-to-Real
 UR  - https://www.sciencedirect.com/science/article/pii/S0004370222001515
 Y2  - 2024/11/14/12:37:38
 L1  - https://www.sciencedirect.com/science/article/pii/S0004370222001515/pdfft?download=true
-KW  - Generalization
 KW  - Reinforcement learning
+KW  - Generalization
 KW  - Safety analysis
 KW  - Sim-to-Real transfer
 ER  - 
@@ -28973,16 +28505,16 @@ ST  - SHARP
 UR  - https://ieeexplore.ieee.org/abstract/document/9723544
 Y2  - 2024/11/14/12:38:01
 L1  - https://ieeexplore.ieee.org/stampPDF/getPDF.jsp?tp=&arnumber=9723544&ref=
-KW  - Human-aware motion planning
 KW  - Human-robot interaction
-KW  - Planning
-KW  - planning under uncertainty
-KW  - Robot kinematics
-KW  - Robots
 KW  - Safety
-KW  - safety in HRI
-KW  - Stochastic processes
+KW  - Robot kinematics
+KW  - Planning
+KW  - Robots
 KW  - Trajectory
+KW  - Stochastic processes
+KW  - Human-aware motion planning
+KW  - planning under uncertainty
+KW  - safety in HRI
 ER  - 
 
 TY  - CONF
@@ -28992,6 +28524,7 @@ AU  - Rubies-Royo, Vicenç
 AU  - Tomlin, Claire
 AU  - Fisac, Jaime F.
 T2  - Robotics: Science and Systems XVII
+AB  - Reach-avoid optimal control problems; in which the system must reach certain goal conditions while staying clear of unacceptable failure modes; are central to safety and liveness assurance for autonomous robotic systems; but their exact solutions are intractable for complex dynamics and environments. Recent successes in the use of reinforcement learning methods to approximately solve optimal control problems with performance objectives make their application to certification problems attractive; however; the Lagrange-type objective (cumulative costs or rewards over time) used in reinforcement learning is not suitable to encode temporal logic requirements. Recent work has shown promise in extending the reinforcement learning machinery to safety-type problems; whose objective is not a sum but a minimum over time. In this work; we generalize the reinforcement learning formulation to handle all optimal control problems in the reach-avoid category. We derive a time-discounted reach-avoid Bellman backup with contraction mapping properties and prove that the resulting reach-avoid Q-learning algorithm converges under analogous conditions to the traditional Lagrange-type problem; yielding an arbitrarily tight conservative approximation to the reach-avoid set. We further demonstrate the use of this formulation with deep reinforcement learning methods; by treating their approximate solutions as untrusted oracles in a supervisory control framework. We evaluate our proposed framework on a range of nonlinear systems; validating the results against analytic and numerical solutions; and through Monte Carlo simulation in previously intractable problems. Our results open the door to a range of learning-based methods for safe-and-live autonomous behavior; with applications across robotics and automation.
 DA  - 2021/07/12/
 PY  - 2021
 DP  - www.roboticsproceedings.org
@@ -29079,10 +28612,10 @@ PB  - Social Science Research Network
 UR  - https://papers.ssrn.com/abstract=3871635
 Y2  - 2024/11/14/13:04:06
 L1  - https://papers.ssrn.com/sol3/Delivery.cfm/SSRN_ID3888099_code2918001.pdf?abstractid=3871635&mirid=1
-KW  - AI
 KW  - Artificial Intelligence
-KW  - Problem Logics
+KW  - AI
 KW  - Regulation
+KW  - Problem Logics
 KW  - Regulatory Rationale
 KW  - Regulatory Target
 KW  - Sociotechnical Change
@@ -29127,16 +28660,16 @@ ST  - Bridging the gap
 UR  - https://doi.org/10.1007/s43681-020-00037-w
 Y2  - 2024/11/14/13:05:19
 L1  - https://link.springer.com/content/pdf/10.1007%2Fs43681-020-00037-w.pdf
-KW  - AI
-KW  - Artificial intelligence
 KW  - Artificial Intelligence
+KW  - Artificial intelligence
+KW  - AI
+KW  - Short term
 KW  - Artificial intelligence ethics
 KW  - Artificial intelligence policy
 KW  - Cooperation models
 KW  - Incompletely theorized agreement
 KW  - Long term
 KW  - Overlapping consensus
-KW  - Short term
 ER  - 
 
 TY  - JOUR
@@ -29222,8 +28755,8 @@ UR  - https://www.sciencedirect.com/science/article/pii/S0016328721001932
 Y2  - 2024/11/14/13:10:31
 L1  - https://www.sciencedirect.com/science/article/pii/S0016328721001932/pdfft?download=true
 L2  - https://www.sciencedirect.com/science/article/pii/S0016328721001932?via=ihub
-KW  - Artificial general intelligence
 KW  - Artificial Intelligence
+KW  - Artificial general intelligence
 KW  - Human-level AI
 KW  - Transformative AI
 ER  - 
@@ -29322,10 +28855,10 @@ SN  - 2522-5839
 UR  - https://www.nature.com/articles/s42256-022-00440-4
 Y2  - 2024/11/14/13:14:00
 L1  - https://www.nature.com/articles/s42256-022-00440-4.pdf
-KW  - Agriculture
 KW  - Ethics
 KW  - Science
 KW  - technology and society
+KW  - Agriculture
 ER  - 
 
 TY  - GEN
@@ -29374,9 +28907,9 @@ SN  - 2045-2322
 UR  - https://www.nature.com/articles/s41598-021-01997-7
 Y2  - 2024/11/14/13:15:22
 L1  - https://www.nature.com/articles/s41598-021-01997-7.pdf
-KW  - Behavioural methods
-KW  - Computer science
 KW  - Psychology
+KW  - Computer science
+KW  - Behavioural methods
 ER  - 
 
 TY  - GEN
@@ -29408,47 +28941,6 @@ KW  - Computer Science - Artificial Intelligence
 ER  - 
 
 TY  - CONF
-TI  - Activism by the AI Community: Analysing Recent Achievements and Future Prospects
-AU  - Belfield, Haydn
-T2  - AIES '20: AAAI/ACM Conference on AI, Ethics, and Society
-AB  - The artificial intelligence (AI) community has recently engaged in activism in relation to their employers, other members of the community, and their governments in order to shape the societal and ethical implications of AI. It has achieved some notable successes, but prospects for further political organising and activism are uncertain. We survey activism by the AI community over the last six years; apply two analytical frameworks drawing upon the literature on epistemic communities, and worker organising and bargaining; and explore what they imply for the future prospects of the AI community. Success thus far has hinged on a coherent shared culture, and high bargaining power due to the high demand for a limited supply of AI ‘talent’. Both are crucial to the future of AI activism and worthy of sustained attention.
-C1  - New York NY USA
-C3  - Proceedings of the AAAI/ACM Conference on AI, Ethics, and Society
-DA  - 2020/02/07/
-PY  - 2020
-DO  - 10.1145/3375627.3375814
-DP  - DOI.org (Crossref)
-SP  - 15
-EP  - 21
-LA  - en
-PB  - ACM
-SN  - 978-1-4503-7110-0
-ST  - Activism by the AI Community
-UR  - https://dl.acm.org/doi/10.1145/3375627.3375814
-Y2  - 2024/11/14/13:20:04
-L1  - https://www.cser.ac.uk/media/uploads/files/Haydn_Belfield_Activism_by_the_AI_Community_Analysing_Recent_Achievements_and_Future_Prospects.pdf
-ER  - 
-
-TY  - GEN
-TI  - Beyond Near- and Long-Term: Towards a Clearer Account of Research Priorities in AI Ethics and Society
-AU  - Prunkl, Carina
-AU  - Whittlestone, Jess
-AB  - One way of carving up the broad "AI ethics and society" research space that has emerged in recent years is to distinguish between "near-term" and "long-term" research. While such ways of breaking down the research space can be useful, we put forward several concerns about the near/long-term distinction gaining too much prominence in how research questions and priorities are framed. We highlight some ambiguities and inconsistencies in how the distinction is used, and argue that while there are differing priorities within this broad research community, these differences are not well-captured by the near/long-term distinction. We unpack the near/long-term distinction into four different dimensions, and propose some ways that researchers can communicate more clearly about their work and priorities using these dimensions. We suggest that moving towards a more nuanced conversation about research priorities can help establish new opportunities for collaboration, aid the development of more consistent and coherent research agendas, and enable identification of previously neglected research areas.
-DA  - 2020/01/21/
-PY  - 2020
-DO  - 10.48550/arXiv.2001.04335
-DP  - arXiv.org
-PB  - arXiv
-ST  - Beyond Near- and Long-Term
-UR  - http://arxiv.org/abs/2001.04335
-Y2  - 2024/11/14/13:20:13
-L1  - http://arxiv.org/pdf/2001.04335v2
-L2  - https://arxiv.org/abs/2001.04335
-KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Computers and Society
-ER  - 
-
-TY  - CONF
 TI  - The tension between openness and prudence in responsible AI research
 AU  - Whittlestone, Jess
 AU  - Ovadya, Aviv
@@ -29459,25 +28951,6 @@ PY  - 2019
 DP  - Zotero
 LA  - en
 L1  - https://aiforsocialgood.github.io/neurips2019/accepted/track2/pdfs/18_aisg_neurips2019.pdf
-ER  - 
-
-TY  - GEN
-TI  - Exploring AI Futures Through Role Play
-AU  - Avin, Shahar
-AU  - Gruetzemacher, Ross
-AU  - Fox, James
-AB  - We present an innovative methodology for studying and teaching the impacts of AI through a role play game. The game serves two primary purposes: 1) training AI developers and AI policy professionals to reflect on and prepare for future social and ethical challenges related to AI and 2) exploring possible futures involving AI technology development, deployment, social impacts, and governance. While the game currently focuses on the inter relations between short --, mid and long term impacts of AI, it has potential to be adapted for a broad range of scenarios, exploring in greater depths issues of AI policy research and affording training within organizations. The game presented here has undergone two years of development and has been tested through over 30 events involving between 3 and 70 participants. The game is under active development, but preliminary findings suggest that role play is a promising methodology for both exploring AI futures and training individuals and organizations in thinking about, and reflecting on, the impacts of AI and strategic mistakes that can be avoided today.
-DA  - 2019/12/19/
-PY  - 2019
-DO  - 10.48550/arXiv.1912.08964
-DP  - arXiv.org
-PB  - arXiv
-UR  - http://arxiv.org/abs/1912.08964
-Y2  - 2024/11/14/13:22:19
-L1  - http://arxiv.org/pdf/1912.08964v1
-L2  - https://arxiv.org/abs/1912.08964
-KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Computers and Society
 ER  - 
 
 TY  - JOUR
@@ -29512,7 +28985,7 @@ TY  - JOUR
 TI  - Prompting Considered Harmful
 AU  - Morris, Meredith Ringel
 T2  - Communications of the ACM
-AB  - As systems graduate from labs to the open world, moving beyond prompting is central to ensuring that AI is useful, usable, and safe for end users as well as experts such as AI developers and researchers.
+AB  - As a computer scientist with one foot in artificial intelligence (AI) research and the other in human-computer interaction (HCI) research, I have become increasingly concerned that promptinga has transitioned from what was essentially a test and debugging interface for machine-learning (ML) engineers into the de facto interaction paradigm for end users of large language models (LLMs) and their multimodal generative AI counterparts. It is my professional opinion that prompting is a poor user interface for generative AI systems, which should be phased out as quickly as possible. My concerns about prompting are twofold. First, prompt-based interfaces are confusing and non-optimal for end users (and ought not to be conflated with true natural-language interactions). Second, prompt-based interfaces are also risky for AI experts—we risk building a body of apps and research atop a shaky foundation of prompt engineering. I will discuss each of these issues in turn, below.
 DA  - 2024/10/17/
 PY  - 2024
 DO  - 10.1145/3673861
@@ -29580,8 +29053,8 @@ UR  - http://arxiv.org/abs/2409.12640
 Y2  - 2024/11/14/13:25:18
 L1  - http://arxiv.org/pdf/2409.12640v2
 L2  - https://arxiv.org/abs/2409.12640
-KW  - Computer Science - Computation and Language
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computation and Language
 ER  - 
 
 TY  - GEN
@@ -29601,8 +29074,8 @@ UR  - http://arxiv.org/abs/2408.11146
 Y2  - 2024/11/14/13:25:42
 L1  - http://arxiv.org/pdf/2408.11146v1
 L2  - https://arxiv.org/abs/2408.11146
-KW  - Computer Science - Computer Science and Game Theory
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computer Science and Game Theory
 KW  - Economics - Theoretical Economics
 ER  - 
 
@@ -29621,8 +29094,8 @@ UR  - http://arxiv.org/abs/2407.08734
 Y2  - 2024/11/14/13:26:42
 L1  - https://arxiv.org/pdf/2407.08734
 KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Computation and Language
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computation and Language
 ER  - 
 
 TY  - GEN
@@ -29720,9 +29193,9 @@ UR  - http://arxiv.org/abs/2407.18213
 Y2  - 2024/11/14/13:27:54
 L1  - https://arxiv.org/pdf/2407.18213
 KW  - Computer Science - Artificial Intelligence
+KW  - Computer Science - Machine Learning
 KW  - Computer Science - Computation and Language
 KW  - Computer Science - Cryptography and Security
-KW  - Computer Science - Machine Learning
 ER  - 
 
 TY  - GEN
@@ -29744,8 +29217,8 @@ UR  - http://arxiv.org/abs/2408.02946
 Y2  - 2024/11/14/13:28:03
 L1  - https://arxiv.org/pdf/2408.02946
 KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Cryptography and Security
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Cryptography and Security
 ER  - 
 
 TY  - CONF
@@ -29768,7 +29241,7 @@ DP  - ACM Digital Library
 SP  - 1
 EP  - 9
 PB  - Association for Computing Machinery
-SN  - 9798400703317
+SN  - 979-8-4007-0331-7
 ST  - "We Need Structured Output"
 UR  - https://dl.acm.org/doi/10.1145/3613905.3650756
 Y2  - 2024/11/14/
@@ -29813,7 +29286,7 @@ SP  - 38
 EP  - 47
 LA  - en
 PB  - ACM
-SN  - 9798400704314
+SN  - 979-8-4007-0431-4
 UR  - https://dl.acm.org/doi/10.1145/3626772.3657813
 Y2  - 2024/11/14/13:33:31
 L1  - https://dl.acm.org/doi/pdf/10.1145/3626772.3657813
@@ -29823,6 +29296,7 @@ TY  - CONF
 TI  - Instance-conditional timescales of decay for non-stationary learning
 AU  - Jain, Nishant
 AU  - Shenoy, Pradeep
+AB  - Slow concept drift is a ubiquitous, yet under-studied problem in practical machine learning systems. In such settings, although recent data is more indicative of future data, naively prioritizing recent instances runs the risk of losing valuable information from the past. We propose an optimization-driven approach towards balancing instance importance over large training windows. First, we model instance relevance using a mixture of multiple timescales of decay, allowing us to capture rich temporal trends. Second, we learn an auxiliary scorer model that recovers the appropriate mixture of timescales as a function of the instance itself. Finally, we propose a nested optimization objective for learning the scorer, by which it maximizes forward transfer for the learned model. Experiments on a large real-world dataset of 39M photos over a 9 year period show upto 15% relative gains in accuracy compared to other robust learning baselines. We replicate our gains on two collections of real-world datasets for non-stationary learning, and extend our work to continual learning settings where, too, we beat SOTA methods by large margins.
 C3  - Proceedings of the AAAI Conference on Artificial Intelligence
 DA  - 2024///
 PY  - 2024
@@ -29833,23 +29307,6 @@ EP  - 12781
 UR  - https://ojs.aaai.org/index.php/AAAI/article/view/29173
 Y2  - 2024/11/14/13:34:43
 L1  - https://ojs.aaai.org/index.php/AAAI/article/download/29173/30219
-ER  - 
-
-TY  - GEN
-TI  - Instance-Conditional Timescales of Decay for Non-Stationary Learning
-AU  - Jain, Nishant
-AU  - Shenoy, Pradeep
-AB  - Slow concept drift is a ubiquitous, yet under-studied problem in practical machine learning systems. In such settings, although recent data is more indicative of future data, naively prioritizing recent instances runs the risk of losing valuable information from the past. We propose an optimization-driven approach towards balancing instance importance over large training windows. First, we model instance relevance using a mixture of multiple timescales of decay, allowing us to capture rich temporal trends. Second, we learn an auxiliary scorer model that recovers the appropriate mixture of timescales as a function of the instance itself. Finally, we propose a nested optimization objective for learning the scorer, by which it maximizes forward transfer for the learned model. Experiments on a large real-world dataset of 39M photos over a 9 year period show upto 15% relative gains in accuracy compared to other robust learning baselines. We replicate our gains on two collections of real-world datasets for non-stationary learning, and extend our work to continual learning settings where, too, we beat SOTA methods by large margins.
-DA  - 2023/12/20/
-PY  - 2023
-DO  - 10.48550/arXiv.2212.05908
-DP  - arXiv.org
-PB  - arXiv
-UR  - http://arxiv.org/abs/2212.05908
-Y2  - 2024/11/14/13:34:54
-L1  - http://arxiv.org/pdf/2212.05908v2
-L2  - https://arxiv.org/abs/2212.05908
-KW  - Computer Science - Machine Learning
 ER  - 
 
 TY  - GEN
@@ -29877,8 +29334,8 @@ UR  - http://arxiv.org/abs/2309.10567
 Y2  - 2024/11/14/13:35:03
 L1  - http://arxiv.org/pdf/2309.10567v1
 L2  - https://arxiv.org/abs/2309.10567
-KW  - Computer Science - Computation and Language
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computation and Language
 KW  - Computer Science - Sound
 KW  - Electrical Engineering and Systems Science - Audio and Speech Processing
 ER  - 
@@ -29899,9 +29356,9 @@ UR  - http://arxiv.org/abs/2308.11721
 Y2  - 2024/11/14/13:35:38
 L1  - http://arxiv.org/pdf/2308.11721v3
 L2  - https://arxiv.org/abs/2308.11721
+KW  - Computer Science - Machine Learning
 KW  - Computer Science - Computers and Society
 KW  - Computer Science - Human-Computer Interaction
-KW  - Computer Science - Machine Learning
 ER  - 
 
 TY  - GEN
@@ -29945,8 +29402,8 @@ UR  - http://arxiv.org/abs/2306.10193
 Y2  - 2024/11/14/13:36:05
 L1  - http://arxiv.org/pdf/2306.10193v2
 L2  - https://arxiv.org/abs/2306.10193
-KW  - Computer Science - Computation and Language
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computation and Language
 ER  - 
 
 TY  - GEN
@@ -30123,8 +29580,8 @@ UR  - https://www.sciencedirect.com/science/article/pii/S0167637724001305
 Y2  - 2024/11/14/13:41:22
 L1  - https://www.sciencedirect.com/science/article/pii/S0167637724001305/pdfft?download=true
 KW  - Artificial neural networks
-KW  - Mixed integer programming
 KW  - Model compression
+KW  - Mixed integer programming
 KW  - Pruning
 ER  - 
 
@@ -30164,8 +29621,8 @@ Y2  - 2024/11/14/13:42:32
 L1  - http://arxiv.org/pdf/2410.17980v1
 L2  - https://arxiv.org/abs/2410.17980
 KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Computation and Language
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computation and Language
 ER  - 
 
 TY  - GEN
@@ -30187,8 +29644,8 @@ Y2  - 2024/11/14/13:43:40
 L1  - http://arxiv.org/pdf/2410.17477v2
 L2  - https://arxiv.org/abs/2410.17477
 KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Computation and Language
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computation and Language
 ER  - 
 
 TY  - GEN
@@ -30209,8 +29666,8 @@ UR  - http://arxiv.org/abs/2410.12949
 Y2  - 2024/11/14/13:43:42
 L1  - http://arxiv.org/pdf/2410.12949v1
 L2  - https://arxiv.org/abs/2410.12949
-KW  - Computer Science - Computation and Language
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computation and Language
 ER  - 
 
 TY  - GEN
@@ -30232,8 +29689,8 @@ Y2  - 2024/11/14/13:43:46
 L1  - http://arxiv.org/pdf/2410.09918v1
 L2  - https://arxiv.org/abs/2410.09918
 KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Logic in Computer Science
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Logic in Computer Science
 ER  - 
 
 TY  - CONF
@@ -30260,7 +29717,7 @@ SP  - 1
 EP  - 3
 LA  - en
 PB  - ACM
-SN  - 9798400707186
+SN  - 979-8-4007-0718-6
 ST  - Dynamic Abstractions
 UR  - https://dl.acm.org/doi/10.1145/3672539.3686706
 Y2  - 2024/11/14/13:45:08
@@ -30333,20 +29790,6 @@ L2  - https://arxiv.org/abs/2411.06528
 KW  - Computer Science - Artificial Intelligence
 KW  - Computer Science - Computation and Language
 KW  - Computer Science - Human-Computer Interaction
-ER  - 
-
-TY  - CONF
-TI  - Quantifying Likeness: A Simple Machine Learning Approach to Identifying Copyright Infringement in (AI-Generated) Artwork
-T2  - The Thirteenth International Conference on Learning Representations
-AB  - This study proposes an approach aligned with the legal process to quantify copyright infringement, via stylistic similarity, in AI-generated artwork. In contrast to typical work in this field, and more in line with a realistic legal setting, our approach quantifies the similarity of a set of potentially-infringing “defendant” artworks to a set of copyrighted “plaintiff" artworks. We frame this as an image classification task, using a fine-tuned ResNet trained on small, customized datasets relevant to each use case. Softmax-normalized probabilities from the model serve as similarity scores for potentially infringing “defendant” artworks, and saliency maps and features visualizations complement the score by highlighting key features and allowing for interpretability. This straightforward image classification approach can be accomplished in a quite simple, low-resource setting, making it accessible for real-world applications. We present a case study using Mickey Mouse as the plaintiff, performing thorough hyperparameter tuning and robustness analysis. Our experiments include optimizing batch size, weight decay, and learning rate, as well as exploring the impact of additional distractor classes. We employ data augmentation, cross-validation, and a linear decay learning rate scheduler to improve model performance, along with conducting scaling experiments with different types of distractor classes. The aims of this work are to illustrate the potential of the approach, and identify settings which generalize well, such that it is as "plug and play" as possible for users to apply with their own plaintiff sets of artworks.
-DA  - 2024/10/04/
-PY  - 2024
-DP  - openreview.net
-LA  - en
-ST  - Quantifying Likeness
-UR  - https://openreview.net/forum?id=9zKm3TytBG
-Y2  - 2024/11/14/13:46:58
-L1  - https://openreview.net/pdf?id=9zKm3TytBG
 ER  - 
 
 TY  - GEN
@@ -30677,8 +30120,8 @@ Y2  - 2024/11/14/13:52:31
 L1  - http://arxiv.org/pdf/2410.06981v1
 L2  - https://arxiv.org/abs/2410.06981
 KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Computation and Language
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computation and Language
 ER  - 
 
 TY  - GEN
@@ -30722,8 +30165,8 @@ Y2  - 2024/11/14/13:53:21
 L1  - http://arxiv.org/pdf/2410.05581v2
 L2  - https://arxiv.org/abs/2410.05581
 KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Computation and Language
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computation and Language
 ER  - 
 
 TY  - GEN
@@ -30857,8 +30300,8 @@ UR  - http://arxiv.org/abs/2405.20971
 Y2  - 2024/11/14/13:54:39
 L1  - http://arxiv.org/pdf/2405.20971v1
 L2  - https://arxiv.org/abs/2405.20971
-KW  - Computer Science - Computer Vision and Pattern Recognition
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computer Vision and Pattern Recognition
 ER  - 
 
 TY  - CONF
@@ -30914,8 +30357,8 @@ UR  - http://arxiv.org/abs/2405.15589
 Y2  - 2024/11/14/13:54:46
 L1  - http://arxiv.org/pdf/2405.15589v3
 L2  - https://arxiv.org/abs/2405.15589
-KW  - Computer Science - Cryptography and Security
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Cryptography and Security
 ER  - 
 
 TY  - GEN
@@ -30937,8 +30380,8 @@ Y2  - 2024/11/14/13:54:48
 L1  - http://arxiv.org/pdf/2406.18451v3
 L2  - https://arxiv.org/abs/2406.18451
 KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Computer Vision and Pattern Recognition
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computer Vision and Pattern Recognition
 ER  - 
 
 TY  - CONF
@@ -31035,8 +30478,8 @@ Y2  - 2024/11/14/13:55:48
 L1  - http://arxiv.org/pdf/2407.14916v2
 L2  - https://arxiv.org/abs/2407.14916
 KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Computation and Language
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computation and Language
 ER  - 
 
 TY  - CONF
@@ -31184,8 +30627,8 @@ Y2  - 2024/11/14/13:56:48
 L1  - http://arxiv.org/pdf/2404.11018v3
 L2  - https://arxiv.org/abs/2404.11018
 KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Computation and Language
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computation and Language
 ER  - 
 
 TY  - GEN
@@ -31331,9 +30774,9 @@ Y2  - 2024/11/14/13:59:18
 L1  - http://arxiv.org/pdf/2407.09499v1
 L2  - https://arxiv.org/abs/2407.09499
 KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Computer Vision and Pattern Recognition
 KW  - Computer Science - Machine Learning
 KW  - Statistics - Machine Learning
+KW  - Computer Science - Computer Vision and Pattern Recognition
 ER  - 
 
 TY  - GEN
@@ -31509,10 +30952,10 @@ ST  - AI content detection in the emerging information ecosystem
 UR  - https://doi.org/10.1007/s10676-024-09795-1
 Y2  - 2024/11/14/13:59:35
 L1  - https://link.springer.com/content/pdf/10.1007%2Fs10676-024-09795-1.pdf
-KW  - AI regulation
-KW  - AI-generated content
 KW  - Artificial Intelligence
+KW  - AI regulation
 KW  - Generative AI
+KW  - AI-generated content
 ER  - 
 
 TY  - GEN
@@ -31550,8 +30993,8 @@ Y2  - 2024/11/14/14:01:26
 L1  - http://arxiv.org/pdf/2404.03084v2
 L2  - https://arxiv.org/abs/2404.03084
 KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Computer Science and Game Theory
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computer Science and Game Theory
 ER  - 
 
 TY  - JOUR
@@ -31605,8 +31048,8 @@ UR  - http://arxiv.org/abs/2409.09108
 Y2  - 2024/11/14/14:01:38
 L1  - http://arxiv.org/pdf/2409.09108v1
 L2  - https://arxiv.org/abs/2409.09108
-KW  - Computer Science - Computer Vision and Pattern Recognition
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computer Vision and Pattern Recognition
 KW  - Computer Science - Software Engineering
 ER  - 
 
@@ -31627,8 +31070,8 @@ Y2  - 2024/11/14/14:01:41
 L1  - http://arxiv.org/pdf/2406.18580v1
 L2  - https://arxiv.org/abs/2406.18580
 KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Computer Vision and Pattern Recognition
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computer Vision and Pattern Recognition
 ER  - 
 
 TY  - CONF
@@ -31703,9 +31146,9 @@ Y2  - 2024/11/14/14:01:46
 L1  - http://arxiv.org/pdf/2404.09932v2
 L2  - https://arxiv.org/abs/2404.09932
 KW  - Computer Science - Artificial Intelligence
+KW  - Computer Science - Machine Learning
 KW  - Computer Science - Computation and Language
 KW  - Computer Science - Computers and Society
-KW  - Computer Science - Machine Learning
 ER  - 
 
 TY  - GEN
@@ -31796,8 +31239,8 @@ UR  - http://arxiv.org/abs/2408.09162
 Y2  - 2024/11/14/14:02:51
 L1  - http://arxiv.org/pdf/2408.09162v1
 L2  - https://arxiv.org/abs/2408.09162
-KW  - Computer Science - Computer Vision and Pattern Recognition
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computer Vision and Pattern Recognition
 ER  - 
 
 TY  - GEN
@@ -31818,8 +31261,8 @@ UR  - http://arxiv.org/abs/2408.08307
 Y2  - 2024/11/14/14:02:53
 L1  - http://arxiv.org/pdf/2408.08307v1
 L2  - https://arxiv.org/abs/2408.08307
-KW  - Computer Science - Computer Vision and Pattern Recognition
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computer Vision and Pattern Recognition
 ER  - 
 
 TY  - GEN
@@ -31843,8 +31286,8 @@ Y2  - 2024/11/14/14:02:55
 L1  - http://arxiv.org/pdf/2404.08471v1
 L2  - https://arxiv.org/abs/2404.08471
 KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Computer Vision and Pattern Recognition
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computer Vision and Pattern Recognition
 ER  - 
 
 TY  - GEN
@@ -31957,9 +31400,9 @@ UR  - http://arxiv.org/abs/2407.17667
 Y2  - 2024/11/14/14:04:51
 L1  - http://arxiv.org/pdf/2407.17667v1
 L2  - https://arxiv.org/abs/2407.17667
+KW  - Computer Science - Machine Learning
 KW  - Astrophysics - Cosmology and Nongalactic Astrophysics
 KW  - Astrophysics - Instrumentation and Methods for Astrophysics
-KW  - Computer Science - Machine Learning
 ER  - 
 
 TY  - JOUR
@@ -32133,8 +31576,8 @@ Y2  - 2024/11/14/15:25:16
 L1  - http://arxiv.org/pdf/2402.07744v2
 L2  - https://arxiv.org/abs/2402.07744
 KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Computation and Language
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computation and Language
 ER  - 
 
 TY  - GEN
@@ -32266,8 +31709,8 @@ UR  - http://arxiv.org/abs/2302.03481
 Y2  - 2024/11/14/15:28:18
 L1  - http://arxiv.org/pdf/2302.03481v1
 L2  - https://arxiv.org/abs/2302.03481
-KW  - Computer Science - Human-Computer Interaction
 KW  - Computer Science - Robotics
+KW  - Computer Science - Human-Computer Interaction
 ER  - 
 
 TY  - GEN
@@ -32293,8 +31736,8 @@ Y2  - 2024/11/14/15:29:16
 L1  - http://arxiv.org/pdf/2402.02314v3
 L2  - https://arxiv.org/abs/2402.02314
 KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Computation and Language
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computation and Language
 ER  - 
 
 TY  - CONF
@@ -32338,8 +31781,8 @@ UR  - http://arxiv.org/abs/2105.12419
 Y2  - 2024/11/14/15:30:17
 L1  - http://arxiv.org/pdf/2105.12419v2
 L2  - https://arxiv.org/abs/2105.12419
-KW  - Computer Science - Cryptography and Security
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Cryptography and Security
 KW  - Computer Science - Social and Information Networks
 ER  - 
 
@@ -32626,11 +32069,11 @@ UR  - https://doi.org/10.1007/s11633-022-1387-3
 Y2  - 2024/11/14/15:37:42
 L1  - https://link.springer.com/content/pdf/10.1007%2Fs11633-022-1387-3.pdf
 KW  - Artificial Intelligence
+KW  - Natural language processing
+KW  - dialogue systems
 KW  - Chinese open-domain conversational model
 KW  - deep learning (DL)
-KW  - dialogue systems
 KW  - large-scale pre-training
-KW  - Natural language processing
 ER  - 
 
 TY  - CONF
@@ -32662,12 +32105,13 @@ L1  - https://aclanthology.org/2024.acl-long.848.pdf
 ER  - 
 
 TY  - JOUR
-TI  - TAILORING LANGUAGE GENERATION MODELS UNDER TOTAL VARIATION DISTANCE
+TI  - Tailoring Language Generation Models under Total Variation Distance
 AU  - Ji, Haozhe
 AU  - Ke, Pei
 AU  - Hu, Zhipeng
 AU  - Zhang, Rongsheng
 AU  - Huang, Minlie
+AB  - The standard paradigm of neural language generation adopts maximum likelihood estimation (MLE) as the optimizing method. From a distributional view, MLE in fact minimizes the Kullback-Leibler divergence (KLD) between the distribution of the real data and that of the model. However, this approach forces the model to distribute non-zero (sometimes large) probability mass to all training samples regardless of their quality. Moreover, in the attempt to cover the low-probability regions in the data distribution, the model systematically overestimates the probability of corrupted text sequences, which we conjecture is one of the main reasons for text degeneration during autoregressive decoding. To remedy this problem, we leverage the total variation distance (TVD) with its robustness to outliers, and develop practical bounds to apply it to language generation. Then, we introduce the TaiLr objective that balances the tradeoff of estimating TVD. Intuitively, TaiLr downweights real data samples that have low model probabilities with tunable penalization intensity. Experimental results show that our method alleviates the overestimation of degenerated sequences without sacrificing diversity and improves generation quality on a wide range of text generation tasks.
 DA  - 2023///
 PY  - 2023
 DP  - Zotero
@@ -32854,6 +32298,7 @@ AU  - Cui, Jianwei
 AU  - Wang, Bin
 AU  - Liu, Qun
 AU  - Huang, Minlie
+AB  - Morality in dialogue systems has raised great attention in research recently. A moral dialogue system aligned with users' values could enhance conversation engagement and user connections. In this paper, we propose a framework, MoralDial to train and evaluate moral dialogue systems. In our framework, we first explore the communication mechanisms of morality and resolve expressed morality into three parts, which indicate the roadmap for building a moral dialogue system. Based on that, we design a simple yet effective method: constructing moral discussions between simulated specific users and the dialogue system. The constructed discussions consist of expressing, explaining, revising, and inferring moral views in dialogue exchanges, which makes conversational models learn morality well in a natural manner. Furthermore, we propose a novel evaluation method under the framework. We evaluate the multiple aspects of morality by judging the relation between dialogue responses and human values in discussions, where the multifaceted nature of morality is particularly considered. Automatic and manual experiments demonstrate that our framework is promising to train and evaluate moral dialogue systems.
 DA  - 2023///
 PY  - 2023
 DP  - Zotero
@@ -33132,6 +32577,7 @@ AU  - Ke, Pei
 AU  - Zhang, Zheng
 AU  - Huang, Minlie
 T2  - Findings of the Association for Computational Linguistics: ACL 2023
+AB  - It has always been an important yet challenging problem to control language models to avoid generating texts with undesirable attributes, such as toxic language and unnatural repetition. We introduce Leo for controllable text generation, which needs no modification to the model architecture and facilitates out-of-the-box use of trained models. It employs a contrastive loss on sequence likelihood, which fundamentally decreases the generation probability of negative samples (i.e., generations with undesirable attributes). It also adopts a novel likelihood ranking-based strategy to construct contrastive samples from model generations. On the tasks of language detoxification, sentiment steering, and repetition reduction, we show that Leo outperforms strong baselines of controllable text generation and demonstrate the superiority of Leo’s sample construction strategy.
 C1  - Toronto, Canada
 C3  - Findings of the Association for Computational Linguistics: ACL 2023
 DA  - 2023///
@@ -33156,6 +32602,7 @@ AU  - Wen, Jiaxin
 AU  - Zhang, Zheng
 AU  - Huang, Minlie
 T2  - Findings of the Association for Computational Linguistics: ACL 2023
+AB  - Crowdsourced dialogue corpora are usually limited in scale and topic coverage due to the expensive cost of data curation. This would hinder the generalization of downstream dialogue models to open-domain topics. In this work, we leverage large language models for dialogue augmentation in the task of emotional support conversation (ESC). By treating dialogue augmentation as a dialogue completion task, we prompt a fine-tuned language model to complete full dialogues from available dialogue posts of various topics, which are then postprocessed based on heuristics. Applying this approach, we construct AugESC, an augmented dataset for the ESC task, which largely extends the scale and topic coverage of the crowdsourced ESConv corpus. Through comprehensive human evaluation, we demonstrate that our approach is superior to strong baselines of dialogue augmentation and that AugESC has comparable dialogue quality to the crowdsourced corpus. We also conduct human interactive evaluation and prove that post-training on AugESC improves downstream dialogue models’ generalization ability to open-domain topics. These results suggest the utility of AugESC and highlight the potential of large language models in improving data-scarce dialogue generation tasks.
 C1  - Toronto, Canada
 C3  - Findings of the Association for Computational Linguistics: ACL 2023
 DA  - 2023///
@@ -33274,17 +32721,17 @@ ST  - AdvExpander
 UR  - https://ieeexplore.ieee.org/document/9622188
 Y2  - 2024/11/14/15:43:23
 L1  - https://ieeexplore.ieee.org/stampPDF/getPDF.jsp?tp=&arnumber=9622188&ref=
-KW  - Bibliographies
-KW  - Databases
-KW  - Patents
-KW  - Robustness
-KW  - Sorting
-KW  - Speech processing
 KW  - Standards
+KW  - Speech processing
+KW  - Robustness
 KW  - text classification
+KW  - Uniform resource locators
+KW  - Databases
+KW  - Bibliographies
+KW  - Patents
+KW  - Sorting
 KW  - text matching
 KW  - textual adversarial examples
-KW  - Uniform resource locators
 ER  - 
 
 TY  - JOUR
@@ -33728,12 +33175,12 @@ UR  - http://arxiv.org/abs/2311.18743
 Y2  - 2024/11/14/15:48:21
 L1  - https://arxiv.org/pdf/2311.18743
 KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Computation and Language
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computation and Language
 ER  - 
 
 TY  - JOUR
-TI  - Multi-horizon representations with hierarchical forward models for reinforcement learning
+TI  - Multi-Horizon Representations with Hierarchical Forward Models for Reinforcement Learning
 AU  - McInroe, Trevor
 AU  - Schäfer, Lukas
 AU  - Albrecht, Stefano V.
@@ -33757,8 +33204,8 @@ UR  - http://arxiv.org/abs/2404.14064
 Y2  - 2024/11/14/16:00:48
 L1  - http://arxiv.org/pdf/2404.14064v2
 L2  - https://arxiv.org/abs/2404.14064
-KW  - Computer Science - Computer Vision and Pattern Recognition
 KW  - Computer Science - Machine Learning
+KW  - Computer Science - Computer Vision and Pattern Recognition
 ER  - 
 
 TY  - GEN
@@ -33821,27 +33268,6 @@ L2  - https://arxiv.org/abs/2302.04944
 KW  - Computer Science - Artificial Intelligence
 KW  - Computer Science - Machine Learning
 KW  - Computer Science - Multiagent Systems
-ER  - 
-
-TY  - GEN
-TI  - Causal Explanations for Sequential Decision-Making in Multi-Agent Systems
-AU  - Gyevnar, Balint
-AU  - Wang, Cheng
-AU  - Lucas, Christopher G.
-AU  - Cohen, Shay B.
-AU  - Albrecht, Stefano V.
-AB  - We present CEMA: Causal Explanations in Multi-Agent systems; a framework for creating causal natural language explanations of an agent's decisions in dynamic sequential multi-agent systems to build more trustworthy autonomous agents. Unlike prior work that assumes a fixed causal structure, CEMA only requires a probabilistic model for forward-simulating the state of the system. Using such a model, CEMA simulates counterfactual worlds that identify the salient causes behind the agent's decisions. We evaluate CEMA on the task of motion planning for autonomous driving and test it in diverse simulated scenarios. We show that CEMA correctly and robustly identifies the causes behind the agent's decisions, even when a large number of other agents is present, and show via a user study that CEMA's explanations have a positive effect on participants' trust in autonomous vehicles and are rated as high as high-quality baseline explanations elicited from other participants. We release the collected explanations with annotations as the HEADD dataset.
-DA  - 2024/02/14/
-PY  - 2024
-DO  - 10.48550/arXiv.2302.10809
-DP  - arXiv.org
-PB  - arXiv
-UR  - http://arxiv.org/abs/2302.10809
-Y2  - 2024/11/14/16:00:57
-L1  - http://arxiv.org/pdf/2302.10809v4
-L2  - https://arxiv.org/abs/2302.10809
-KW  - Computer Science - Artificial Intelligence
-KW  - Computer Science - Robotics
 ER  - 
 
 TY  - GEN
@@ -34113,24 +33539,6 @@ KW  - Computer Science - Machine Learning
 ER  - 
 
 TY  - GEN
-TI  - Multi-Horizon Representations with Hierarchical Forward Models for Reinforcement Learning
-AU  - McInroe, Trevor
-AU  - Schäfer, Lukas
-AU  - Albrecht, Stefano V.
-AB  - Learning control from pixels is difficult for reinforcement learning (RL) agents because representation learning and policy learning are intertwined. Previous approaches remedy this issue with auxiliary representation learning tasks, but they either do not consider the temporal aspect of the problem or only consider single-step transitions, which may cause learning inefficiencies if important environmental changes take many steps to manifest. We propose Hierarchical $k$-Step Latent (HKSL), an auxiliary task that learns multiple representations via a hierarchy of forward models that learn to communicate and an ensemble of $n$-step critics that all operate at varying magnitudes of step skipping. We evaluate HKSL in a suite of 30 robotic control tasks with and without distractors and a task of our creation. We find that HKSL either converges to higher or optimal episodic returns more quickly than several alternative representation learning approaches. Furthermore, we find that HKSL's representations capture task-relevant details accurately across timescales (even in the presence of distractors) and that communication channels between hierarchy levels organize information based on both sides of the communication process, both of which improve sample efficiency.
-DA  - 2024/01/29/
-PY  - 2024
-DO  - 10.48550/arXiv.2206.11396
-DP  - arXiv.org
-PB  - arXiv
-UR  - http://arxiv.org/abs/2206.11396
-Y2  - 2024/11/14/16:04:46
-L1  - http://arxiv.org/pdf/2206.11396v2
-L2  - https://arxiv.org/abs/2206.11396
-KW  - Computer Science - Machine Learning
-ER  - 
-
-TY  - GEN
 TI  - Few-Shot Teamwork
 AU  - Fosong, Elliot
 AU  - Rahman, Arrasy
@@ -34166,8 +33574,157 @@ UR  - http://arxiv.org/abs/2007.09327
 Y2  - 2024/11/14/16:04:52
 L1  - http://arxiv.org/pdf/2007.09327v2
 L2  - https://arxiv.org/abs/2007.09327
-KW  - Computer Science - Cryptography and Security
 KW  - Computer Science - Machine Learning
 KW  - Computer Science - Multiagent Systems
+KW  - Computer Science - Cryptography and Security
+ER  - 
+
+TY  - CONF
+TI  - Interpretable Goal-based Prediction and Planning for Autonomous Driving
+AU  - Albrecht, Stefano V.
+AU  - Brewitt, Cillian
+AU  - Wilhelm, John
+AU  - Gyevnar, Balint
+AU  - Eiras, Francisco
+AU  - Dobre, Mihai
+AU  - Ramamoorthy, Subramanian
+AB  - We propose an integrated prediction and planning system for autonomous driving which uses rational inverse planning to recognise the goals of other vehicles. Goal recognition informs a Monte Carlo Tree Search (MCTS) algorithm to plan optimal maneuvers for the ego vehicle. Inverse planning and MCTS utilise a shared set of defined maneuvers and macro actions to construct plans which are explainable by means of rationality principles. Evaluation in simulations of urban driving scenarios demonstrate the system's ability to robustly recognise the goals of other vehicles, enabling our vehicle to exploit non-trivial opportunities to significantly reduce driving times. In each scenario, we extract intuitive explanations for the predictions which justify the system's decisions.
+C3  - IEEE International Conference on Robotics and Automation (ICRA)
+DA  - 2021/03/15/
+PY  - 2021
+UR  - https://ieeexplore.ieee.org/document/9560849
+Y2  - 2021/10/11/11:52:18
+L1  - https://arxiv.org/pdf/2002.02277.pdf
+L2  - https://arxiv.org/abs/2002.02277
+KW  - Computer Science - Robotics
+ER  - 
+
+TY  - CONF
+TI  - GRIT: Fast, Interpretable, and Verifiable Goal Recognition with Learned Decision Trees for Autonomous Driving
+AU  - Brewitt, Cillian
+AU  - Gyevnar, Balint
+AU  - Garcin, Samuel
+AU  - Albrecht, Stefano V.
+T2  - 2021 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)
+AB  - It is important for autonomous vehicles to have the ability to infer the goals of other vehicles (goal recognition), in order to safely interact with other vehicles and predict their future trajectories. This is a difficult problem, especially in urban environments with interactions between many vehicles. Goal recognition methods must be fast to run in real time and make accurate inferences. As autonomous driving is safety- critical, it is important to have methods which are human interpretable and for which safety can be formally verified. Existing goal recognition methods for autonomous vehicles fail to satisfy all four objectives of being fast, accurate, interpretable and verifiable. We propose Goal Recognition with Interpre table Trees (GRIT), a goal recognition system which achieves these objectives. GRIT makes use of decision trees trained on vehicle trajectory data. We evaluate GRIT on two datasets, showing that GRIT achieved fast inference speed and comparable accuracy to two deep learning baselines, a planning-based goal recognition method, and an ablation of GRIT. We show that the learned trees are human interpretable and demonstrate how properties of GRIT can be formally verified using a satisfiability modulo theories (SMT) solver.
+C3  - 2021 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)
+DA  - 2021/09//
+PY  - 2021
+DO  - 10.1109/IROS51168.2021.9636279
+DP  - IEEE Xplore
+SP  - 1023
+EP  - 1030
+ST  - GRIT
+L1  - https://ieeexplore.ieee.org/stampPDF/getPDF.jsp?tp=&arnumber=9636279&ref=aHR0cHM6Ly9pZWVleHBsb3JlLmllZWUub3JnL2Fic3RyYWN0L2RvY3VtZW50Lzk2MzYyNzk=
+L2  - https://ieeexplore.ieee.org/abstract/document/9636279
+KW  - Deep learning
+KW  - Knowledge engineering
+KW  - Safety
+KW  - Urban areas
+KW  - Trajectory
+KW  - Training
+KW  - Real-time systems
+ER  - 
+
+TY  - CHAP
+TI  - Bridging the Transparency Gap: What Can Explainable AI Learn from the AI Act?
+AU  - Gyevnar, Balint
+AU  - Ferguson, Nick
+AU  - Schafer, Burkhard
+T2  - ECAI 2023
+AB  - The European Union has proposed the Artificial Intelligence Act which introduces detailed requirements of transparency for AI systems. Many of these requirements can be addressed by the field of explainable AI (XAI), however, there is a fundamental difference between XAI and the Act regarding what transparency is. The Act views transparency as a means that supports wider values, such as accountability, human rights, and sustainable innovation. In contrast, XAI views transparency narrowly as an end in itself, focusing on explaining complex algorithmic properties without considering the socio-technical context. We call this difference the “transparency gap”. Failing to address the transparency gap, XAI risks leaving a range of transparency issues unaddressed. To begin to bridge this gap, we overview and clarify the terminology of how XAI and European regulation – the Act and the related General Data Protection Regulation (GDPR) – view basic definitions of transparency. By comparing the disparate views of XAI and regulation, we arrive at four axes where practical work could bridge the transparency gap: defining the scope of transparency, clarifying the legal status of XAI, addressing issues with conformity assessment, and building explainability for datasets.
+DA  - 2023///
+PY  - 2023
+DP  - ebooks.iospress.nl
+SP  - 964
+EP  - 971
+PB  - IOS Press
+ST  - Bridging the Transparency Gap
+UR  - https://ebooks.iospress.nl/doi/10.3233/FAIA230367
+Y2  - 2023/10/07/14:16:02
+L1  - https://ebooks.iospress.nl/pdf/doi/10.3233/FAIA230367
+ER  - 
+
+TY  - CONF
+TI  - A Human-Centric Method for Generating Causal Explanations in Natural Language for Autonomous Vehicle Motion Planning
+AU  - Gyevnar, Balint
+AU  - Tamborski, Massimiliano
+AU  - Wang, Cheng
+AU  - Lucas, Christopher G.
+AU  - Cohen, Shay B.
+AU  - Albrecht, Stefano V.
+T2  - International Joint Conference on Artificial Intelligence (IJCAI)
+AB  - Inscrutable AI systems are difficult to trust, especially if they operate in safety-critical settings like autonomous driving. Therefore, there is a need to build transparent and queryable systems to increase trust levels. We propose a transparent, human-centric explanation generation method for autonomous vehicle motion planning and prediction based on an existing white-box system called IGP2. Our method integrates Bayesian networks with context-free generative rules and can give causal natural language explanations for the high-level driving behaviour of autonomous vehicles. Preliminary testing on simulated scenarios shows that our method captures the causes behind the actions of autonomous vehicles and generates intelligible explanations with varying complexity.
+C1  - London
+C3  - Workshop on Artificial Intelligence for Autonomous Driving
+DA  - 2022///
+PY  - 2022
+DO  - 10.48550/arXiv.2206.08783
+DP  - arXiv.org
+UR  - http://arxiv.org/abs/2206.08783
+Y2  - 2022/12/12/15:03:45
+L1  - https://arxiv.org/pdf/2206.08783.pdf
+L2  - https://arxiv.org/abs/2206.08783
+KW  - Computer Science - Robotics
+ER  - 
+
+TY  - GEN
+TI  - Explainable AI for Safe and Trustworthy Autonomous Driving: A Systematic Review
+AU  - Kuznietsov, Anton
+AU  - Gyevnar, Balint
+AU  - Wang, Cheng
+AU  - Peters, Steven
+AU  - Albrecht, Stefano V.
+AB  - Artificial Intelligence (AI) shows promising applications for the perception and planning tasks in autonomous driving (AD) due to its superior performance compared to conventional methods. However, inscrutable AI systems exacerbate the existing challenge of safety assurance of AD. One way to mitigate this challenge is to utilize explainable AI (XAI) techniques. To this end, we present the first comprehensive systematic literature review of explainable methods for safe and trustworthy AD. We begin by analyzing the requirements for AI in the context of AD, focusing on three key aspects: data, model, and agency. We find that XAI is fundamental to meeting these requirements. Based on this, we explain the sources of explanations in AI and describe a taxonomy of XAI. We then identify five key contributions of XAI for safe and trustworthy AI in AD, which are interpretable design, interpretable surrogate models, interpretable monitoring, auxiliary explanations, and interpretable validation. Finally, we propose a modular framework called SafeX to integrate these contributions, enabling explanation delivery to users while simultaneously ensuring the safety of AI models.
+DA  - 2024/02/08/
+PY  - 2024
+DP  - arXiv.org
+PB  - arXiv
+ST  - Explainable AI for Safe and Trustworthy Autonomous Driving
+UR  - http://arxiv.org/abs/2402.10086
+Y2  - 2024/04/21/12:08:31
+L1  - https://arxiv.org/pdf/2402.10086.pdf
+L2  - https://arxiv.org/abs/2402.10086
+KW  - Computer Science - Artificial Intelligence
+KW  - Computer Science - Machine Learning
+KW  - Computer Science - Robotics
+KW  - Computer Science - Human-Computer Interaction
+KW  - Computer Science - Computer Vision and Pattern Recognition
+ER  - 
+
+TY  - GEN
+TI  - Objective Metrics for Human-Subjects Evaluation in Explainable Reinforcement Learning
+AU  - Gyevnar, Balint
+AU  - Towers, Mark
+AB  - Explanation is a fundamentally human process. Understanding the goal and audience of the explanation is vital, yet existing work on explainable reinforcement learning (XRL) routinely does not consult humans in their evaluations. Even when they do, they routinely resort to subjective metrics, such as confidence or understanding, that can only inform researchers of users' opinions, not their practical effectiveness for a given problem. This paper calls on researchers to use objective human metrics for explanation evaluations based on observable and actionable behaviour to build more reproducible, comparable, and epistemically grounded research. To this end, we curate, describe, and compare several objective evaluation methodologies for applying explanations to debugging agent behaviour and supporting human-agent teaming, illustrating our proposed methods using a novel grid-based environment. We discuss how subjective and objective metrics complement each other to provide holistic validation and how future work needs to utilise standardised benchmarks for testing to enable greater comparisons between research.
+DA  - 2025/01/31/
+PY  - 2025
+DO  - 10.48550/arXiv.2501.19256
+DP  - arXiv.org
+PB  - arXiv
+UR  - http://arxiv.org/abs/2501.19256
+Y2  - 2025/02/28/10:46:43
+L1  - http://arxiv.org/pdf/2501.19256v1
+L2  - https://arxiv.org/abs/2501.19256
+KW  - Computer Science - Artificial Intelligence
+KW  - Computer Science - Human-Computer Interaction
+KW  - Computer Science - Robotics
+ER  - 
+
+TY  - GEN
+TI  - AI Safety for Everyone
+AU  - Gyevnar, Balint
+AU  - Kasirzadeh, Atoosa
+AB  - Recent discussions and research in AI safety have increasingly emphasized the deep connection between AI safety and existential risk from advanced AI systems, suggesting that work on AI safety necessarily entails serious consideration of potential existential threats. However, this framing has three potential drawbacks: it may exclude researchers and practitioners who are committed to AI safety but approach the field from different angles; it could lead the public to mistakenly view AI safety as focused solely on existential scenarios rather than addressing a wide spectrum of safety challenges; and it risks creating resistance to safety measures among those who disagree with predictions of existential AI risks. Through a systematic literature review of primarily peer-reviewed research, we find a vast array of concrete safety work that addresses immediate and practical concerns with current AI systems. This includes crucial areas like adversarial robustness and interpretability, highlighting how AI safety research naturally extends existing technological and systems safety concerns and practices. Our findings suggest the need for an epistemically inclusive and pluralistic conception of AI safety that can accommodate the full range of safety considerations, motivations, and perspectives that currently shape the field.
+DA  - 2025/02/14/
+PY  - 2025
+DO  - 10.48550/arXiv.2502.09288
+DP  - arXiv.org
+PB  - arXiv
+UR  - http://arxiv.org/abs/2502.09288
+Y2  - 2025/02/28/10:46:31
+L1  - http://arxiv.org/pdf/2502.09288v2
+L2  - https://arxiv.org/abs/2502.09288
+KW  - Computer Science - Computers and Society
 ER  - 
 

@@ -1,0 +1,20 @@
+[project]
+name = "ai-safety-ethics"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "bertopic>=0.16.4",
+    "llvmlite>=0.44.0",
+    "nltk>=3.9.1",
+    "pip>=25.0.1",
+    "seaborn>=0.13.2",
+    "textacy>=0.13.0",
+    "wordcloud>=1.9.4",
+]
+
+[dependency-groups]
+dev = [
+    "jupyter>=1.1.1",
+]

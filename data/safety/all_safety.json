@@ -20189,7 +20189,7 @@
 		}
 	},
 	{
-		"id": "elhageToyModelsSuperposition2022a",
+		"id": "elhageToyModelsSuperposition2022",
 		"type": "article",
 		"abstract": "Neural networks often pack many unrelated concepts into a single neuron - a puzzling phenomenon known as 'polysemanticity' which makes interpretability much more challenging. This paper provides a toy model where polysemanticity can be fully understood, arising as a result of models storing additional sparse features in \"superposition.\" We demonstrate the existence of a phase change, a surprising connection to the geometry of uniform polytopes, and evidence of a link to adversarial examples. We also discuss potential implications for mechanistic interpretability.",
 		"DOI": "10.48550/arXiv.2209.10652",
@@ -64618,35 +64618,6 @@
 		}
 	},
 	{
-		"id": "QuantifyingLikenessSimple2024",
-		"type": "paper-conference",
-		"abstract": "This study proposes an approach aligned with the legal process to quantify copyright infringement, via stylistic similarity, in AI-generated artwork. In contrast to typical work in this field, and more in line with a realistic legal setting, our approach quantifies the similarity of a set of potentially-infringing “defendant” artworks to a set of copyrighted “plaintiff\" artworks. We frame this as an image classification task, using a fine-tuned ResNet trained on small, customized datasets relevant to each use case. Softmax-normalized probabilities from the model serve as similarity scores for potentially infringing “defendant” artworks, and saliency maps and features visualizations complement the score by highlighting key features and allowing for interpretability. This straightforward image classification approach can be accomplished in a quite simple, low-resource setting, making it accessible for real-world applications. We present a case study using Mickey Mouse as the plaintiff, performing thorough hyperparameter tuning and robustness analysis. Our experiments include optimizing batch size, weight decay, and learning rate, as well as exploring the impact of additional distractor classes. We employ data augmentation, cross-validation, and a linear decay learning rate scheduler to improve model performance, along with conducting scaling experiments with different types of distractor classes. The aims of this work are to illustrate the potential of the approach, and identify settings which generalize well, such that it is as \"plug and play\" as possible for users to apply with their own plaintiff sets of artworks.",
-		"event-title": "The Thirteenth International Conference on Learning Representations",
-		"language": "en",
-		"source": "openreview.net",
-		"title": "Quantifying Likeness: A Simple Machine Learning Approach to Identifying Copyright Infringement in (AI-Generated) Artwork",
-		"title-short": "Quantifying Likeness",
-		"URL": "https://openreview.net/forum?id=9zKm3TytBG",
-		"accessed": {
-			"date-parts": [
-				[
-					"2024",
-					11,
-					14
-				]
-			]
-		},
-		"issued": {
-			"date-parts": [
-				[
-					"2024",
-					10,
-					4
-				]
-			]
-		}
-	},
-	{
 		"id": "ghafouriEpistemicIntegrityLarge2024",
 		"type": "article",
 		"abstract": "Large language models are increasingly relied upon as sources of information, but their propensity for generating false or misleading statements with high confidence poses risks for users and society. In this paper, we confront the critical problem of epistemic miscalibration $\\unicode{x2013}$ where a model's linguistic assertiveness fails to reflect its true internal certainty. We introduce a new human-labeled dataset and a novel method for measuring the linguistic assertiveness of Large Language Models (LLMs) which cuts error rates by over 50% relative to previous benchmarks. Validated across multiple datasets, our method reveals a stark misalignment between how confidently models linguistically present information and their actual accuracy. Further human evaluations confirm the severity of this miscalibration. This evidence underscores the urgent risk of the overstated certainty LLMs hold which may mislead users on a massive scale. Our framework provides a crucial step forward in diagnosing this miscalibration, offering a path towards correcting it and more trustworthy AI across domains.",
@@ -67923,55 +67894,6 @@
 			{
 				"family": "Bajcsy",
 				"given": "Andrea"
-			},
-			{
-				"family": "Fisac",
-				"given": "Jaime F."
-			}
-		],
-		"accessed": {
-			"date-parts": [
-				[
-					"2024",
-					11,
-					14
-				]
-			]
-		},
-		"issued": {
-			"date-parts": [
-				[
-					"2023",
-					11,
-					1
-				]
-			]
-		}
-	},
-	{
-		"id": "huActiveUncertaintyReduction2023a",
-		"type": "article",
-		"abstract": "The ability to accurately predict others' behavior is central to the safety and efficiency of interactive robotics. Unfortunately, robots often lack access to key information on which these predictions may hinge, such as other agents' goals, attention, and willingness to cooperate. Dual control theory addresses this challenge by treating unknown parameters of a predictive model as stochastic hidden states and inferring their values at runtime using information gathered during system operation. While able to optimally and automatically trade off exploration and exploitation, dual control is computationally intractable for general interactive motion planning. In this paper, we present a novel algorithmic approach to enable active uncertainty reduction for interactive motion planning based on the implicit dual control paradigm. Our approach relies on sampling-based approximation of stochastic dynamic programming, leading to a model predictive control problem that can be readily solved by real-time gradient-based optimization methods. The resulting policy is shown to preserve the dual control effect for a broad class of predictive models with both continuous and categorical uncertainty. To ensure the safe operation of the interacting agents, we use a runtime safety filter (also referred to as a \"shielding\" scheme), which overrides the robot's dual control policy with a safety fallback strategy when a safety-critical event is imminent. We then augment the dual control framework with an improved variant of the recently proposed shielding-aware robust planning scheme, which proactively balances the nominal planning performance with the risk of high-cost emergency maneuvers triggered by low-probability agent behaviors. We demonstrate the efficacy of our approach with both simulated driving studies and hardware experiments using 1/10 scale autonomous vehicles.",
-		"DOI": "10.48550/arXiv.2302.00171",
-		"note": "arXiv:2302.00171",
-		"number": "arXiv:2302.00171",
-		"publisher": "arXiv",
-		"source": "arXiv.org",
-		"title": "Active Uncertainty Reduction for Safe and Efficient Interaction Planning: A Shielding-Aware Dual Control Approach",
-		"title-short": "Active Uncertainty Reduction for Safe and Efficient Interaction Planning",
-		"URL": "http://arxiv.org/abs/2302.00171",
-		"author": [
-			{
-				"family": "Hu",
-				"given": "Haimin"
-			},
-			{
-				"family": "Isele",
-				"given": "David"
-			},
-			{
-				"family": "Bae",
-				"given": "Sangjae"
 			},
 			{
 				"family": "Fisac",
@@ -73712,6 +73634,333 @@
 					"2024",
 					8,
 					1
+				]
+			]
+		}
+	},
+	{
+		"id": "albrechtInterpretableGoalbasedPrediction2021",
+		"type": "paper-conference",
+		"abstract": "We propose an integrated prediction and planning system for autonomous driving which uses rational inverse planning to recognise the goals of other vehicles. Goal recognition informs a Monte Carlo Tree Search (MCTS) algorithm to plan optimal maneuvers for the ego vehicle. Inverse planning and MCTS utilise a shared set of defined maneuvers and macro actions to construct plans which are explainable by means of rationality principles. Evaluation in simulations of urban driving scenarios demonstrate the system's ability to robustly recognise the goals of other vehicles, enabling our vehicle to exploit non-trivial opportunities to significantly reduce driving times. In each scenario, we extract intuitive explanations for the predictions which justify the system's decisions.",
+		"container-title": "IEEE International Conference on Robotics and Automation (ICRA)",
+		"license": "All rights reserved",
+		"title": "Interpretable Goal-based Prediction and Planning for Autonomous Driving",
+		"URL": "https://ieeexplore.ieee.org/document/9560849",
+		"author": [
+			{
+				"family": "Albrecht",
+				"given": "Stefano V."
+			},
+			{
+				"family": "Brewitt",
+				"given": "Cillian"
+			},
+			{
+				"family": "Wilhelm",
+				"given": "John"
+			},
+			{
+				"family": "Gyevnar",
+				"given": "Balint"
+			},
+			{
+				"family": "Eiras",
+				"given": "Francisco"
+			},
+			{
+				"family": "Dobre",
+				"given": "Mihai"
+			},
+			{
+				"family": "Ramamoorthy",
+				"given": "Subramanian"
+			}
+		],
+		"accessed": {
+			"date-parts": [
+				[
+					"2021",
+					10,
+					11
+				]
+			]
+		},
+		"issued": {
+			"date-parts": [
+				[
+					"2021",
+					3,
+					15
+				]
+			]
+		}
+	},
+	{
+		"id": "gyevnarHumanCentricMethodGenerating2022",
+		"type": "paper-conference",
+		"abstract": "Inscrutable AI systems are difficult to trust, especially if they operate in safety-critical settings like autonomous driving. Therefore, there is a need to build transparent and queryable systems to increase trust levels. We propose a transparent, human-centric explanation generation method for autonomous vehicle motion planning and prediction based on an existing white-box system called IGP2. Our method integrates Bayesian networks with context-free generative rules and can give causal natural language explanations for the high-level driving behaviour of autonomous vehicles. Preliminary testing on simulated scenarios shows that our method captures the causes behind the actions of autonomous vehicles and generates intelligible explanations with varying complexity.",
+		"container-title": "Workshop on Artificial Intelligence for Autonomous Driving",
+		"DOI": "10.48550/arXiv.2206.08783",
+		"event-place": "London",
+		"event-title": "International Joint Conference on Artificial Intelligence (IJCAI)",
+		"note": "arXiv:2206.08783 [cs]",
+		"publisher-place": "London",
+		"source": "arXiv.org",
+		"title": "A Human-Centric Method for Generating Causal Explanations in Natural Language for Autonomous Vehicle Motion Planning",
+		"URL": "http://arxiv.org/abs/2206.08783",
+		"author": [
+			{
+				"family": "Gyevnar",
+				"given": "Balint"
+			},
+			{
+				"family": "Tamborski",
+				"given": "Massimiliano"
+			},
+			{
+				"family": "Wang",
+				"given": "Cheng"
+			},
+			{
+				"family": "Lucas",
+				"given": "Christopher G."
+			},
+			{
+				"family": "Cohen",
+				"given": "Shay B."
+			},
+			{
+				"family": "Albrecht",
+				"given": "Stefano V."
+			}
+		],
+		"accessed": {
+			"date-parts": [
+				[
+					"2022",
+					12,
+					12
+				]
+			]
+		},
+		"issued": {
+			"date-parts": [
+				[
+					"2022"
+				]
+			]
+		}
+	},
+	{
+		"id": "brewittGRITFastInterpretable2021",
+		"type": "paper-conference",
+		"abstract": "It is important for autonomous vehicles to have the ability to infer the goals of other vehicles (goal recognition), in order to safely interact with other vehicles and predict their future trajectories. This is a difficult problem, especially in urban environments with interactions between many vehicles. Goal recognition methods must be fast to run in real time and make accurate inferences. As autonomous driving is safety- critical, it is important to have methods which are human interpretable and for which safety can be formally verified. Existing goal recognition methods for autonomous vehicles fail to satisfy all four objectives of being fast, accurate, interpretable and verifiable. We propose Goal Recognition with Interpre table Trees (GRIT), a goal recognition system which achieves these objectives. GRIT makes use of decision trees trained on vehicle trajectory data. We evaluate GRIT on two datasets, showing that GRIT achieved fast inference speed and comparable accuracy to two deep learning baselines, a planning-based goal recognition method, and an ablation of GRIT. We show that the learned trees are human interpretable and demonstrate how properties of GRIT can be formally verified using a satisfiability modulo theories (SMT) solver.",
+		"container-title": "2021 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)",
+		"DOI": "10.1109/IROS51168.2021.9636279",
+		"event-title": "2021 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)",
+		"note": "ISSN: 2153-0866",
+		"page": "1023-1030",
+		"source": "IEEE Xplore",
+		"title": "GRIT: Fast, Interpretable, and Verifiable Goal Recognition with Learned Decision Trees for Autonomous Driving",
+		"title-short": "GRIT",
+		"author": [
+			{
+				"family": "Brewitt",
+				"given": "Cillian"
+			},
+			{
+				"family": "Gyevnar",
+				"given": "Balint"
+			},
+			{
+				"family": "Garcin",
+				"given": "Samuel"
+			},
+			{
+				"family": "Albrecht",
+				"given": "Stefano V."
+			}
+		],
+		"issued": {
+			"date-parts": [
+				[
+					"2021",
+					9
+				]
+			]
+		}
+	},
+	{
+		"id": "gyevnarBridgingTransparencyGap2023",
+		"type": "chapter",
+		"container-title": "ECAI 2023",
+		"note": "DOI: 10.3233/FAIA230367",
+		"page": "964-971",
+		"publisher": "IOS Press",
+		"source": "ebooks.iospress.nl",
+		"title": "Bridging the Transparency Gap: What Can Explainable AI Learn from the AI Act?",
+		"title-short": "Bridging the Transparency Gap",
+		"URL": "https://ebooks.iospress.nl/doi/10.3233/FAIA230367",
+		"abstract": "The European Union has proposed the Artificial Intelligence Act which introduces detailed requirements of transparency for AI systems. Many of these requirements can be addressed by the field of explainable AI (XAI), however, there is a fundamental difference between XAI and the Act regarding what transparency is. The Act views transparency as a means that supports wider values, such as accountability, human rights, and sustainable innovation. In contrast, XAI views transparency narrowly as an end in itself, focusing on explaining complex algorithmic properties without considering the socio-technical context. We call this difference the “transparency gap”. Failing to address the transparency gap, XAI risks leaving a range of transparency issues unaddressed. To begin to bridge this gap, we overview and clarify the terminology of how XAI and European regulation – the Act and the related General Data Protection Regulation (GDPR) – view basic definitions of transparency. By comparing the disparate views of XAI and regulation, we arrive at four axes where practical work could bridge the transparency gap: defining the scope of transparency, clarifying the legal status of XAI, addressing issues with conformity assessment, and building explainability for datasets.",
+		"author": [
+			{
+				"family": "Gyevnar",
+				"given": "Balint"
+			},
+			{
+				"family": "Ferguson",
+				"given": "Nick"
+			},
+			{
+				"family": "Schafer",
+				"given": "Burkhard"
+			}
+		],
+		"accessed": {
+			"date-parts": [
+				[
+					"2023",
+					10,
+					7
+				]
+			]
+		},
+		"issued": {
+			"date-parts": [
+				[
+					"2023"
+				]
+			]
+		}
+	},
+	{
+		"id": "kuznietsovExplainableAISafe2024",
+		"type": "article",
+		"abstract": "Artificial Intelligence (AI) shows promising applications for the perception and planning tasks in autonomous driving (AD) due to its superior performance compared to conventional methods. However, inscrutable AI systems exacerbate the existing challenge of safety assurance of AD. One way to mitigate this challenge is to utilize explainable AI (XAI) techniques. To this end, we present the first comprehensive systematic literature review of explainable methods for safe and trustworthy AD. We begin by analyzing the requirements for AI in the context of AD, focusing on three key aspects: data, model, and agency. We find that XAI is fundamental to meeting these requirements. Based on this, we explain the sources of explanations in AI and describe a taxonomy of XAI. We then identify five key contributions of XAI for safe and trustworthy AI in AD, which are interpretable design, interpretable surrogate models, interpretable monitoring, auxiliary explanations, and interpretable validation. Finally, we propose a modular framework called SafeX to integrate these contributions, enabling explanation delivery to users while simultaneously ensuring the safety of AI models.",
+		"note": "arXiv:2402.10086 [cs]",
+		"number": "arXiv:2402.10086",
+		"publisher": "arXiv",
+		"source": "arXiv.org",
+		"title": "Explainable AI for Safe and Trustworthy Autonomous Driving: A Systematic Review",
+		"title-short": "Explainable AI for Safe and Trustworthy Autonomous Driving",
+		"URL": "http://arxiv.org/abs/2402.10086",
+		"author": [
+			{
+				"family": "Kuznietsov",
+				"given": "Anton"
+			},
+			{
+				"family": "Gyevnar",
+				"given": "Balint"
+			},
+			{
+				"family": "Wang",
+				"given": "Cheng"
+			},
+			{
+				"family": "Peters",
+				"given": "Steven"
+			},
+			{
+				"family": "Albrecht",
+				"given": "Stefano V."
+			}
+		],
+		"accessed": {
+			"date-parts": [
+				[
+					"2024",
+					4,
+					21
+				]
+			]
+		},
+		"issued": {
+			"date-parts": [
+				[
+					"2024",
+					2,
+					8
+				]
+			]
+		}
+	},
+	{
+		"id": "gyevnarObjectiveMetricsHumanSubjects2025",
+		"type": "article",
+		"abstract": "Explanation is a fundamentally human process. Understanding the goal and audience of the explanation is vital, yet existing work on explainable reinforcement learning (XRL) routinely does not consult humans in their evaluations. Even when they do, they routinely resort to subjective metrics, such as confidence or understanding, that can only inform researchers of users' opinions, not their practical effectiveness for a given problem. This paper calls on researchers to use objective human metrics for explanation evaluations based on observable and actionable behaviour to build more reproducible, comparable, and epistemically grounded research. To this end, we curate, describe, and compare several objective evaluation methodologies for applying explanations to debugging agent behaviour and supporting human-agent teaming, illustrating our proposed methods using a novel grid-based environment. We discuss how subjective and objective metrics complement each other to provide holistic validation and how future work needs to utilise standardised benchmarks for testing to enable greater comparisons between research.",
+		"DOI": "10.48550/arXiv.2501.19256",
+		"note": "arXiv:2501.19256 [cs]",
+		"number": "arXiv:2501.19256",
+		"publisher": "arXiv",
+		"source": "arXiv.org",
+		"title": "Objective Metrics for Human-Subjects Evaluation in Explainable Reinforcement Learning",
+		"URL": "http://arxiv.org/abs/2501.19256",
+		"author": [
+			{
+				"family": "Gyevnar",
+				"given": "Balint"
+			},
+			{
+				"family": "Towers",
+				"given": "Mark"
+			}
+		],
+		"accessed": {
+			"date-parts": [
+				[
+					"2025",
+					2,
+					28
+				]
+			]
+		},
+		"issued": {
+			"date-parts": [
+				[
+					"2025",
+					1,
+					31
+				]
+			]
+		}
+	},
+	{
+		"id": "gyevnarAISafetyEveryone2025",
+		"type": "article",
+		"abstract": "Recent discussions and research in AI safety have increasingly emphasized the deep connection between AI safety and existential risk from advanced AI systems, suggesting that work on AI safety necessarily entails serious consideration of potential existential threats. However, this framing has three potential drawbacks: it may exclude researchers and practitioners who are committed to AI safety but approach the field from different angles; it could lead the public to mistakenly view AI safety as focused solely on existential scenarios rather than addressing a wide spectrum of safety challenges; and it risks creating resistance to safety measures among those who disagree with predictions of existential AI risks. Through a systematic literature review of primarily peer-reviewed research, we find a vast array of concrete safety work that addresses immediate and practical concerns with current AI systems. This includes crucial areas like adversarial robustness and interpretability, highlighting how AI safety research naturally extends existing technological and systems safety concerns and practices. Our findings suggest the need for an epistemically inclusive and pluralistic conception of AI safety that can accommodate the full range of safety considerations, motivations, and perspectives that currently shape the field.",
+		"DOI": "10.48550/arXiv.2502.09288",
+		"note": "arXiv:2502.09288 [cs]",
+		"number": "arXiv:2502.09288",
+		"publisher": "arXiv",
+		"source": "arXiv.org",
+		"title": "AI Safety for Everyone",
+		"URL": "http://arxiv.org/abs/2502.09288",
+		"author": [
+			{
+				"family": "Gyevnar",
+				"given": "Balint"
+			},
+			{
+				"family": "Kasirzadeh",
+				"given": "Atoosa"
+			}
+		],
+		"accessed": {
+			"date-parts": [
+				[
+					"2025",
+					2,
+					28
+				]
+			]
+		},
+		"issued": {
+			"date-parts": [
+				[
+					"2025",
+					2,
+					14
 				]
 			]
 		}
