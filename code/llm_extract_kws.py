@@ -56,7 +56,7 @@ def process(
     logger.info("Starting the paper processing script.")
     logger.info(f"Domain: {domain}, Number of papers: {n_papers}, Try count: {try_count}")
 
-    # Setup API client 
+    # Setup API client
     client = OpenAI(base_url="http://localhost:8000/v1", api_key="")
     models = client.models.list()
     model_ids = [model.id for model in models.data]

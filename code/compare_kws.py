@@ -1,13 +1,14 @@
 import csv
-import re
-import pandas as pd
-from tqdm import tqdm
-import typer
 import enum
-from typing import List
+import pickle
+import re
+from pathlib import Path
 
-from nltk.stem.porter import PorterStemmer
+import pandas as pd
+import typer
 from nltk.corpus import stopwords
+from nltk.stem.porter import PorterStemmer
+from tqdm import tqdm
 
 app = typer.Typer()
 
@@ -38,7 +39,7 @@ def preprocess(
         help="The type of preprocessing to perform.",
     ),
     retrieval_category: RetrievalCategory = typer.Option(
-        RetrievalCategory.Both,
+        "both",
         "--retrieval-cat",
         "-r",
         help="The retrieval category to filter by.",
@@ -50,6 +51,8 @@ def preprocess(
         "output/", "--output-path", "-o", help="Path to the output data directory."
     ),
 ):
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+
     """Process the data corpus for the given application type."""
     if output == PreprocessType.VOSViewer:
         df = pd.read_csv(input_file, index_col=0)
@@ -67,7 +70,7 @@ def preprocess(
 
         # Write binary score of which category each paper belongs to.
         if retrieval_category == RetrievalCategory.Both:
-            score = df["Retrieval"] == "Safety" # 1: Safety, 0: Ethics
+            score = df["Retrieval"] == "Safety"  # 1: Safety, 0: Ethics
             score.astype(int).to_csv(
                 output_dir + "scores.txt",
                 index=False,
@@ -80,7 +83,7 @@ def preprocess(
         # Load JSON input into dataframe. Expecting a list/dict with a 'keywords' field per record
         # Try to load as JSON file first
         df = pd.read_json(input_file, orient="index")
-        df = pd.read_csv('data/papers.csv', index_col=0).join(df, how='inner')
+        df = pd.read_csv("data/papers.csv", index_col=0).join(df, how="inner")
 
         # Expect a column named 'keywords' (case-insensitive fallback)
         keywords_col = None
@@ -96,13 +99,14 @@ def preprocess(
 
         # Initialize stemmer
         stemmer = PorterStemmer()
+
         def stem_token(t: str) -> str:
             return stemmer.stem(t)
 
-        def clean_keyword_phrase(phrases: list) -> List[str]:
+        def clean_keyword_phrase(phrases: list) -> list[str]:
             if not isinstance(phrases, list):
                 return []
-            tokens_out: List[str] = []
+            tokens_out: list[str] = []
             for phrase in phrases:
                 # remove text in parentheses
                 phrase = re.sub(r"\([^)]*\)", "", phrase)
@@ -120,45 +124,65 @@ def preprocess(
         df[keywords_col] = df[keywords_col].apply(clean_keyword_phrase)
 
         # Flatten and write to output file
-        df = df.loc[~df.index.duplicated(keep='first'), :]
-        df[[keywords_col, 'Retrieval']].dropna(how='all', axis=1).to_json(
-            output_dir + "keywords.json",
-            orient='index'
+        df = df.loc[~df.index.duplicated(keep="first"), :]
+        df[[keywords_col, "Retrieval"]].dropna(how="all", axis=1).to_json(
+            output_dir + "keywords.json", orient="index"
         )
 
 
 @app.command()
 def compare(
     input_file: str = typer.Option(
-        "output/keywords.json", "--input-path", "-i", help="Path to the input keywords file."
+        "output/keywords.json",
+        "--input-path",
+        "-i",
+        help="Path to the input keywords file.",
     ),
     min_common: int = typer.Option(
         2, "--min-common", "-m", help="Minimum number of common keywords to report."
-    )
+    ),
+    output_dir: str = typer.Option(
+        "output/", "--output-path", "-o", help="Directory of outputs."
+    ),
 ):
     df = pd.read_json(input_file, orient="index")
-    papers = pd.read_csv('data/papers.csv', index_col=0)
+    papers = pd.read_csv("data/papers.csv", index_col=0)
 
-    ethics = df[df['Retrieval'] == 'Ethics']
-    safety = df[df['Retrieval'] == 'Safety']
-    shared_keywords = {}
-    for idx, erow in tqdm(ethics.iterrows(), total=ethics.shape[0]):
-        for idx2, srow in safety.iterrows():
-            common = set(erow['keywords']).intersection(set(srow['keywords']))
-            if common and len(common) >= min_common:
-                shared_keywords[(idx, idx2)] = (common, len(common))
+    ethics = df[df["Retrieval"] == "Ethics"]
+    safety = df[df["Retrieval"] == "Safety"]
+    if (Path(output_dir) / "shared_keywords.pkl").exists():
+        shared_keywords = pickle.load(
+            (Path(output_dir) / "shared_keywords.pkl").open("rb")
+        )
+    else:
+        shared_keywords = {}
+        for idx, erow in tqdm(ethics.iterrows(), total=ethics.shape[0]):
+            for idx2, srow in safety.iterrows():
+                common = set(erow["keywords"]).intersection(set(srow["keywords"]))
+                if common:
+                    shared_keywords[(idx, idx2)] = (common, len(common))
+        pickle.dump(
+            shared_keywords,
+            (Path(output_dir) / "shared_keywords.pkl").open("wb"),
+        )
 
     # Prepare rows for output
     rows = []
-    for (idx, idx2), (keywords, count) in sorted(shared_keywords.items(), key=lambda x: x[1], reverse=True):
-        rows.append({
-            'ethics_id': idx,
-            'safety_id': idx2,
-            'ethics_title': papers.loc[idx, 'Title'],
-            'safety_title': papers.loc[idx2, 'Title'],
-            'shared_keywords': ", ".join(sorted(keywords)),
-            'count': count,
-        })
+    for (idx, idx2), (keywords, count) in sorted(
+        filter(lambda x: x[1][1] >= min_common, shared_keywords.items()),
+        key=lambda x: x[1],
+        reverse=True,
+    ):
+        rows.append(
+            {
+                "ethics_id": idx,
+                "safety_id": idx2,
+                "ethics_title": papers.loc[idx, "Title"],
+                "safety_title": papers.loc[idx2, "Title"],
+                "shared_keywords": ", ".join(sorted(keywords)),
+                "count": count,
+            }
+        )
 
     from rich.table import Table
     from rich.console import Console
@@ -176,15 +200,16 @@ def compare(
     for i, r in enumerate(rows, start=1):
         table.add_row(
             str(i),
-            str(r['ethics_id']),
-            str(r['safety_id']),
-            r['ethics_title'],
-            r['safety_title'],
-            r['shared_keywords'],
-            str(r['count']),
+            str(r["ethics_id"]),
+            str(r["safety_id"]),
+            r["ethics_title"],
+            r["safety_title"],
+            r["shared_keywords"],
+            str(r["count"]),
         )
 
     console.print(table)
+
 
 if __name__ == "__main__":
     app()

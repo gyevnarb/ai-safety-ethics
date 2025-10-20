@@ -5,11 +5,22 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "bertopic>=0.17.3",
     "nltk>=3.9.2",
     "openai>=2.3.0",
     "pandas>=2.3.2",
+    "pip>=25.2",
+    "seaborn>=0.13.2",
+    "spacy>=3.8.7",
     "typer>=0.19.2",
 ]
 
 [project.scripts]
 process = "process:cli"
+
+[tool.ruff]
+select = ["ALL"]
+
+ignore = [
+    "B008", "N806", "N803", "FBT"
+]
