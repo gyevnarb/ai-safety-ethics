@@ -11,7 +11,9 @@ import pandas as pd
 import seaborn as sns
 import typer
 import umap
+from bertopic import BERTopic
 from hdbscan import HDBSCAN
+from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
 app = typer.Typer()
@@ -76,12 +78,9 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def model_topic(
-    df: pd.DataFrame, min_cluster_size: int = 10, plot: bool = True
+    df: pd.DataFrame, min_cluster_size: int = 10, plot: bool = True,
 ) -> None:
     """Perform topic modeling using BERTopic and visualize results."""
-    from bertopic import BERTopic
-    from sentence_transformers import SentenceTransformer
-
     # Initialize embedding model
     embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
@@ -143,106 +142,116 @@ def model_topic(
     except Exception as e:
         typer.echo(f"Visualization failed (reason): {e}")
 
-    # UMAP projection of embeddings and corpus scatter
     if plot:
-        reducer = umap.UMAP(
-            n_neighbors=15,
-            min_dist=0.1,
-            metric="cosine",
-            random_state=RANDOM_SEED,
-        )
-        umap_emb = reducer.fit_transform(embeddings)
-        df["umap_x"] = umap_emb[:, 0]
-        df["umap_y"] = umap_emb[:, 1]
+        plot_topic_analysis(df, topic_model, embeddings, embedding_model)
 
-        plt.figure(figsize=(11, 7))
 
-        # Separate outlier and non-outlier documents
-        df_main = df[df["topic"] != -1]
-        df_outliers = df[df["topic"] == -1]
+def plot_topic_analysis(
+    df: pd.DataFrame,
+    topic_model: BERTopic,
+    embeddings: np.ndarray,
+    embedding_model: SentenceTransformer,
+) -> None:
+    """Plot UMAP projections and temporal semantic drift analysis."""
+    # UMAP projection of embeddings and corpus scatter
+    reducer = umap.UMAP(
+        n_neighbors=15,
+        min_dist=0.1,
+        metric="cosine",
+        random_state=RANDOM_SEED,
+    )
+    umap_emb = reducer.fit_transform(embeddings)
+    df["umap_x"] = umap_emb[:, 0]
+    df["umap_y"] = umap_emb[:, 1]
 
-        # Plot non-outlier documents (colored by topic, styled by corpus)
-        sns.scatterplot(
-            data=df_main,
-            x="umap_x",
-            y="umap_y",
-            hue="topic",
-            style="corpus",
-            palette="tab20",
-            s=25,
-            alpha=0.7,
-            legend=False,
-        )
+    plt.figure(figsize=(11, 7))
 
-        # Plot outliers with very low opacity (gray, faint)
-        plt.scatter(
-            df_outliers["umap_x"],
-            df_outliers["umap_y"],
-            color="gray",
-            alpha=0.1,
-            s=10,
-            label="Outliers (-1)",
-        )
+    # Separate outlier and non-outlier documents
+    df_main = df[df["topic"] != -1]
+    df_outliers = df[df["topic"] == -1]
 
-        # Compute topic centroids in UMAP space
-        topic_centroids = df.groupby("topic")[["umap_x", "umap_y"]].mean().reset_index()
+    # Plot non-outlier documents (colored by topic, styled by corpus)
+    sns.scatterplot(
+        data=df_main,
+        x="umap_x",
+        y="umap_y",
+        hue="topic",
+        style="corpus",
+        palette="tab20",
+        s=25,
+        alpha=0.7,
+        legend=False,
+    )
 
-        # Annotate each topic with its label
-        for _, row in topic_centroids.iterrows():
-            topic_label = topic_model.get_topic(row["topic"])
-            if topic_label:
-                label_text = "_".join(label[0] for label in topic_label[:3])
-                plt.text(
-                    row["umap_x"],
-                    row["umap_y"],
-                    label_text,
-                    fontsize=9,
-                    fontweight="bold",
-                    color="black",
-                    alpha=0.8,
-                    ha="center",
-                )
+    # Plot outliers with very low opacity (gray, faint)
+    plt.scatter(
+        df_outliers["umap_x"],
+        df_outliers["umap_y"],
+        color="gray",
+        alpha=0.1,
+        s=10,
+        label="Outliers (-1)",
+    )
 
-        plt.title("UMAP projection: documents by topic and corpus (with topic labels)")
-        plt.xlabel("UMAP-1")
-        plt.ylabel("UMAP-2")
+    # Compute topic centroids in UMAP space
+    topic_centroids = df.groupby("topic")[["umap_x", "umap_y"]].mean().reset_index()
+
+    # Annotate each topic with its label
+    for _, row in topic_centroids.iterrows():
+        topic_label = topic_model.get_topic(row["topic"])
+        if topic_label:
+            label_text = "_".join(label[0] for label in topic_label[:3])
+            plt.text(
+                row["umap_x"],
+                row["umap_y"],
+                label_text,
+                fontsize=9,
+                fontweight="bold",
+                color="black",
+                alpha=0.8,
+                ha="center",
+            )
+
+    plt.title("UMAP projection: documents by topic and corpus (with topic labels)")
+    plt.xlabel("UMAP-1")
+    plt.ylabel("UMAP-2")
+    plt.show()
+
+    # Temporal semantic drift: average embedding by year &
+    # cosine similarity between corpora per year
+    if "year" in df.columns:
+        years = sorted(df["year"].dropna().unique())
+        year_sims = []
+        for y in years:
+            sub = df[df["year"] == y]
+            if (
+                len(sub[sub.corpus == "Ethics"]) < 2
+                or len(sub[sub.corpus == "Safety"]) < 2
+            ):
+                year_sims.append(np.nan)
+                continue
+            e_vec = np.mean(
+                embedding_model.encode(
+                    sub[sub.corpus == "Ethics"]["clean_text"].tolist(),
+                ),
+                axis=0,
+            )
+            s_vec = np.mean(
+                embedding_model.encode(
+                    sub[sub.corpus == "Safety"]["clean_text"].tolist(),
+                ),
+                axis=0,
+            )
+            sim = cosine_similarity([e_vec], [s_vec])[0][0]
+            year_sims.append(sim)
+        plt.figure(figsize=(10, 4))
+        plt.plot(years, year_sims, marker="o")
+        plt.xlabel("Year")
+        plt.ylabel("Cosine similarity (Ethics vs Safety)")
+        plt.title("Temporal semantic convergence")
         plt.show()
-
-        # Temporal semantic drift: average embedding by year &
-        # cosine similarity between corpora per year
-        if "year" in df.columns:
-            years = sorted(df["year"].dropna().unique())
-            year_sims = []
-            for y in years:
-                sub = df[df["year"] == y]
-                if (
-                    len(sub[sub.corpus == "Ethics"]) < 2
-                    or len(sub[sub.corpus == "Safety"]) < 2
-                ):
-                    year_sims.append(np.nan)
-                    continue
-                e_vec = np.mean(
-                    embedding_model.encode(
-                        sub[sub.corpus == "Ethics"]["clean_text"].tolist(),
-                    ),
-                    axis=0,
-                )
-                s_vec = np.mean(
-                    embedding_model.encode(
-                        sub[sub.corpus == "Safety"]["clean_text"].tolist(),
-                    ),
-                    axis=0,
-                )
-                sim = cosine_similarity([e_vec], [s_vec])[0][0]
-                year_sims.append(sim)
-            plt.figure(figsize=(10, 4))
-            plt.plot(years, year_sims, marker="o")
-            plt.xlabel("Year")
-            plt.ylabel("Cosine similarity (Ethics vs Safety)")
-            plt.title("Temporal semantic convergence")
-            plt.show()
-        else:
-            typer.echo("No year column found; skipping temporal drift analysis")
+    else:
+        typer.echo("No year column found; skipping temporal drift analysis")
 
     # Corpus-level centroid similarity
     ethics_vec = np.mean(
