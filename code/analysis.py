@@ -13,12 +13,43 @@ import typer
 import umap
 from bertopic import BERTopic
 from hdbscan import HDBSCAN
+from networkx.drawing.nx_pydot import graphviz_layout
 from sentence_transformers import SentenceTransformer
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 app = typer.Typer()
 
 RANDOM_SEED = 42
+CUSTOM_STOPWORDS = {
+    "et",
+    "al",
+    "using",
+    "however",
+    "also",
+    "one",
+    "two",
+    "new",
+    "based",
+    "within",
+    "may",
+    "many",
+    "different",
+    "used",
+    "approach",
+    "result",
+    "study",
+    "paper",
+    "show",
+    "propose",
+    "system",
+    "model",
+    "method",
+    "post",
+    "pre",
+    "ai",
+    "ieee",
+}
 
 
 def read_data(file_path: Path) -> pd.DataFrame:
@@ -47,12 +78,13 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
     nltk.download("stopwords")
 
     nlp = spacy.load("en_core_web_sm", disable=["parser", "ner"])
-    stop_words = set(nltk.corpus.stopwords.words("english"))
+    stop_words = set(nltk.corpus.stopwords.words("english")).union(CUSTOM_STOPWORDS)
 
     def preprocess(text: str) -> str:
         if pd.isna(text):
             return ""
-        text = re.sub(r"http\S+|www\S+|doi\.org\S+", "", str(text))
+        text = re.sub(r"http\S+|www\S+|doi\.org\S+", "", str(text))  # remove URLs
+        text = re.sub(r"©.*", "", text, flags=re.IGNORECASE)  # remove copyright
         text = text.lower()
 
         doc = nlp(text)
@@ -78,8 +110,10 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def model_topic(
-    df: pd.DataFrame, min_cluster_size: int = 10, plot: bool = True,
-) -> None:
+    df: pd.DataFrame,
+    min_cluster_size: int = 10,
+    plot: bool = True,
+) -> BERTopic:
     """Perform topic modeling using BERTopic and visualize results."""
     # Initialize embedding model
     embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
@@ -144,6 +178,70 @@ def model_topic(
 
     if plot:
         plot_topic_analysis(df, topic_model, embeddings, embedding_model)
+
+    return topic_model
+
+
+def analyze_network(
+    df: pd.DataFrame,
+    plot: bool = True,
+    topic_model: BERTopic = None,
+) -> None:
+    """Analyze term co-occurrence networks and visualize."""
+
+    def build_cooccurrence_graph(
+        series: pd.Series,
+        top_n: int | None = None,
+    ) -> nx.Graph:
+        vectorizer = TfidfVectorizer(sublinear_tf=True)
+        X = vectorizer.fit_transform(series)
+        tfidf_scores = X.max(0).toarray().ravel()  # Can also use max()
+        words = vectorizer.get_feature_names_out()
+
+        df = pd.DataFrame({"word": words, "tfidf": tfidf_scores})
+        if top_n is not None:
+            vocab = (
+                df.sort_values(by="tfidf", ascending=False).head(top_n)["word"].tolist()
+            )
+        else:
+            vocab = df["word"].tolist()
+        cooc = defaultdict(int)
+        for text in series:
+            tokens = [t for t in text.split() if t in vocab]
+            for a, b in combinations(set(tokens), 2):
+                cooc[tuple(sorted((a, b)))] += 1
+        G = nx.Graph()
+        for (a, b), w in cooc.items():
+            G.add_edge(a, b, weight=w)
+        return G
+
+    G_eth = build_cooccurrence_graph(
+        df[df.corpus == "Ethics"]["clean_text"], top_n=1000,
+    )
+    G_saf = build_cooccurrence_graph(
+        df[df.corpus == "Safety"]["clean_text"], top_n=1000,
+    )
+
+    typer.echo(
+        f"Ethics graph nodes: {G_eth.number_of_nodes()} edges: {G_eth.number_of_edges()}"
+    )
+    typer.echo(
+        f"Safety graph nodes: {G_saf.number_of_nodes()} edges: {G_saf.number_of_edges()}"
+    )
+
+    if plot:
+        plot_top_subgraph(
+            G_eth,
+            top_k=50,
+            title="Ethics co-word subgraph (top tf-idf nodes)",
+            topic_model=topic_model,
+        )
+        plot_top_subgraph(
+            G_saf,
+            top_k=50,
+            title="Safety co-word subgraph (top tf-idf nodes)",
+            topic_model=topic_model,
+        )
 
 
 def plot_topic_analysis(
@@ -266,59 +364,78 @@ def plot_topic_analysis(
     typer.echo(f"Corpus-level cosine similarity: {corp_sim}")
 
 
-def analyze_network(df: pd.DataFrame, plot: bool = True) -> None:
-    """Analyze term co-occurrence networks and visualize."""
+def plot_top_subgraph(
+    G: nx.Graph,
+    top_k: int = 30,
+    title: str = "Co-word subgraph",
+    topic_model: BERTopic = None,
+) -> None:
+    """Visualize a subgraph of the co-word network (top-degree nodes)."""
+    deg = dict(G.degree(weight="weight"))
+    top_nodes = sorted(deg.items(), key=lambda x: x[1], reverse=True)[:top_k]
+    nodes = [n for n, _ in top_nodes]
+    H = G.subgraph(nodes)
 
-    def build_cooccurrence_graph(series: pd.Series, top_n: int = 100) -> nx.Graph:
-        words = " ".join(series).split()
-        freq = Counter(words).most_common(top_n)
-        vocab = {w for w, _ in freq}
-        cooc = defaultdict(int)
-        for text in series:
-            tokens = [t for t in text.split() if t in vocab]
-            for a, b in combinations(set(tokens), 2):
-                cooc[tuple(sorted((a, b)))] += 1
-        G = nx.Graph()
-        for (a, b), w in cooc.items():
-            G.add_edge(a, b, weight=w)
-        return G
+    # --- Map words to topics if topic model provided ---
+    if topic_model is not None:
+        topic_words = topic_model.get_topics()
+        word_to_topic = {}
+        for topic_id, words in topic_words.items():
+            for w, _ in words:
+                word_to_topic[w] = topic_id
 
-    G_eth = build_cooccurrence_graph(df[df.corpus == "Ethics"]["clean_text"], top_n=120)
-    G_saf = build_cooccurrence_graph(df[df.corpus == "Safety"]["clean_text"], top_n=120)
+        topics = [
+            word_to_topic.get(n, -1) for n in H.nodes()
+        ]  # -1 if word not in any topic
+        unique_topics = sorted({t for t in topics if t != -1})
+        color_map = plt.get_cmap("tab10", len(unique_topics))
+        node_colors = [
+            color_map(unique_topics.index(t))
+            if t in unique_topics
+            else (0.8, 0.8, 0.8, 0.5)
+            for t in topics
+        ]
+    else:
+        node_colors = "lightblue"
 
-    typer.echo(
-        f"Ethics graph nodes: {G_eth.number_of_nodes()} edges: {G_eth.number_of_edges()}"
+    # --- Plot ---
+    plt.figure(figsize=(10, 8))
+    pos = graphviz_layout(H, prog="dot")
+    nx.draw_networkx_nodes(
+        H,
+        pos,
+        node_size=[deg[n] for n in H.nodes()],
+        node_color=node_colors,
     )
-    typer.echo(
-        f"Safety graph nodes: {G_saf.number_of_nodes()} edges: {G_saf.number_of_edges()}"
+    weights = np.array([H[u][v]["weight"] for u, v in H.edges()])
+    nx.draw_networkx_edges(
+        H,
+        pos,
+        width=np.power(weights / weights.max(), 1.2),
     )
+    nx.draw_networkx_labels(H, pos, font_size=11, font_weight="bold")
+    plt.title(title)
+    plt.axis("off")
 
-    # Visualize a subgraph of the co-word network (top-degree nodes)
-    def plot_top_subgraph(
-        G: nx.Graph,
-        top_k: int = 30,
-        title: str = "Co-word subgraph",
-    ) -> None:
-        deg = dict(G.degree(weight="weight"))
-        top_nodes = sorted(deg.items(), key=lambda x: x[1], reverse=True)[:top_k]
-        nodes = [n for n, _ in top_nodes]
-        H = G.subgraph(nodes)
-        plt.figure(figsize=(10, 8))
-        pos = nx.spring_layout(H, k=0.5, seed=42)
-        nx.draw_networkx_nodes(H, pos, node_size=[deg[n] / 20 for n in H.nodes()])
-        nx.draw_networkx_edges(H, pos, alpha=0.4)
-        nx.draw_networkx_labels(H, pos, font_size=9)
-        plt.title(title)
-        plt.axis("off")
-        plt.show()
+    # Optional legend for topics
+    if topic_model is not None:
+        for topic_id in unique_topics:
+            topic_label = topic_model.get_topic(topic_id)
+            label_text = "_".join(label[0] for label in topic_label[:2])
+            plt.scatter(
+                [],
+                [],
+                color=color_map(unique_topics.index(topic_id)),
+                label=label_text,
+            )
+        plt.legend(loc="best", frameon=False)
 
-    if plot:
-        plot_top_subgraph(G_eth, top_k=30, title="Ethics co-word subgraph (top nodes)")
-        plot_top_subgraph(G_saf, top_k=30, title="Safety co-word subgraph (top nodes)")
+    plt.show()
+
 
 
 @app.command()
-def analyze(
+def analyze(  # noqa: PLR0913
     file_path: Path = typer.Option(
         Path("data/papers.csv"),
         "-p",
@@ -357,7 +474,7 @@ def analyze(
     else:
         df = read_data(file_path)
         df = preprocess_data(df)
-        df.to_csv(output_df_file, index=False)
+        df.to_csv(output_df_file, index=True)
 
     # Basic descriptive statistics
     typer.echo(f"Years range: {df['year'].min()} - {df['year'].max()}")
@@ -397,12 +514,13 @@ def analyze(
     keyness_df.head(30)
 
     # Topic modeling with BERTopic
+    topic_model = None
     if topic_modeling:
-        model_topic(df, min_cluster_size=min_cluster_size, plot=plot)
+        topic_model = model_topic(df, min_cluster_size=min_cluster_size, plot=plot)
 
     # Co-word network: top-N vocabulary co-occurrence
     if network_analysis:
-        analyze_network(df, plot=plot)
+        analyze_network(df, plot=plot, topic_model=topic_model)
 
     raise typer.Exit(0)
 

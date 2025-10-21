@@ -10,6 +10,7 @@ dependencies = [
     "openai>=2.3.0",
     "pandas>=2.3.2",
     "pip>=25.2",
+    "pydot>=4.0.1",
     "seaborn>=0.13.2",
     "spacy>=3.8.7",
     "typer>=0.19.2",

@@ -33,7 +33,7 @@ class RetrievalCategory(enum.Enum):
 @app.command()
 def preprocess(
     output: PreprocessType = typer.Option(
-        PreprocessType.VOSViewer,
+        "vosviewer",
         "--type",
         "-t",
         help="The type of preprocessing to perform.",
@@ -45,10 +45,10 @@ def preprocess(
         help="The retrieval category to filter by.",
     ),
     input_file: str = typer.Option(
-        "data/papers.csv", "--input-path", "-i", help="Path to the input data file."
+        "data/papers.csv", "--input-path", "-i", help="Path to the input data file.",
     ),
     output_dir: str = typer.Option(
-        "output/", "--output-path", "-o", help="Path to the output data directory."
+        "output/", "--output-path", "-o", help="Path to the output data directory.",
     ),
 ):
     Path(output_dir).mkdir(parents=True, exist_ok=True)
@@ -57,8 +57,12 @@ def preprocess(
     if output == PreprocessType.VOSViewer:
         df = pd.read_csv(input_file, index_col=0)
         if retrieval_category != RetrievalCategory.Both:
-            df = df[df["Retrieval"] == retrieval_category.value.capitalize()]
-        text = df["Title"].str.cat(df["Abstract Note"], sep=" ")
+            df = df[df["corpus"] == retrieval_category.value.capitalize()]
+        if "clean_text" in df.columns:
+            typer.echo("Using existing pre-processed data for VOSViewer preprocessing.")
+            text = df["clean_text"]
+        else:
+            text = df["title"].str.cat(df["abstract"], sep=" ")
         text = text.apply(remove_urls)
         text.to_csv(
             output_dir + retrieval_category.value + ".txt",
@@ -70,7 +74,7 @@ def preprocess(
 
         # Write binary score of which category each paper belongs to.
         if retrieval_category == RetrievalCategory.Both:
-            score = df["Retrieval"] == "Safety"  # 1: Safety, 0: Ethics
+            score = df["corpus"] == "Safety"  # 1: Safety, 0: Ethics
             score.astype(int).to_csv(
                 output_dir + "scores.txt",
                 index=False,
@@ -126,7 +130,7 @@ def preprocess(
         # Flatten and write to output file
         df = df.loc[~df.index.duplicated(keep="first"), :]
         df[[keywords_col, "Retrieval"]].dropna(how="all", axis=1).to_json(
-            output_dir + "keywords.json", orient="index"
+            output_dir + "keywords.json", orient="index",
         )
 
 

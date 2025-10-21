@@ -185,3 +185,4 @@ cython_debug/
 .pypirc
 output/
 uv.lock
+.vscode/
