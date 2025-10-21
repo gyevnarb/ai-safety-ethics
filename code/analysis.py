@@ -62,7 +62,7 @@ def read_data(file_path: Path) -> pd.DataFrame:
     for col in ["title", "abstract", "year", "authors"]:
         if col not in df.columns:
             typer.secho(
-                f'WARNING: column "{col}" not found. Consider adding it.',  # noqa: Q003
+                f'WARNING: column "{col}" not found. Consider adding it.',
                 fg=typer.colors.YELLOW,
             )
     return df

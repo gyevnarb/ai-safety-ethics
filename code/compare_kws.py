@@ -13,10 +13,12 @@ from tqdm import tqdm
 app = typer.Typer()
 
 
-def remove_urls(text: str) -> str:
+def remove_urls_copyright(text: str) -> str:
     # Matches http/https URLs and www URLs
     url_pattern = r"http\S+|www\.\S+"
-    return re.sub(url_pattern, "", text)
+    copyright_pattern = r"©.*"
+    text = re.sub(url_pattern, "", text)
+    return re.sub(copyright_pattern, "", text, flags=re.IGNORECASE)
 
 
 class PreprocessType(enum.Enum):
@@ -63,7 +65,7 @@ def preprocess(
             text = df["clean_text"]
         else:
             text = df["title"].str.cat(df["abstract"], sep=" ")
-        text = text.apply(remove_urls)
+        text = text.apply(remove_urls_copyright)
         text.to_csv(
             output_dir + retrieval_category.value + ".txt",
             index=False,
