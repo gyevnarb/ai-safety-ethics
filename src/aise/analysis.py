@@ -29,7 +29,6 @@ import spacy
 import typer
 import umap
 from bertopic import BERTopic
-from bertopic.vectorizers import ClassTfidfTransformer
 from hdbscan import HDBSCAN
 from networkx.drawing.nx_pydot import graphviz_layout
 from rich.console import Console
@@ -177,7 +176,6 @@ def get_statistics(df: pd.DataFrame) -> None:
 
 def model_topic(
     df: pd.DataFrame,
-    corpus: str = "Both",
     min_cluster_size: int = 10,
     plot: bool = True,
     output_dir: Path = Path("output"),
@@ -185,10 +183,6 @@ def model_topic(
     """Perform topic modeling using BERTopic and visualize results."""
     # Initialize embedding model
     embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
-
-    # Small optimization: if corpus is large, sample for initial modeling
-    if corpus != "Both":
-        df = df[df["corpus"] == corpus]
     texts = df["clean_text"].tolist()
 
     console.print("Computing embeddings (this may take time)")
@@ -226,7 +220,7 @@ def model_topic(
     )
 
     # Compare topic distributions across corpora
-    if corpus == "Both":
+    if any(df["corpus"] == "Safety") and any(df["corpus"] == "Ethics"):
         topic_info = topic_info[["Topic", "Name"]].set_index("Topic")
         df["topic_name"] = df.topic.apply(lambda x: topic_info.loc[x, "Name"])
 
@@ -296,37 +290,43 @@ def analyze_network(
             G.add_edge(a, b, weight=w)
         return G
 
-    G_eth = build_cooccurrence_graph(
-        df[df.corpus == "Ethics"]["clean_text"],
-        top_n=1000,
-    )
-    G_saf = build_cooccurrence_graph(
-        df[df.corpus == "Safety"]["clean_text"],
-        top_n=1000,
-    )
-
-    console.print(
+    G_eth = None
+    if any(df["corpus"] == "Ethics"):
+        G_eth = build_cooccurrence_graph(
+            df[df.corpus == "Ethics"]["clean_text"],
+            top_n=1000,
+        )
+        console.print(
         f"Ethics graph nodes: {G_eth.number_of_nodes()} edges: {G_eth.number_of_edges()}"
-    )
-    console.print(
-        f"Safety graph nodes: {G_saf.number_of_nodes()} edges: {G_saf.number_of_edges()}"
-    )
+        )
+
+    G_saf = None
+    if any(df["corpus"] == "Safety"):
+        G_saf = build_cooccurrence_graph(
+            df[df.corpus == "Safety"]["clean_text"],
+            top_n=1000,
+        )
+        console.print(
+            f"Safety graph nodes: {G_saf.number_of_nodes()} edges: {G_saf.number_of_edges()}"
+        )
 
     if plot:
-        plot_top_subgraph(
-            G_eth,
-            top_k=50,
-            title="Ethics co-word subgraph (top tf-idf nodes)",
-            topic_model=topic_model,
-            output_dir=output_dir,
-        )
-        plot_top_subgraph(
-            G_saf,
-            top_k=50,
-            title="Safety co-word subgraph (top tf-idf nodes)",
-            topic_model=topic_model,
-            output_dir=output_dir,
-        )
+        if G_eth is not None:
+            plot_top_subgraph(
+                G_eth,
+                top_k=50,
+                title="Ethics co-word subgraph (top tf-idf nodes)",
+                topic_model=topic_model,
+                output_dir=output_dir,
+            )
+        if G_saf is not None:
+            plot_top_subgraph(
+                G_saf,
+                top_k=50,
+                title="Safety co-word subgraph (top tf-idf nodes)",
+                topic_model=topic_model,
+                output_dir=output_dir,
+            )
 
 
 def plot_topic_analysis(
@@ -349,7 +349,7 @@ def plot_topic_analysis(
     fig = topic_model.visualize_topics_per_class(topics_per_class)
     fig.write_html(output_dir / "bertopic_topics_per_class.html")
 
-    fig = topic_model.visualize_barchart()
+    fig = topic_model.visualize_barchart(top_n_topics=12)
     fig.write_html(output_dir / "bertopic_barchart.html")
 
     # UMAP projection of embeddings and corpus scatter
@@ -458,11 +458,19 @@ def plot_topic_analysis(
 
         # Corpus-level centroid similarity
         ethics_vec = np.mean(
-            [emb for emb, c in zip(embeddings, df["corpus"], strict=True) if c == "Ethics"],
+            [
+                emb
+                for emb, c in zip(embeddings, df["corpus"], strict=True)
+                if c == "Ethics"
+            ],
             axis=0,
         )
         safety_vec = np.mean(
-            [emb for emb, c in zip(embeddings, df["corpus"], strict=True) if c == "Safety"],
+            [
+                emb
+                for emb, c in zip(embeddings, df["corpus"], strict=True)
+                if c == "Safety"
+            ],
             axis=0,
         )
         corp_sim = cosine_similarity([ethics_vec], [safety_vec])[0][0]
@@ -560,18 +568,22 @@ def analyze(
         "--force",
         help="Whether to force re-preprocessing of data even if cached.",
     ),
-    topic_corpus: str | None = typer.Option(
+    corpus: str | None = typer.Option(
         None,
-        "-t",
-        "--topic-corpus",
+        "-c",
+        "--corpus",
         help=(
-            "Corpus to perform topic modeling on ('ethics', 'safety', 'both'). "
-            "If not given, then no topic modeling is performed."
+            "Corpus to perform topic modeling on ('ethics', 'safety'). "
+            "If not given, then both corpora are used."
         ),
     ),
     min_cluster_size: int = typer.Option(
         default=10,
         help="Minimum cluster size for HDBSCAN in topic modeling.",
+    ),
+    topic_modeling: bool = typer.Option(
+        default=True,
+        help="Whether to perform topic modeling analysis.",
     ),
     network_analysis: bool = typer.Option(
         default=True,
@@ -598,9 +610,9 @@ def analyze(
 
     All preprocessed data and visualizations are saved to the specified output directory.
     """
-    if topic_corpus not in {None, "ethics", "safety", "both"}:
+    if corpus is not None and corpus not in {"ethics", "safety"}:
         console.print(
-            "Invalid topic_corpus. Choose from 'ethics', 'safety', 'both', or None.",
+            "Invalid topic_corpus. Choose from 'ethics', 'safety', or None.",
         )
         raise typer.Exit(1)
 
@@ -616,14 +628,19 @@ def analyze(
         df = preprocess_data(df)
         df.to_csv(output_df_file, index=True)
 
+    if corpus is not None:
+        corpus = corpus.lower().capitalize()
+        df = df[df["corpus"] == corpus]
+
+    console.print(f"Using only corpus: {corpus}" if corpus else "Using both corpora")
+
     get_statistics(df)
 
     # Topic modeling with BERTopic
     topic_model = None
-    if topic_corpus is not None:
+    if topic_modeling:
         topic_model = model_topic(
             df,
-            corpus=topic_corpus.capitalize(),
             min_cluster_size=min_cluster_size,
             plot=plot,
             output_dir=output_path,
