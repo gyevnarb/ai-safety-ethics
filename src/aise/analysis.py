@@ -11,6 +11,7 @@ The input CSV file is expected to have at least the following columns:
 - year: The publication year of the paper (optional).
 - authors: The authors of the paper (optional).
 """
+
 from __future__ import annotations
 
 import re
@@ -30,11 +31,15 @@ import umap
 from bertopic import BERTopic
 from hdbscan import HDBSCAN
 from networkx.drawing.nx_pydot import graphviz_layout
+from rich.console import Console
 from sentence_transformers import SentenceTransformer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+from aise.util import pandas_to_rich
+
 app = typer.Typer(rich_markup_mode="rich")
+console = Console()
 
 RANDOM_SEED = 42
 CUSTOM_STOPWORDS = {
@@ -110,17 +115,63 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
         return " ".join(tokens)
 
     # Apply preprocessing to abstracts (progress-safe)
-    typer.echo("Preprocessing text data...")
+    console.print("Preprocessing text data...")
     if "clean_text" not in df.columns:
-        full_text = (
-            df["title"].fillna("").str.cat(df["abstract"].fillna(""), sep=" <> ")
-        )
+        full_text = df["title"].fillna("").str.cat(df["abstract"].fillna(""), sep=" <> ")
         df["clean_text"] = full_text.map(preprocess)
 
-    typer.echo("Sample cleaned text:")
-    typer.echo(df["clean_text"].iloc[0][:300])
+    console.print("Sample cleaned text:")
+    console.print(df["clean_text"].iloc[0][:300])
 
     return df
+
+
+def get_statistics(df: pd.DataFrame) -> None:
+    """Compute and display basic statistics about the dataset."""
+    console.print("Dataset statistics:")
+
+    # Basic descriptive statistics
+    console.print(f"Years range: {df['year'].min()} - {df['year'].max()}")
+    _df_word_counts = df["clean_text"].str.split().apply(len)
+    df["word_count"] = _df_word_counts
+    console.print(
+        pandas_to_rich(df.groupby("corpus")["word_count"].median(), "Median word count:")
+    )
+
+    # Keyness: log-likelihood ratio to find distinctive words
+    def word_freqs(series: pd.Series) -> Counter:
+        words = " ".join(series).split()
+        return Counter(words)
+
+    freq_ethics = word_freqs(df[df.corpus == "Ethics"]["clean_text"])
+    freq_safety = word_freqs(df[df.corpus == "Safety"]["clean_text"])
+
+    results = []
+    eps = 1e-9
+    N1, N2 = sum(freq_ethics.values()), sum(freq_safety.values())
+    r_total_ethics = N1 / (N1 + N2)
+    r_total_safety = 1.0 - r_total_ethics
+    all_words = set(list(freq_ethics.keys()) + list(freq_safety.keys()))
+    for w in all_words:
+        O1, O2 = freq_ethics.get(w, 0), freq_safety.get(w, 0)
+        if O1 + O2 == 0:
+            LL = 0.0
+        else:
+            E1 = r_total_ethics * (O1 + O2) + eps
+            E2 = r_total_safety * (O1 + O2) + eps
+            LL = 2 * ((O1 * np.log((O1 / E1) + eps)) + (O2 * np.log((O2 / E2) + eps)))
+        results.append((w, LL, O1, O2))
+
+    keyness_df = pd.DataFrame(
+        results,
+        columns=["word", "LL", "ethics_count", "safety_count"],
+    )
+    keyness_df = keyness_df.sort_values("LL", ascending=False).reset_index(drop=True)
+    console.print(
+        pandas_to_rich(
+            keyness_df.head(30), "Top 30 distinctive words by log-likelihood ratio:"
+        ),
+    )
 
 
 def model_topic(
@@ -139,7 +190,7 @@ def model_topic(
     else:
         texts = df[df["corpus"] == corpus]["clean_text"].tolist()
 
-    typer.echo("Computing embeddings (this may take time)")
+    console.print("Computing embeddings (this may take time)")
     embeddings = embedding_model.encode(texts, show_progress_bar=True)
 
     # Fit BERTopic
@@ -156,14 +207,22 @@ def model_topic(
     )
 
     topics, _ = topic_model.fit_transform(
-        texts, embeddings,
+        texts,
+        embeddings,
     )
     df["topic"] = topics
 
     # Topic summary
     topic_info = topic_model.get_topic_info()
-    typer.echo(f"Total topics found: {len(topic_info) - 1}")  # exclude -1 (outliers)
-    typer.echo(topic_info.head(15))
+    topic_info["Representative_Docs"] = topic_info["Representative_Docs"].apply(
+        lambda x: [x[:100] + "..." for x in x]
+    )
+    console.print(
+        pandas_to_rich(
+            topic_info.head(15),
+            f"Total topics found: {len(topic_info) - 1}; Top 15 topics:",
+        )
+    )
 
     # Compare topic distributions across corpora
     if corpus == "Both":
@@ -189,10 +248,11 @@ def model_topic(
             .abs()
             .sort_values(ascending=False)
         )
-        typer.echo("Top differing topics (by absolute prop diff):")
-        typer.echo(diff.head(15))
+        console.print(
+            pandas_to_rich(diff.head(15), "Top differing topics (by absolute prop diff):")
+        )
     else:
-        typer.echo("Topic counts could not be computed: only one corpus selected.")
+        console.print("Topic counts could not be computed: only one corpus selected.")
 
     # Visualize top 10 topics by combined frequency (BERTopic visualization)
     if plot:
@@ -243,10 +303,10 @@ def analyze_network(
         top_n=1000,
     )
 
-    typer.echo(
+    console.print(
         f"Ethics graph nodes: {G_eth.number_of_nodes()} edges: {G_eth.number_of_edges()}"
     )
-    typer.echo(
+    console.print(
         f"Safety graph nodes: {G_saf.number_of_nodes()} edges: {G_saf.number_of_edges()}"
     )
 
@@ -272,7 +332,7 @@ def plot_topic_analysis(
     embedding_model: SentenceTransformer,
 ) -> None:
     """Plot UMAP projections and temporal semantic drift analysis."""
-    fig = topic_model.visualize_topics(top_n_topics=10)
+    fig = topic_model.visualize_topics()
     fig.write_html("output/bertopic_top10.html")
 
     # UMAP projection of embeddings and corpus scatter
@@ -374,7 +434,7 @@ def plot_topic_analysis(
         plt.title("Temporal semantic convergence")
         plt.show()
     else:
-        typer.echo("No year column found; skipping temporal drift analysis")
+        console.print("No year column found; skipping temporal drift analysis")
 
     # Corpus-level centroid similarity
     ethics_vec = np.mean(
@@ -386,7 +446,7 @@ def plot_topic_analysis(
         axis=0,
     )
     corp_sim = cosine_similarity([ethics_vec], [safety_vec])[0][0]
-    typer.echo(f"Corpus-level cosine similarity: {corp_sim}")
+    console.print(f"Corpus-level cosine similarity: {corp_sim}")
 
 
 def plot_top_subgraph(
@@ -474,7 +534,8 @@ def analyze(
     ),
     force: bool = typer.Option(
         False,
-        "-f", "--force",
+        "-f",
+        "--force",
         help="Whether to force re-preprocessing of data even if cached.",
     ),
     topic_corpus: str | None = typer.Option(
@@ -516,7 +577,7 @@ def analyze(
     All preprocessed data and visualizations are saved to the specified output directory.
     """
     if topic_corpus not in {None, "ethics", "safety", "both"}:
-        typer.echo(
+        console.print(
             "Invalid topic_corpus. Choose from 'ethics', 'safety', 'both', or None.",
         )
         raise typer.Exit(1)
@@ -525,54 +586,15 @@ def analyze(
     output_path.mkdir(parents=True, exist_ok=True)
     output_df_file = output_path / "processed_data.csv"
     if output_df_file.exists() and not force:
-        typer.echo("Using existing processed data.")
+        console.print("Using existing processed data.")
         df = pd.read_csv(output_df_file)
     else:
-        typer.echo("Reading and preprocessing data...")
+        console.print("Reading and preprocessing data...")
         df = read_data(file_path)
         df = preprocess_data(df)
         df.to_csv(output_df_file, index=True)
 
-    # Basic descriptive statistics
-    typer.echo(f"Years range: {df['year'].min()} - {df['year'].max()}")
-    _df_word_counts = df["clean_text"].str.split().apply(len)
-    df["word_count"] = _df_word_counts
-    typer.echo("Word count (median) per corpus:")
-    typer.echo(df.groupby("corpus")["word_count"].median())
-
-    # Keyness: log-likelihood ratio to find distinctive words
-    def word_freqs(series: pd.Series) -> Counter:
-        words = " ".join(series).split()
-        return Counter(words)
-
-    freq_ethics = word_freqs(df[df.corpus == "Ethics"]["clean_text"])
-    freq_safety = word_freqs(df[df.corpus == "Safety"]["clean_text"])
-
-    results = []
-    eps = 1e-9
-    N1, N2 = sum(freq_ethics.values()), sum(freq_safety.values())
-    r_total_ethics = N1 / (N1 + N2)
-    r_total_safety = 1. - r_total_ethics
-    all_words = set(list(freq_ethics.keys()) + list(freq_safety.keys()))
-    for w in all_words:
-        O1, O2 = freq_ethics.get(w, 0), freq_safety.get(w, 0)
-        if O1 + O2 == 0:
-            LL = 0.
-        else:
-            E1 = r_total_ethics * (O1 + O2) + eps
-            E2 = r_total_safety * (O1 + O2) + eps
-            LL = 2 * (
-                (O1 * np.log((O1 / E1) + eps))
-                + (O2 * np.log((O2 / E2) + eps))
-            )
-        results.append((w, LL, O1, O2))
-
-    keyness_df = pd.DataFrame(
-        results,
-        columns=["word", "LL", "ethics_count", "safety_count"],
-    )
-    keyness_df = keyness_df.sort_values("LL", ascending=False).reset_index(drop=True)
-    typer.echo(keyness_df.head(30))
+    get_statistics(df)
 
     # Topic modeling with BERTopic
     topic_model = None
