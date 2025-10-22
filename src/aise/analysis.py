@@ -212,12 +212,13 @@ def model_topic(
     topic_info["Representative_Docs"] = topic_info["Representative_Docs"].apply(
         lambda x: [x[:100] + "..." for x in x]
     )
-    console.print(
-        pandas_to_rich(
-            topic_info.head(15),
-            f"Total topics found: {len(topic_info) - 1}; Top 15 topics:",
-        )
+    topics_table = pandas_to_rich(
+        topic_info.head(15),
+        f"Total topics found: {len(topic_info) - 1}; Top 15 topics:",
     )
+    console.print(topics_table)
+    with (output_dir / "bertopic_topics.csv").open("w", encoding="utf-8") as f:
+        topic_info.to_csv(f, index=False)
 
     # Compare topic distributions across corpora
     if any(df["corpus"] == "Safety") and any(df["corpus"] == "Ethics"):
