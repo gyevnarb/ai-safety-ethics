@@ -1,3 +1,11 @@
+"""Analyze paper metadata for topic modeling and network analysis.
+
+This script will read a CSV file containing paper metadata, preprocess the text data,
+perform topic modeling using BERTopic, and analyze term co-occurrence networks.
+It also includes visualization of topic distributions and network graphs.
+"""
+from __future__ import annotations
+
 import re
 from collections import Counter, defaultdict
 from itertools import combinations
@@ -9,6 +17,7 @@ import nltk
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import spacy
 import typer
 import umap
 from bertopic import BERTopic
@@ -35,7 +44,7 @@ CUSTOM_STOPWORDS = {
     "may",
     "many",
     "different",
-    "used",
+    "use",
     "approach",
     "result",
     "study",
@@ -73,8 +82,6 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
 
     Includes tokenization, lemmatization, and stopword removal.
     """
-    import spacy
-
     nltk.download("stopwords")
 
     nlp = spacy.load("en_core_web_sm", disable=["parser", "ner"])
@@ -111,6 +118,7 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
 
 def model_topic(
     df: pd.DataFrame,
+    corpus: str = "Both",
     min_cluster_size: int = 10,
     plot: bool = True,
 ) -> BERTopic:
@@ -119,7 +127,10 @@ def model_topic(
     embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
     # Small optimization: if corpus is large, sample for initial modeling
-    texts = df["clean_text"].tolist()
+    if corpus == "Both":
+        texts = df["clean_text"].tolist()
+    else:
+        texts = df[df["corpus"] == corpus]["clean_text"].tolist()
 
     typer.echo("Computing embeddings (this may take time)")
     embeddings = embedding_model.encode(texts, show_progress_bar=True)
@@ -136,7 +147,10 @@ def model_topic(
         calculate_probabilities=True,
         hdbscan_model=hdbscan_model,
     )
-    topics, _ = topic_model.fit_transform(texts, embeddings)
+
+    topics, _ = topic_model.fit_transform(
+        texts, embeddings,
+    )
     df["topic"] = topics
 
     # Topic summary
@@ -145,19 +159,22 @@ def model_topic(
     typer.echo(topic_info.head(15))
 
     # Compare topic distributions across corpora
-    topic_counts = df.pivot_table(
-        index="corpus",
-        columns="topic",
-        aggfunc="size",
-        fill_value=0,
-    )
-    # ensure both indexes present
-    if "Ethics" in topic_counts.index and "Safety" in topic_counts.index:
+    if corpus == "Both":
+        topic_info = topic_info[["Topic", "Name"]].set_index("Topic")
+        df["topic_name"] = df.topic.apply(lambda x: topic_info.loc[x, "Name"])
+
+        topic_counts = df.pivot_table(
+            index="corpus",
+            columns=["topic", "topic_name"],
+            aggfunc="size",
+            fill_value=0,
+        ).T
+
         topic_counts["ethics_prop"] = (
-            topic_counts.loc["Ethics"] / topic_counts.loc["Ethics"].sum()
+            topic_counts["Ethics"] / topic_counts["Ethics"].sum()
         )
         topic_counts["safety_prop"] = (
-            topic_counts.loc["Safety"] / topic_counts.loc["Safety"].sum()
+            topic_counts["Safety"] / topic_counts["Safety"].sum()
         )
         topic_counts = topic_counts[["ethics_prop", "safety_prop"]].fillna(0)
         diff = (
@@ -168,7 +185,7 @@ def model_topic(
         typer.echo("Top differing topics (by absolute prop diff):")
         typer.echo(diff.head(15))
     else:
-        typer.echo("Topic counts could not be computed: check topics and corpus labels")
+        typer.echo("Topic counts could not be computed: only one corpus selected.")
 
     # Visualize top 10 topics by combined frequency (BERTopic visualization)
     try:
@@ -216,10 +233,12 @@ def analyze_network(
         return G
 
     G_eth = build_cooccurrence_graph(
-        df[df.corpus == "Ethics"]["clean_text"], top_n=1000,
+        df[df.corpus == "Ethics"]["clean_text"],
+        top_n=1000,
     )
     G_saf = build_cooccurrence_graph(
-        df[df.corpus == "Safety"]["clean_text"], top_n=1000,
+        df[df.corpus == "Safety"]["clean_text"],
+        top_n=1000,
     )
 
     typer.echo(
@@ -433,9 +452,8 @@ def plot_top_subgraph(
     plt.show()
 
 
-
 @app.command()
-def analyze(  # noqa: PLR0913
+def analyze(
     file_path: Path = typer.Option(
         Path("data/papers.csv"),
         "-p",
@@ -448,9 +466,14 @@ def analyze(  # noqa: PLR0913
         "--output",
         help="Directory to save analysis results and visualizations.",
     ),
-    topic_modeling: bool = typer.Option(
-        default=True,
-        help="Whether to perform topic modeling on the dataset.",
+    topic_corpus: str | None = typer.Option(
+        None,
+        "-t",
+        "--topic-corpus",
+        help=(
+            "Corpus to perform topic modeling on ('ethics', 'safety', 'both'). "
+            "If not given, then no topic modeling is performed."
+        ),
     ),
     min_cluster_size: int = typer.Option(
         default=10,
@@ -464,14 +487,27 @@ def analyze(  # noqa: PLR0913
         default=True,
         help="Whether to plot visualizations.",
     ),
+    force_preprocess: bool = typer.Option(
+        False,
+        "-f", "--force-preprocess",
+        help="Whether to force re-preprocessing of data even if cached.",
+    ),
 ) -> int:
     """Analyze the paper metadata and perform topic modeling."""
+    if topic_corpus not in {None, "ethics", "safety", "both"}:
+        typer.echo(
+            "Invalid topic_corpus. Choose from 'ethics', 'safety', 'both', or None.",
+        )
+        raise typer.Exit(1)
+
     # Read data
     output_path.mkdir(parents=True, exist_ok=True)
     output_df_file = output_path / "processed_data.csv"
-    if output_df_file.exists():
+    if output_df_file.exists() and not force_preprocess:
+        typer.echo("Using existing processed data.")
         df = pd.read_csv(output_df_file)
     else:
+        typer.echo("Reading and preprocessing data...")
         df = read_data(file_path)
         df = preprocess_data(df)
         df.to_csv(output_df_file, index=True)
@@ -515,14 +551,24 @@ def analyze(  # noqa: PLR0913
 
     # Topic modeling with BERTopic
     topic_model = None
-    if topic_modeling:
-        topic_model = model_topic(df, min_cluster_size=min_cluster_size, plot=plot)
+    if topic_corpus is not None:
+        topic_model = model_topic(
+            df,
+            corpus=topic_corpus.capitalize(),
+            min_cluster_size=min_cluster_size,
+            plot=plot,
+        )
 
     # Co-word network: top-N vocabulary co-occurrence
     if network_analysis:
         analyze_network(df, plot=plot, topic_model=topic_model)
 
     raise typer.Exit(0)
+
+
+def cli() -> None:
+    """Entry point for the CLI."""
+    app()
 
 
 if __name__ == "__main__":

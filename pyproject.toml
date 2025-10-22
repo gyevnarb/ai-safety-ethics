@@ -1,7 +1,11 @@
+[build-system]
+requires = ["hatchling>=1.17.0"]
+build-backend = "hatchling.build"
+
 [project]
 name = "ai-safety-ethics"
 version = "0.1.0"
-description = "Add your description here"
+description = "Bridging research problems of the fields AI safety and AI ethics"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -17,11 +21,29 @@ dependencies = [
 ]
 
 [project.scripts]
-process = "process:cli"
+analysis = "ai_safety_ethics.analysis:cli"
 
 [tool.ruff]
-select = ["ALL"]
-
+target-version = "py311"
+select = [
+    "ALL",
+]
 ignore = [
-    "B008", "N806", "N803", "FBT"
+    "ANN",
+    "COM",
+    "C90",
+    "DJ",
+    "EXE",
+    "T10",
+    "TID",
+    "FBT001",
+    "FBT003",
+    "T201",
+    "S603",
+    "N806",
+    "N803",
+    "PLR0913",
+    "PLR0912",
+    "PLR0915",
+    "B008",
 ]
