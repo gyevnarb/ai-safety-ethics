@@ -3,7 +3,7 @@ requires = ["hatchling>=1.17.0"]
 build-backend = "hatchling.build"
 
 [project]
-name = "ai-safety-ethics"
+name = "aise"
 version = "0.1.0"
 description = "Bridging research problems of the fields AI safety and AI ethics"
 readme = "README.md"
@@ -11,7 +11,6 @@ requires-python = ">=3.11"
 dependencies = [
     "bertopic>=0.17.3",
     "nltk>=3.9.2",
-    "openai>=2.3.0",
     "pandas>=2.3.2",
     "pip>=25.2",
     "pydot>=4.0.1",
@@ -21,9 +20,10 @@ dependencies = [
 ]
 
 [project.scripts]
-analysis = "ai_safety_ethics.analysis:cli"
+aise = "aise.analysis:cli"
 
 [tool.ruff]
+line-length = 90
 target-version = "py311"
 select = [
     "ALL",
@@ -36,8 +36,7 @@ ignore = [
     "EXE",
     "T10",
     "TID",
-    "FBT001",
-    "FBT003",
+    "FBT",
     "T201",
     "S603",
     "N806",

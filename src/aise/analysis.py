@@ -3,6 +3,13 @@
 This script will read a CSV file containing paper metadata, preprocess the text data,
 perform topic modeling using BERTopic, and analyze term co-occurrence networks.
 It also includes visualization of topic distributions and network graphs.
+
+The input CSV file is expected to have at least the following columns:
+- title: The title of the paper.
+- abstract: The abstract of the paper.
+- corpus: The corpus/category the paper belongs to (e.g., 'Ethics', 'Safety').
+- year: The publication year of the paper (optional).
+- authors: The authors of the paper (optional).
 """
 from __future__ import annotations
 
@@ -27,7 +34,7 @@ from sentence_transformers import SentenceTransformer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-app = typer.Typer()
+app = typer.Typer(rich_markup_mode="rich")
 
 RANDOM_SEED = 42
 CUSTOM_STOPWORDS = {
@@ -188,11 +195,6 @@ def model_topic(
         typer.echo("Topic counts could not be computed: only one corpus selected.")
 
     # Visualize top 10 topics by combined frequency (BERTopic visualization)
-    try:
-        topic_model.visualize_topics(top_n_topics=10)
-    except Exception as e:
-        typer.echo(f"Visualization failed (reason): {e}")
-
     if plot:
         plot_topic_analysis(df, topic_model, embeddings, embedding_model)
 
@@ -270,6 +272,9 @@ def plot_topic_analysis(
     embedding_model: SentenceTransformer,
 ) -> None:
     """Plot UMAP projections and temporal semantic drift analysis."""
+    fig = topic_model.visualize_topics(top_n_topics=10)
+    fig.write_html("output/bertopic_top10.html")
+
     # UMAP projection of embeddings and corpus scatter
     reducer = umap.UMAP(
         n_neighbors=15,
@@ -336,14 +341,15 @@ def plot_topic_analysis(
 
     # Temporal semantic drift: average embedding by year &
     # cosine similarity between corpora per year
+    min_docs_per_year = 2
     if "year" in df.columns:
         years = sorted(df["year"].dropna().unique())
         year_sims = []
         for y in years:
             sub = df[df["year"] == y]
             if (
-                len(sub[sub.corpus == "Ethics"]) < 2
-                or len(sub[sub.corpus == "Safety"]) < 2
+                len(sub[sub.corpus == "Ethics"]) < min_docs_per_year
+                or len(sub[sub.corpus == "Safety"]) < min_docs_per_year
             ):
                 year_sims.append(np.nan)
                 continue
@@ -466,6 +472,11 @@ def analyze(
         "--output",
         help="Directory to save analysis results and visualizations.",
     ),
+    force: bool = typer.Option(
+        False,
+        "-f", "--force",
+        help="Whether to force re-preprocessing of data even if cached.",
+    ),
     topic_corpus: str | None = typer.Option(
         None,
         "-t",
@@ -487,13 +498,23 @@ def analyze(
         default=True,
         help="Whether to plot visualizations.",
     ),
-    force_preprocess: bool = typer.Option(
-        False,
-        "-f", "--force-preprocess",
-        help="Whether to force re-preprocessing of data even if cached.",
-    ),
 ) -> int:
-    """Analyze the paper metadata and perform topic modeling."""
+    """AI safety and ethics paper analysis tool.
+
+    This script reads a CSV file containing paper metadata, preprocesses the text data,
+    performs topic modeling using BERTopic, and analyzes term co-occurrence networks.
+    It also includes visualization of topic distributions and network graphs.
+
+    The input CSV file is expected to have at least the following columns:
+    - key: Unique identifier for each paper.
+    - title: The title of the paper.
+    - abstract: The abstract of the paper.
+    - corpus: The corpus/category the paper belongs to ('Ethics', 'Safety').
+    - year: The publication year of the paper.
+    - authors: The authors of the paper (optional).
+
+    All preprocessed data and visualizations are saved to the specified output directory.
+    """
     if topic_corpus not in {None, "ethics", "safety", "both"}:
         typer.echo(
             "Invalid topic_corpus. Choose from 'ethics', 'safety', 'both', or None.",
@@ -503,7 +524,7 @@ def analyze(
     # Read data
     output_path.mkdir(parents=True, exist_ok=True)
     output_df_file = output_path / "processed_data.csv"
-    if output_df_file.exists() and not force_preprocess:
+    if output_df_file.exists() and not force:
         typer.echo("Using existing processed data.")
         df = pd.read_csv(output_df_file)
     else:
@@ -514,11 +535,9 @@ def analyze(
 
     # Basic descriptive statistics
     typer.echo(f"Years range: {df['year'].min()} - {df['year'].max()}")
-
-    # Word counts and lexical richness per document
     _df_word_counts = df["clean_text"].str.split().apply(len)
     df["word_count"] = _df_word_counts
-    typer.echo("\nWord count (median) per corpus:")
+    typer.echo("Word count (median) per corpus:")
     typer.echo(df.groupby("corpus")["word_count"].median())
 
     # Keyness: log-likelihood ratio to find distinctive words
@@ -529,17 +548,23 @@ def analyze(
     freq_ethics = word_freqs(df[df.corpus == "Ethics"]["clean_text"])
     freq_safety = word_freqs(df[df.corpus == "Safety"]["clean_text"])
 
-    N1, N2 = sum(freq_ethics.values()), sum(freq_safety.values())
-    all_words = set(list(freq_ethics.keys()) + list(freq_safety.keys()))
     results = []
+    eps = 1e-9
+    N1, N2 = sum(freq_ethics.values()), sum(freq_safety.values())
+    r_total_ethics = N1 / (N1 + N2)
+    r_total_safety = 1. - r_total_ethics
+    all_words = set(list(freq_ethics.keys()) + list(freq_safety.keys()))
     for w in all_words:
         O1, O2 = freq_ethics.get(w, 0), freq_safety.get(w, 0)
-        E1 = N1 * (O1 + O2) / (N1 + N2) if (N1 + N2) > 0 else 0
-        E2 = N2 * (O1 + O2) / (N1 + N2) if (N1 + N2) > 0 else 0
-        LL = 2 * (
-            (O1 * np.log((O1 / (E1 + 1e-9)) + 1e-9))
-            + (O2 * np.log((O2 / (E2 + 1e-9)) + 1e-9))
-        )
+        if O1 + O2 == 0:
+            LL = 0.
+        else:
+            E1 = r_total_ethics * (O1 + O2) + eps
+            E2 = r_total_safety * (O1 + O2) + eps
+            LL = 2 * (
+                (O1 * np.log((O1 / E1) + eps))
+                + (O2 * np.log((O2 / E2) + eps))
+            )
         results.append((w, LL, O1, O2))
 
     keyness_df = pd.DataFrame(
@@ -547,7 +572,7 @@ def analyze(
         columns=["word", "LL", "ethics_count", "safety_count"],
     )
     keyness_df = keyness_df.sort_values("LL", ascending=False).reset_index(drop=True)
-    keyness_df.head(30)
+    typer.echo(keyness_df.head(30))
 
     # Topic modeling with BERTopic
     topic_model = None
