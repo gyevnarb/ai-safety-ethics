@@ -29,6 +29,7 @@ import spacy
 import typer
 import umap
 from bertopic import BERTopic
+from bertopic.vectorizers import ClassTfidfTransformer
 from hdbscan import HDBSCAN
 from networkx.drawing.nx_pydot import graphviz_layout
 from rich.console import Console
@@ -179,16 +180,16 @@ def model_topic(
     corpus: str = "Both",
     min_cluster_size: int = 10,
     plot: bool = True,
+    output_dir: Path = Path("output"),
 ) -> BERTopic:
     """Perform topic modeling using BERTopic and visualize results."""
     # Initialize embedding model
     embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
     # Small optimization: if corpus is large, sample for initial modeling
-    if corpus == "Both":
-        texts = df["clean_text"].tolist()
-    else:
-        texts = df[df["corpus"] == corpus]["clean_text"].tolist()
+    if corpus != "Both":
+        df = df[df["corpus"] == corpus]
+    texts = df["clean_text"].tolist()
 
     console.print("Computing embeddings (this may take time)")
     embeddings = embedding_model.encode(texts, show_progress_bar=True)
@@ -256,7 +257,7 @@ def model_topic(
 
     # Visualize top 10 topics by combined frequency (BERTopic visualization)
     if plot:
-        plot_topic_analysis(df, topic_model, embeddings, embedding_model)
+        plot_topic_analysis(df, topic_model, embeddings, embedding_model, output_dir)
 
     return topic_model
 
@@ -265,6 +266,7 @@ def analyze_network(
     df: pd.DataFrame,
     plot: bool = True,
     topic_model: BERTopic = None,
+    output_dir: Path = Path("output"),
 ) -> None:
     """Analyze term co-occurrence networks and visualize."""
 
@@ -316,12 +318,14 @@ def analyze_network(
             top_k=50,
             title="Ethics co-word subgraph (top tf-idf nodes)",
             topic_model=topic_model,
+            output_dir=output_dir,
         )
         plot_top_subgraph(
             G_saf,
             top_k=50,
             title="Safety co-word subgraph (top tf-idf nodes)",
             topic_model=topic_model,
+            output_dir=output_dir,
         )
 
 
@@ -330,10 +334,23 @@ def plot_topic_analysis(
     topic_model: BERTopic,
     embeddings: np.ndarray,
     embedding_model: SentenceTransformer,
+    output_dir: Path = Path("output"),
 ) -> None:
     """Plot UMAP projections and temporal semantic drift analysis."""
-    fig = topic_model.visualize_topics()
-    fig.write_html("output/bertopic_top10.html")
+    fig = topic_model.visualize_topics(use_ctfidf=True)
+    fig.write_html(output_dir / "bertopic_topics.html")
+
+    fig = topic_model.visualize_heatmap(use_ctfidf=True)
+    fig.write_html(output_dir / "bertopic_heatmap.html")
+
+    topics_per_class = topic_model.topics_per_class(
+        df["clean_text"], classes=df["corpus"]
+    )
+    fig = topic_model.visualize_topics_per_class(topics_per_class)
+    fig.write_html(output_dir / "bertopic_topics_per_class.html")
+
+    fig = topic_model.visualize_barchart()
+    fig.write_html(output_dir / "bertopic_barchart.html")
 
     # UMAP projection of embeddings and corpus scatter
     reducer = umap.UMAP(
@@ -397,56 +414,59 @@ def plot_topic_analysis(
     plt.title("UMAP projection: documents by topic and corpus (with topic labels)")
     plt.xlabel("UMAP-1")
     plt.ylabel("UMAP-2")
+    plt.savefig(output_dir / "umap_topics.png", dpi=300)
     plt.show()
 
     # Temporal semantic drift: average embedding by year &
     # cosine similarity between corpora per year
-    min_docs_per_year = 2
-    if "year" in df.columns:
-        years = sorted(df["year"].dropna().unique())
-        year_sims = []
-        for y in years:
-            sub = df[df["year"] == y]
-            if (
-                len(sub[sub.corpus == "Ethics"]) < min_docs_per_year
-                or len(sub[sub.corpus == "Safety"]) < min_docs_per_year
-            ):
-                year_sims.append(np.nan)
-                continue
-            e_vec = np.mean(
-                embedding_model.encode(
-                    sub[sub.corpus == "Ethics"]["clean_text"].tolist(),
-                ),
-                axis=0,
-            )
-            s_vec = np.mean(
-                embedding_model.encode(
-                    sub[sub.corpus == "Safety"]["clean_text"].tolist(),
-                ),
-                axis=0,
-            )
-            sim = cosine_similarity([e_vec], [s_vec])[0][0]
-            year_sims.append(sim)
-        plt.figure(figsize=(10, 4))
-        plt.plot(years, year_sims, marker="o")
-        plt.xlabel("Year")
-        plt.ylabel("Cosine similarity (Ethics vs Safety)")
-        plt.title("Temporal semantic convergence")
-        plt.show()
-    else:
-        console.print("No year column found; skipping temporal drift analysis")
+    if "Ethics" in df["corpus"] and "Safety" in df["corpus"]:
+        min_docs_per_year = 2
+        if "year" in df.columns:
+            years = sorted(df["year"].dropna().unique())
+            year_sims = []
+            for y in years:
+                sub = df[df["year"] == y]
+                if (
+                    len(sub[sub.corpus == "Ethics"]) < min_docs_per_year
+                    or len(sub[sub.corpus == "Safety"]) < min_docs_per_year
+                ):
+                    year_sims.append(np.nan)
+                    continue
+                e_vec = np.mean(
+                    embedding_model.encode(
+                        sub[sub.corpus == "Ethics"]["clean_text"].tolist(),
+                    ),
+                    axis=0,
+                )
+                s_vec = np.mean(
+                    embedding_model.encode(
+                        sub[sub.corpus == "Safety"]["clean_text"].tolist(),
+                    ),
+                    axis=0,
+                )
+                sim = cosine_similarity([e_vec], [s_vec])[0][0]
+                year_sims.append(sim)
+            plt.figure(figsize=(10, 4))
+            plt.plot(years, year_sims, marker="o")
+            plt.xlabel("Year")
+            plt.ylabel("Cosine similarity (Ethics vs Safety)")
+            plt.title("Temporal semantic convergence")
+            plt.savefig(output_dir / "temporal_semantic_drift.png", dpi=300)
+            plt.show()
+        else:
+            console.print("No year column found; skipping temporal drift analysis")
 
-    # Corpus-level centroid similarity
-    ethics_vec = np.mean(
-        [emb for emb, c in zip(embeddings, df["corpus"], strict=True) if c == "Ethics"],
-        axis=0,
-    )
-    safety_vec = np.mean(
-        [emb for emb, c in zip(embeddings, df["corpus"], strict=True) if c == "Safety"],
-        axis=0,
-    )
-    corp_sim = cosine_similarity([ethics_vec], [safety_vec])[0][0]
-    console.print(f"Corpus-level cosine similarity: {corp_sim}")
+        # Corpus-level centroid similarity
+        ethics_vec = np.mean(
+            [emb for emb, c in zip(embeddings, df["corpus"], strict=True) if c == "Ethics"],
+            axis=0,
+        )
+        safety_vec = np.mean(
+            [emb for emb, c in zip(embeddings, df["corpus"], strict=True) if c == "Safety"],
+            axis=0,
+        )
+        corp_sim = cosine_similarity([ethics_vec], [safety_vec])[0][0]
+        console.print(f"Corpus-level cosine similarity: {corp_sim}")
 
 
 def plot_top_subgraph(
@@ -454,6 +474,7 @@ def plot_top_subgraph(
     top_k: int = 30,
     title: str = "Co-word subgraph",
     topic_model: BERTopic = None,
+    output_dir: Path = Path("output"),
 ) -> None:
     """Visualize a subgraph of the co-word network (top-degree nodes)."""
     deg = dict(G.degree(weight="weight"))
@@ -515,6 +536,7 @@ def plot_top_subgraph(
             )
         plt.legend(loc="best", frameon=False)
 
+    plt.savefig(output_dir / "coword_graph.png", dpi=300)
     plt.show()
 
 
@@ -604,11 +626,12 @@ def analyze(
             corpus=topic_corpus.capitalize(),
             min_cluster_size=min_cluster_size,
             plot=plot,
+            output_dir=output_path,
         )
 
     # Co-word network: top-N vocabulary co-occurrence
     if network_analysis:
-        analyze_network(df, plot=plot, topic_model=topic_model)
+        analyze_network(df, plot=plot, topic_model=topic_model, output_dir=output_path)
 
     raise typer.Exit(0)
 
