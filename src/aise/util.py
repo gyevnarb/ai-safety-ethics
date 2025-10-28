@@ -1,8 +1,16 @@
 """Utility functions for AI Safety and Ethics analysis."""
 
+from collections import Counter
+
 import pandas as pd
 from rich.table import Table
 from rich.text import Text
+
+
+def word_freqs(series: pd.Series) -> Counter:
+    """Compute word frequencies from a pandas Series of text data."""
+    words = " ".join(series).split()
+    return Counter(words)
 
 
 def pandas_to_rich(data, title: str = "Pandas Object") -> Table:

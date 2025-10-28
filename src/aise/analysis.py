@@ -15,7 +15,7 @@ The input CSV file is expected to have at least the following columns:
 from __future__ import annotations
 
 import re
-from collections import Counter, defaultdict
+from collections import defaultdict
 from itertools import combinations
 from pathlib import Path
 
@@ -36,7 +36,7 @@ from sentence_transformers import SentenceTransformer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from aise.util import pandas_to_rich
+from aise.util import pandas_to_rich, word_freqs
 
 app = typer.Typer(rich_markup_mode="rich")
 console = Console()
@@ -126,26 +126,70 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def get_statistics(df: pd.DataFrame) -> None:
+def get_statistics(df: pd.DataFrame, plot: bool = False) -> None:
     """Compute and display basic statistics about the dataset."""
     console.print("Dataset statistics:")
 
+    # Counts by corpus
+    corpus_counts = df["corpus"].value_counts()
+    console.print(pandas_to_rich(corpus_counts, "Document counts by corpus:"))
+
     # Basic descriptive statistics
-    console.print(f"Years range: {df['year'].min()} - {df['year'].max()}")
     _df_word_counts = df["clean_text"].str.split().apply(len)
     df["word_count"] = _df_word_counts
     console.print(
         pandas_to_rich(df.groupby("corpus")["word_count"].median(), "Median word count:")
     )
 
-    # Keyness: log-likelihood ratio to find distinctive words
-    def word_freqs(series: pd.Series) -> Counter:
-        words = " ".join(series).split()
-        return Counter(words)
-
+    # Raw frequency comparison
     freq_ethics = word_freqs(df[df.corpus == "Ethics"]["clean_text"])
     freq_safety = word_freqs(df[df.corpus == "Safety"]["clean_text"])
+    console.print(
+        f"Total unique words - Ethics: {len(freq_ethics)}, Safety: {len(freq_safety)}"
+    )
+    freq_diffs = {
+        w: (
+            freq_ethics.get(w, 0) - freq_safety.get(w, 0),
+            freq_ethics.get(w, 0),
+            freq_safety.get(w, 0),
+        )
+        for w in freq_ethics.keys() & freq_safety.keys()
+    }
+    freq_diff = (
+        pd.DataFrame.from_dict(
+            freq_diffs,
+            orient="index",
+            columns=["freq_diff", "ethics_count", "safety_count"],
+        )
+        .reset_index(names=["word"])
+        .sort_values(
+            "freq_diff",
+            ascending=False,
+        )
+    )
+    console.print(
+        pandas_to_rich(
+            freq_diff.head(25),
+            "Top 25 words more frequent in Ethics than Safety:",
+        ),
+    )
+    console.print(
+        pandas_to_rich(
+            freq_diff.tail(25),
+            "Top 25 words more frequent in Safety than Ethics:",
+        ),
+    )
+    console.print(
+        pandas_to_rich(freq_diff[freq_diff["safety_count"] < 10].head(25)),
+        "Top 25 words only in Ethics corpus",
+    )
+    console.print(
+        pandas_to_rich(freq_diff[freq_diff["ethics_count"] < 10].tail(25)),
+        "Top 25 words only in Safety corpus",
+    )
+    freq_diff.to_csv("output/word_freq_differences.csv", index=True)
 
+    # Keyness: log-likelihood ratio to find distinctive words
     results = []
     eps = 1e-9
     N1, N2 = sum(freq_ethics.values()), sum(freq_safety.values())
@@ -167,11 +211,30 @@ def get_statistics(df: pd.DataFrame) -> None:
         columns=["word", "LL", "ethics_count", "safety_count"],
     )
     keyness_df = keyness_df.sort_values("LL", ascending=False).reset_index(drop=True)
+    keyness_df.to_csv("output/word_keyness.csv", index=False)
     console.print(
         pandas_to_rich(
             keyness_df.head(30), "Top 30 distinctive words by log-likelihood ratio:"
         ),
     )
+
+    # Plot year distribution histogram
+    if plot and "year" in df.columns:
+        year = df["year"].dropna().astype(int).groupby(df["corpus"])
+        console.print("Plotting year distribution...")
+        console.print(
+            f"Year range: {year.min()} - {year.max()}\n"
+            f"Mean:\n{year.mean()},\nMedian:\n{year.median()}\n\n"
+            f"Percentiles: 25th: \n{year.quantile(0.25)},\n75th:\n{year.quantile(0.75)}"
+        )
+        plt.figure(figsize=(10, 4))
+        sns.histplot(data=df, x="year", hue="corpus", multiple="stack", bins=30)
+        plt.xlim((2010, 2026))
+        plt.title("Publication Year Distribution by Corpus")
+        plt.xlabel("Year")
+        plt.ylabel("Number of Papers")
+        plt.savefig("output/year_distribution.png", dpi=300)
+        plt.show()
 
 
 def model_topic(
@@ -298,7 +361,7 @@ def analyze_network(
             top_n=1000,
         )
         console.print(
-        f"Ethics graph nodes: {G_eth.number_of_nodes()} edges: {G_eth.number_of_edges()}"
+            f"Ethics graph nodes: {G_eth.number_of_nodes()} edges: {G_eth.number_of_edges()}"
         )
 
     G_saf = None
@@ -420,7 +483,7 @@ def plot_topic_analysis(
 
     # Temporal semantic drift: average embedding by year &
     # cosine similarity between corpora per year
-    if "Ethics" in df["corpus"] and "Safety" in df["corpus"]:
+    if "Ethics" in df["corpus"].to_numpy() and "Safety" in df["corpus"].to_numpy():
         min_docs_per_year = 2
         if "year" in df.columns:
             years = sorted(df["year"].dropna().unique())
@@ -635,7 +698,7 @@ def analyze(
 
     console.print(f"Using only corpus: {corpus}" if corpus else "Using both corpora")
 
-    get_statistics(df)
+    get_statistics(df, plot)
 
     # Topic modeling with BERTopic
     topic_model = None
