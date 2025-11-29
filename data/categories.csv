@@ -1,0 +1,266 @@
+﻿field,type,high,low
+Safety,Risk,Noise and outliers,Risks from low system performance
+Safety,Risk,Noise and outliers,Irreducible data noise
+Safety,Risk,Noise and outliers,Data corruption
+Safety,Risk,Noise and outliers,Sensitivity to outliers
+Safety,Risk,Noise and outliers,Label noise and corruption
+Safety,Risk,Noise and outliers,Brittle latent representations
+Safety,Risk,Domain-specific risks,"Efficient bio-, chemical-, and nuclear-weapon design"
+Safety,Risk,Domain-specific risks,More effective and new ways of cyberattacks
+Safety,Risk,Domain-specific risks,Political destabilisation and AI-assisted coups
+Safety,Risk,Domain-specific risks,Risks from real-world embodied deployment
+Safety,Risk,Lack of monitoring,Machine learning backdoors
+Safety,Risk,Lack of monitoring,Multi-agent market and steganographic collusion
+Safety,Risk,Lack of monitoring,Unfaithful chain of thought
+Safety,Risk,Lack of monitoring,Risks from hallucination
+Safety,Risk,Lack of monitoring,Risks from instrumental goals
+Safety,Risk,Lack of monitoring,Mesa-optimization
+Safety,Risk,Lack of monitoring,Alignment faking
+Safety,Risk,Lack of monitoring,Interpretability illusion
+Safety,Risk,Lack of monitoring,Accumulative systemic risks
+Safety,Risk,Lack of monitoring,Inadvertent privacy and copyright violation
+Safety,Risk,Lack of monitoring,Memorization of false and outdated information
+Safety,Risk,Lack of monitoring,"AI consciousness, morality, and welfare"
+Safety,Risk,Lack of monitoring,Sandbagging (intentional underperformance during testing)
+Safety,Risk,Lack of control enforcement,Multi-agent goal conflicts
+Safety,Risk,Lack of control enforcement,Social dilemmas and coercive behaviour
+Safety,Risk,Lack of control enforcement,Miscoordination in multi-agent systems
+Safety,Risk,Lack of control enforcement,Agent shutdown resistance
+Safety,Risk,Lack of control enforcement,Sycophancy
+Safety,Risk,Lack of control enforcement,Jailbreaking
+Safety,Risk,Lack of control enforcement,Wireheading
+Safety,Risk,Lack of control enforcement,Reward hacking and specification gaming
+Safety,Risk,Lack of control enforcement,Recursive self-improvement
+Safety,Risk,Lack of control enforcement,Open-weight safety finetuning stripping
+Safety,Risk,Unsafe exploration,Unsafe state and action space exploration
+Safety,Risk,Unsafe exploration,Unsafe behaviour under resource constraints
+Safety,Risk,Unsafe exploration,Risks from incorrect agent beliefs
+Safety,Risk,Unsafe exploration,Goal and reward misidentification and misspecification
+Safety,Risk,Unsafe exploration,Unsafe behaviour under bounded rationality
+Safety,Risk,System misspecification,Incorrect system requirement elicitation and specification
+Safety,Risk,System misspecification,Suboptimal modeling choices
+Safety,Risk,System misspecification,Inappropriate hyperparameter selection
+Safety,Risk,System misspecification,Overfitting  (in supervised learning) and overoptimization (in RL)
+Safety,Risk,System misspecification,Benchmark inflation and reproduction crises
+Safety,Risk,System misspecification,Inability to scale to large systems
+Safety,Risk,System misspecification,Unintended misalignment from fine-tuning
+Safety,Risk,Adversarial attacks,Perturbation-based attacks
+Safety,Risk,Adversarial attacks,Adversarial prompt generation
+Safety,Risk,Adversarial attacks,Data poisoning
+Safety,Risk,Adversarial attacks,External reward tampering
+Safety,Risk,Adversarial attacks,Malicious deepfake
+Safety,Risk,Non-stationary distribution,Data distribution shifts
+Safety,Risk,Non-stationary distribution,"Input, training, and fine-tuning data distribution drift"
+Safety,Risk,Non-stationary distribution,Risks from partial observability
+Safety,Risk,Non-stationary distribution,Risks from continually learning agents
+Safety,Risk,Non-stationary distribution,Out-of-distribution inputs
+Safety,Risk,Non-stationary distribution,Action and state space drift
+Safety,Mitigation,Mechanistic interpretability,Circuit analysis
+Safety,Mitigation,Mechanistic interpretability,Sparse autoencoders
+Safety,Mitigation,Mechanistic interpretability,Neuron activation visualization
+Safety,Mitigation,Mechanistic interpretability,Developmental trajectory interpretability
+Safety,Mitigation,Mechanistic interpretability,Interpretable surrogate modeling
+Safety,Mitigation,Mechanistic interpretability,Causal scrubbing
+Safety,Mitigation,Mechanistic interpretability,Intrinsically interpretable model analysis
+Safety,Mitigation,Mechanistic interpretability,Automated interpretability
+Safety,Mitigation,Mechanistic interpretability,Concept-based methods and steering
+Safety,Mitigation,Mechanistic interpretability,Information theoretical analysis
+Safety,Mitigation,Robustness and adversarial resilience,Adversarial training
+Safety,Mitigation,Robustness and adversarial resilience,Adversarial data augmentation
+Safety,Mitigation,Robustness and adversarial resilience,Remote adversarial patching
+Safety,Mitigation,Robustness and adversarial resilience,Belief updates under adversarial training
+Safety,Mitigation,Robustness and adversarial resilience,Outlier detection
+Safety,Mitigation,Robustness and adversarial resilience,Out-of-distribution generalization
+Safety,Mitigation,Robustness and adversarial resilience,Clusterability and label-noise data augmentation
+Safety,Mitigation,Robustness and adversarial resilience,Trojan and backdoor discovery
+Safety,Mitigation,Robustness and adversarial resilience,Domain adaptation for continual learning
+Safety,Mitigation,Robustness and adversarial resilience,Robust data processing and management
+Safety,Mitigation,Robustness and adversarial resilience,Methods for bounded memory/compute
+Safety,Mitigation,Robustness and adversarial resilience,Robust unsupervised learning
+Safety,Mitigation,Robustness and adversarial resilience,Sample efficiency and meta-RL regularization
+Safety,Mitigation,Robustness and adversarial resilience,Robust and risk-averse RL
+Safety,Mitigation,Safety control and capability containment,"Capability thresholds, red lines, and hard constraints"
+Safety,Mitigation,Safety control and capability containment,Password-locking capabilities
+Safety,Mitigation,Safety control and capability containment,Constrained or risk-averse RL
+Safety,Mitigation,Safety control and capability containment,Machine unlearning for unsafe information or behaviors
+Safety,Mitigation,Safety control and capability containment,Hard constraints on action and state space
+Safety,Mitigation,Safety control and capability containment,Safe Pareto improvements and game-theoretic guarantees
+Safety,Mitigation,Safety control and capability containment,Limits on external tool usage
+Safety,Mitigation,Safety control and capability containment,Scalable oversight frameworks via delegation to less capable AI
+Safety,Mitigation,Safety control and capability containment,Chain-of-thought control
+Safety,Mitigation,Reward modelling and learning,Reward modeling and inverse RL for human values
+Safety,Mitigation,Reward modelling and learning,Multi-agent cooperation via inverse RL
+Safety,Mitigation,Reward modelling and learning,RLHF / RLHAIF / RLAIF fine-tuning
+Safety,Mitigation,Reward modelling and learning,Accurate reward specification
+Safety,Mitigation,Reward modelling and learning,Audits for reward hacking and hidden goals
+Safety,Mitigation,Reward modelling and learning,Normative work on value alignment and corrigibility
+Safety,Mitigation,Reward modelling and learning,Preference learning under uncertainty
+Safety,Mitigation,Reward modelling and learning,Multi-stakeholder and multi-agent reward learning
+Safety,Mitigation,Reward modelling and learning,Constitutional and rule-based reward modelling
+Safety,Mitigation,"Monitoring, detection, and evaluation",Detecting adversarial examples
+Safety,Mitigation,"Monitoring, detection, and evaluation",Benchmark datasets and sandboxing environments
+Safety,Mitigation,"Monitoring, detection, and evaluation",Honeypot monitoring
+Safety,Mitigation,"Monitoring, detection, and evaluation",Chain-of-thought monitoring
+Safety,Mitigation,"Monitoring, detection, and evaluation",Safety verification frameworks and standardized pipelines
+Safety,Mitigation,"Monitoring, detection, and evaluation",Error bounds and formal verification
+Safety,Mitigation,"Monitoring, detection, and evaluation",Risk assessments and audits
+Safety,Mitigation,"Monitoring, detection, and evaluation",Model provenance and audit trails
+Safety,Mitigation,"Monitoring, detection, and evaluation",Safety metrics standardization
+Safety,Mitigation,Safe deployment engineering,Real-world deployment and testing
+Safety,Mitigation,Safe deployment engineering,Contact-safe continuous control
+Safety,Mitigation,Safe deployment engineering,Collaborative robotics
+Safety,Mitigation,Safe deployment engineering,Post-deployment monitoring
+Safety,Mitigation,Safe deployment engineering,Requirements elicitation with stakeholders
+Safety,Mitigation,Safe deployment engineering,Vertical system integration (AI + non-AI + society + etc.)
+Safety,Mitigation,Safe deployment engineering,Actionable safe design frameworks and processes
+Safety,Mitigation,Safe deployment engineering,Safety case development for compliance
+Safety,Mitigation,Safe deployment engineering,Scalable and safe infrastructure
+Safety,Mitigation,Theoretical foundations,Mathematical foundations for ML and agents
+Safety,Mitigation,Theoretical foundations,Theory on bounded rationality
+Safety,Mitigation,Theoretical foundations,Game-theoretic models of AI ecosystems
+Safety,Mitigation,Theoretical foundations,Formal theory of corrigibility
+Safety,Mitigation,Theoretical foundations,Decision theory
+Safety,Mitigation,Forecasting and metascience,Metascience and metasafety research
+Safety,Mitigation,Forecasting and metascience,Science of evaluations
+Safety,Mitigation,Forecasting and metascience,Forecasting and timelines
+Safety,Mitigation,Forecasting and metascience,Standardizing terminology and methodologies
+Safety,Mitigation,Forecasting and metascience,Literature surveys
+Ethics,Risk,"Discrimination, exclusion, toxicity",Inadequate decision-making under moral dilemmas
+Ethics,Risk,"Discrimination, exclusion, toxicity",Moral hypocrisy in automated decision-making
+Ethics,Risk,"Discrimination, exclusion, toxicity",Cross-cultural moral variance
+Ethics,Risk,"Discrimination, exclusion, toxicity",Lack of consideration for metaethics and pluralistic morality
+Ethics,Risk,"Discrimination, exclusion, toxicity",Risks from unactionable normative frameworks
+Ethics,Risk,"Discrimination, exclusion, toxicity",Bias in automated decision-making (including: gender / race / sex / age / (dis)ability / language / income / health)
+Ethics,Risk,"Discrimination, exclusion, toxicity",Biased learning of representations
+Ethics,Risk,"Discrimination, exclusion, toxicity",Biased data generation
+Ethics,Risk,"Discrimination, exclusion, toxicity",Fairness reversal under distribution shifts and outliers
+Ethics,Risk,"Discrimination, exclusion, toxicity",Unfair decisions under preference / opinion aggregation
+Ethics,Risk,"Discrimination, exclusion, toxicity",Risks from fairness-performance trade-offs
+Ethics,Risk,"Discrimination, exclusion, toxicity",Lack of suitable bias measurement techniques
+Ethics,Risk,"Discrimination, exclusion, toxicity",Lack of suitable fairness measurement techniques
+Ethics,Risk,Information hazards,(Non-consensual) mass data collection
+Ethics,Risk,Information hazards,(Inadvertent) identity disclosure
+Ethics,Risk,Information hazards,(Unauthorized) personal data processing and brokerage
+Ethics,Risk,Information hazards,Lack of robust data protection frameworks and regulation
+Ethics,Risk,Information hazards,Intellectual property and copyright violation
+Ethics,Risk,Misinformation harms,Inconsistent and non-deterministic automated decision-making
+Ethics,Risk,Misinformation harms,Unreliability of AI benchmarks
+Ethics,Risk,Misinformation harms,Epistemic erosion and destabilization of community of knowledge
+Ethics,Risk,Misinformation harms,"Erosion of civic discourse, social justice"
+Ethics,Risk,Misinformation harms,Polarization and echo chambers
+Ethics,Risk,Misinformation harms,Hallucinatory dangers in human-robot interaction
+Ethics,Risk,Misinformation harms,Side effects of low performance systems
+Ethics,Risk,Misinformation harms,Reproducibility crisis in AI research
+Ethics,Risk,Misinformation harms,Risks from automated content moderation and censorship biases
+Ethics,Risk,Misinformation harms,AI hype and overpromising
+Ethics,Risk,Malicious uses,Synthetic identities and impersonation (e.g. deepfakes)
+Ethics,Risk,Malicious uses,Intentional robot misuse via immoral commands
+Ethics,Risk,Malicious uses,Jailbreaking and cyberattacks
+Ethics,Risk,Malicious uses,"(LLM-enabled) hate speech, harassment, and bullying"
+Ethics,Risk,Malicious uses,"(LLM-enabled) political misinformation, fake news"
+Ethics,Risk,Malicious uses,"(LLM-enabled) incitement of violence, unrest, or protests"
+Ethics,Risk,HCI harms,Incorrect value encoding
+Ethics,Risk,HCI harms,Side effects of greedy agent behaviour
+Ethics,Risk,HCI harms,Emergent bias in HCI
+Ethics,Risk,HCI harms,Discrepancy between actual and perceived fairness
+Ethics,Risk,HCI harms,"Under / overtrust of AI systems, especially with embodied systems (e.g. domestic robots)"
+Ethics,Risk,HCI harms,Human-agent communication breakdown
+Ethics,Risk,HCI harms,Over-anthropomorphism
+Ethics,Risk,HCI harms,Emotional dependency and parasocial relationships with AI companions
+Ethics,Risk,HCI harms,Psychosis or suicidal ideation triggered by AI interaction
+Ethics,Risk,HCI harms,Erosion of interpersonal trust due to pervasive AI mediation
+Ethics,Risk,"Automation, access, and environmental harms",Risks from automated mental health tools
+Ethics,Risk,"Automation, access, and environmental harms",Crowdworker and data labour abuse (e.g. human cost of RLHF)
+Ethics,Risk,"Automation, access, and environmental harms",Opacity in data and model provenance
+Ethics,Risk,"Automation, access, and environmental harms",Risks to recourse from lack of awareness / understanding / experience with ADS
+Ethics,Risk,"Automation, access, and environmental harms","Non-existent, inappropriate, or inactionable explanations of ADS"
+Ethics,Risk,"Automation, access, and environmental harms",Algorithmic management and surveillance of workers
+Ethics,Risk,"Automation, access, and environmental harms","Wage polarization, job displacement, mass unemployment"
+Ethics,Risk,"Automation, access, and environmental harms",Deskilling and over-automation
+Ethics,Risk,"Automation, access, and environmental harms",Climate inequity impacts
+Ethics,Risk,"Automation, access, and environmental harms",Unsustainable data center practices
+Ethics,Risk,"Automation, access, and environmental harms",Resource extraction and e-waste from hardware manufacturing
+Ethics,Risk,"Automation, access, and environmental harms",Energy consumption and carbon footprint of AI training and inference
+Ethics,Risk,"Automation, access, and environmental harms",Jurisdictional conflicts and cross-border regulation issues
+Ethics,Risk,"Automation, access, and environmental harms",Risks from corporate capture of governance and regulation
+Ethics,Risk,"Automation, access, and environmental harms",Liability and accountability gaps
+Ethics,Risk,"Automation, access, and environmental harms",Lack of global coordination in AI governance
+Ethics,Mitigation,Normative and moral reasoning,Human preference / value elicitation
+Ethics,Mitigation,Normative and moral reasoning,Understanding value conflicts
+Ethics,Mitigation,Normative and moral reasoning,Metaethical study on cross-cultural ethics and normative frameworks
+Ethics,Mitigation,Normative and moral reasoning,Moral dilemmas and AI decision-making
+Ethics,Mitigation,Normative and moral reasoning,Hypocrisy detection
+Ethics,Mitigation,Normative and moral reasoning,Reward design and correction
+Ethics,Mitigation,Normative and moral reasoning,Cultural norms for robot behavior
+Ethics,Mitigation,Normative and moral reasoning,Handling immoral user commands
+Ethics,Mitigation,Normative and moral reasoning,Constitutional AI
+Ethics,Mitigation,"Transparency, explainability and interpretability","Post-hoc methods (saliency maps, gradients, LIME/SHAP/GradCAM)"
+Ethics,Mitigation,"Transparency, explainability and interpretability",Counterfactual / contrastive methods
+Ethics,Mitigation,"Transparency, explainability and interpretability",Inherently interpretable models and interpretable surrogate models
+Ethics,Mitigation,"Transparency, explainability and interpretability",Analysis of mathematical properties (faithfulness/monotonicity/actionability)
+Ethics,Mitigation,"Transparency, explainability and interpretability",Human-centered explanation generation and evaluation
+Ethics,Mitigation,"Transparency, explainability and interpretability",Mimicking human cognitive reasoning
+Ethics,Mitigation,"Transparency, explainability and interpretability",Folk-concept explanations
+Ethics,Mitigation,"Transparency, explainability and interpretability",Moral reasoning traces
+Ethics,Mitigation,"Transparency, explainability and interpretability",Applied mechanistic interpretability (embedding / representation bias analysis)
+Ethics,Mitigation,"Fairness, justice, and inclusive design",Understanding sources of bias
+Ethics,Mitigation,"Fairness, justice, and inclusive design",Metrics for group / individual / procedural fairness
+Ethics,Mitigation,"Fairness, justice, and inclusive design",Detecting bias automatically
+Ethics,Mitigation,"Fairness, justice, and inclusive design",Studying optimality and fairness trade-offs
+Ethics,Mitigation,"Fairness, justice, and inclusive design",Fairness under distribution shift and fairness reversal under new data
+Ethics,Mitigation,"Fairness, justice, and inclusive design",OOD robustness for fairness
+Ethics,Mitigation,"Fairness, justice, and inclusive design",Fair opinion aggregation
+Ethics,Mitigation,"Fairness, justice, and inclusive design",Fairness benchmarks
+Ethics,Mitigation,"Fairness, justice, and inclusive design",Intersectional fairness analysis
+Ethics,Mitigation,"Fairness, justice, and inclusive design",Bias bounty programs
+Ethics,Mitigation,"Fairness, justice, and inclusive design",Counterfactual fairness
+Ethics,Mitigation,"Fairness, justice, and inclusive design",Data augmentation for bias reduction
+Ethics,Mitigation,"Fairness, justice, and inclusive design",Participatory / affected community-driven fair design
+Ethics,Mitigation,"Fairness, justice, and inclusive design",Quantum fair algorithms
+Ethics,Mitigation,Data governance and privacy,Data minimization
+Ethics,Mitigation,Data governance and privacy,Data provenance and traceability
+Ethics,Mitigation,Data governance and privacy,Monitoring data leakages
+Ethics,Mitigation,Data governance and privacy,Frameworks for data curation and documentation
+Ethics,Mitigation,Data governance and privacy,Differential privacy
+Ethics,Mitigation,Data governance and privacy,"Privacy preserving algorithms (federated learning, secure aggregation)"
+Ethics,Mitigation,Data governance and privacy,Machine unlearning
+Ethics,Mitigation,Data governance and privacy,Synthetic data governance
+Ethics,Mitigation,Data governance and privacy,Privacy risk estimation
+Ethics,Mitigation,Data governance and privacy,Watermarking / content provenance for data assets
+Ethics,Mitigation,"Robustness, reliability and uncertainty estimation",Adversarial robustness (including prompt-/jailbreak-resistance)
+Ethics,Mitigation,"Robustness, reliability and uncertainty estimation",Backdoor resistant LLMs
+Ethics,Mitigation,"Robustness, reliability and uncertainty estimation",OOD detection and robustness to distribution shifts (known / unknown unknown detection)
+Ethics,Mitigation,"Robustness, reliability and uncertainty estimation",Consistency checks for decision making
+Ethics,Mitigation,"Robustness, reliability and uncertainty estimation",Red-teaming for reliability (e.g. in mental health application)
+Ethics,Mitigation,"Robustness, reliability and uncertainty estimation",Hallucination mitigation strategies (e.g. in embodied application)
+Ethics,Mitigation,"Governance, accountability and compliance",Risk classification and impact assessments
+Ethics,Mitigation,"Governance, accountability and compliance",External and internal audits (white/black-box)
+Ethics,Mitigation,"Governance, accountability and compliance",Legal and regulatory capture (ala GDPR/AIA/DSA)
+Ethics,Mitigation,"Governance, accountability and compliance",Redress and liability under AI harms
+Ethics,Mitigation,"Governance, accountability and compliance","Documentation and standardization requirements (model / datasheets, system cards)"
+Ethics,Mitigation,"Governance, accountability and compliance",International cooperation
+Ethics,Mitigation,"Governance, accountability and compliance",Open-source model governance
+Ethics,Mitigation,"Governance, accountability and compliance",Supply chain monitoring
+Ethics,Mitigation,"Governance, accountability and compliance",Adverse event reporting infrastructure
+Ethics,Mitigation,HCI and human factors,Mitigating and leveraging automation bias
+Ethics,Mitigation,HCI and human factors,Over / under-reliance and trust calibration
+Ethics,Mitigation,HCI and human factors,Human-in-the-loop for high-stakes use
+Ethics,Mitigation,HCI and human factors,Social priming via anthropomorphism
+Ethics,Mitigation,HCI and human factors,Effective UX design for consent / transparency / algorithmic recourse
+Ethics,Mitigation,HCI and human factors,Accessible design
+Ethics,Mitigation,HCI and human factors,Democratic deliberation and social choice theories
+Ethics,Mitigation,HCI and human factors,Studying human-robot interaction in domestic / care contexts
+Ethics,Mitigation,HCI and human factors,(Game) theoretical models and empirical analyses of human-agent teams
+Ethics,Mitigation,HCI and human factors,Improved communication with conversational agents
+Ethics,Mitigation,HCI and human factors,"Healthcare and mental-health applications (red-teaming, harm detection)"
+Ethics,Mitigation,Information integrity,Monitoring changes in information ecosystems
+Ethics,Mitigation,Information integrity,Mis/disinformation detection
+Ethics,Mitigation,Information integrity,Hate speech detection
+Ethics,Mitigation,Information integrity,Recommender algorithm impact assessment (e.g. echo chambers)
+Ethics,Mitigation,"Societal, economic, and environmental studies","Sector-specific constraints (finance, justice, education, etc.)"
+Ethics,Mitigation,"Societal, economic, and environmental studies",Understanding labor and crowdwork conditions
+Ethics,Mitigation,"Societal, economic, and environmental studies",Displacement and productivity distribution
+Ethics,Mitigation,"Societal, economic, and environmental studies",Encouraging civic participation and AI literacy
+Ethics,Mitigation,"Societal, economic, and environmental studies",Measuring energy use and carbon footprint
+Ethics,Mitigation,"Societal, economic, and environmental studies",E-waste management
+Ethics,Mitigation,"Societal, economic, and environmental studies","Supply chain monitoring, ethics, and sustainability"
