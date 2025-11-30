@@ -37,13 +37,13 @@ Safety,Risk,Unsafe exploration,Unsafe behaviour under resource constraints
 Safety,Risk,Unsafe exploration,Risks from incorrect agent beliefs
 Safety,Risk,Unsafe exploration,Goal and reward misidentification and misspecification
 Safety,Risk,Unsafe exploration,Unsafe behaviour under bounded rationality
-Safety,Risk,System misspecification,Incorrect system requirement elicitation and specification
-Safety,Risk,System misspecification,Suboptimal modeling choices
-Safety,Risk,System misspecification,Inappropriate hyperparameter selection
-Safety,Risk,System misspecification,Overfitting  (in supervised learning) and overoptimization (in RL)
-Safety,Risk,System misspecification,Benchmark inflation and reproduction crises
-Safety,Risk,System misspecification,Inability to scale to large systems
-Safety,Risk,System misspecification,Unintended misalignment from fine-tuning
+Safety,Risk,System misspecification and misidentification,Incorrect system requirement elicitation and specification
+Safety,Risk,System misspecification and misidentification,Suboptimal modeling choices
+Safety,Risk,System misspecification and misidentification,Inappropriate hyperparameter selection
+Safety,Risk,System misspecification and misidentification,Overfitting  (in supervised learning) and overoptimization (in RL)
+Safety,Risk,System misspecification and misidentification,Benchmark inflation and reproduction crises
+Safety,Risk,System misspecification and misidentification,Inability to scale to large systems
+Safety,Risk,System misspecification and misidentification,Unintended misalignment from fine-tuning
 Safety,Risk,Adversarial attacks,Perturbation-based attacks
 Safety,Risk,Adversarial attacks,Adversarial prompt generation
 Safety,Risk,Adversarial attacks,Data poisoning
@@ -81,7 +81,7 @@ Safety,Mitigation,Robustness and adversarial resilience,Sample efficiency and me
 Safety,Mitigation,Robustness and adversarial resilience,Robust and risk-averse RL
 Safety,Mitigation,Safety control and capability containment,"Capability thresholds, red lines, and hard constraints"
 Safety,Mitigation,Safety control and capability containment,Password-locking capabilities
-Safety,Mitigation,Safety control and capability containment,Constrained or risk-averse RL
+Safety,Mitigation,Safety control and capability containment,Constrained and risk-averse RL
 Safety,Mitigation,Safety control and capability containment,Machine unlearning for unsafe information or behaviors
 Safety,Mitigation,Safety control and capability containment,Hard constraints on action and state space
 Safety,Mitigation,Safety control and capability containment,Safe Pareto improvements and game-theoretic guarantees

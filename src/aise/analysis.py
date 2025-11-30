@@ -14,6 +14,7 @@ The input CSV file is expected to have at least the following columns:
 
 from __future__ import annotations
 
+import pickle
 import re
 from collections import defaultdict
 from itertools import combinations
@@ -245,24 +246,30 @@ def model_topic(
 ) -> BERTopic:
     """Perform topic modeling using BERTopic and visualize results."""
     # Initialize embedding model
-    embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
     texts = df["clean_text"].tolist()
+    embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+    if not (output_dir / "topic_model.pkl").exists():
+        console.print("Computing embeddings (this may take time)")
+        embeddings = embedding_model.encode(texts, show_progress_bar=True)
 
-    console.print("Computing embeddings (this may take time)")
-    embeddings = embedding_model.encode(texts, show_progress_bar=True)
-
-    # Fit BERTopic
-    hdbscan_model = HDBSCAN(
-        min_cluster_size=min_cluster_size,
-        metric="euclidean",
-        cluster_selection_method="eom",
-        prediction_data=True,
-    )
-    topic_model = BERTopic(
-        embedding_model=embedding_model,
-        calculate_probabilities=True,
-        hdbscan_model=hdbscan_model,
-    )
+        # Fit BERTopic
+        hdbscan_model = HDBSCAN(
+            min_cluster_size=min_cluster_size,
+            metric="euclidean",
+            cluster_selection_method="eom",
+            prediction_data=True,
+        )
+        topic_model = BERTopic(
+            embedding_model=embedding_model,
+            calculate_probabilities=True,
+            hdbscan_model=hdbscan_model,
+        )
+        with (output_dir / "topic_model.pkl").open("wb") as f:
+            pickle.dump((embeddings, topic_model), f)
+    else:
+        console.print("Loading existing topic model and embeddings")
+        with (output_dir / "topic_model.pkl").open("rb") as f:
+            embeddings, topic_model = pickle.load(f)
 
     topics, _ = topic_model.fit_transform(
         texts,
@@ -416,6 +423,68 @@ def plot_topic_analysis(
     fig = topic_model.visualize_barchart(top_n_topics=12)
     fig.write_html(output_dir / "bertopic_barchart.html")
 
+    # Temporal semantic drift: average embedding by year &
+    # cosine similarity between corpora per year
+    if "Ethics" in df["corpus"].to_numpy() and "Safety" in df["corpus"].to_numpy():
+        min_docs_per_year = 2
+        if "year" in df.columns:
+            years = sorted(df["year"].dropna().unique())
+            year_sims = []
+            for y in years:
+                sub = df[df["year"] == y]
+                if (
+                    len(sub[sub.corpus == "Ethics"]) < min_docs_per_year
+                    or len(sub[sub.corpus == "Safety"]) < min_docs_per_year
+                ):
+                    year_sims.append((np.nan, np.nan))
+                    continue
+                e_vec = embedding_model.encode(
+                    sub[sub.corpus == "Ethics"]["clean_text"].tolist(),
+                )
+                s_vec = embedding_model.encode(
+                    sub[sub.corpus == "Safety"]["clean_text"].tolist(),
+                )
+                sim = cosine_similarity(e_vec, s_vec)
+                year_sims.append(
+                    (np.nanmean(sim), np.nanstd(sim) / np.sqrt(np.sum(~np.isnan(sim))))
+                )
+            plt.figure(figsize=(7, 3))
+            plt.plot(years, [sim[0] for sim in year_sims], marker="o")
+            plt.fill_between(
+                years,
+                [sim[0] - sim[1] for sim in year_sims],
+                [sim[0] + sim[1] for sim in year_sims],
+                alpha=0.2,
+            )
+            plt.xlabel("Year")
+            plt.ylabel("Mean Corpus Cosine Similarity")
+            # plt.title("Temporal semantic convergence")
+            plt.tight_layout()
+            plt.savefig(output_dir / "plots" / "temporal_semantic_drift.png", dpi=300)
+            plt.show()
+        else:
+            console.print("No year column found; skipping temporal drift analysis")
+
+        # Corpus-level centroid similarity
+        ethics_vec = np.mean(
+            [
+                emb
+                for emb, c in zip(embeddings, df["corpus"], strict=True)
+                if c == "Ethics"
+            ],
+            axis=0,
+        )
+        safety_vec = np.mean(
+            [
+                emb
+                for emb, c in zip(embeddings, df["corpus"], strict=True)
+                if c == "Safety"
+            ],
+            axis=0,
+        )
+        corp_sim = cosine_similarity([ethics_vec], [safety_vec])[0][0]
+        console.print(f"Corpus-level cosine similarity: {corp_sim}")
+
     # UMAP projection of embeddings and corpus scatter
     reducer = umap.UMAP(
         n_neighbors=15,
@@ -480,65 +549,6 @@ def plot_topic_analysis(
     plt.ylabel("UMAP-2")
     plt.savefig(output_dir / "umap_topics.png", dpi=300)
     plt.show()
-
-    # Temporal semantic drift: average embedding by year &
-    # cosine similarity between corpora per year
-    if "Ethics" in df["corpus"].to_numpy() and "Safety" in df["corpus"].to_numpy():
-        min_docs_per_year = 2
-        if "year" in df.columns:
-            years = sorted(df["year"].dropna().unique())
-            year_sims = []
-            for y in years:
-                sub = df[df["year"] == y]
-                if (
-                    len(sub[sub.corpus == "Ethics"]) < min_docs_per_year
-                    or len(sub[sub.corpus == "Safety"]) < min_docs_per_year
-                ):
-                    year_sims.append(np.nan)
-                    continue
-                e_vec = np.mean(
-                    embedding_model.encode(
-                        sub[sub.corpus == "Ethics"]["clean_text"].tolist(),
-                    ),
-                    axis=0,
-                )
-                s_vec = np.mean(
-                    embedding_model.encode(
-                        sub[sub.corpus == "Safety"]["clean_text"].tolist(),
-                    ),
-                    axis=0,
-                )
-                sim = cosine_similarity([e_vec], [s_vec])[0][0]
-                year_sims.append(sim)
-            plt.figure(figsize=(10, 4))
-            plt.plot(years, year_sims, marker="o")
-            plt.xlabel("Year")
-            plt.ylabel("Cosine similarity (Ethics vs Safety)")
-            plt.title("Temporal semantic convergence")
-            plt.savefig(output_dir / "temporal_semantic_drift.png", dpi=300)
-            plt.show()
-        else:
-            console.print("No year column found; skipping temporal drift analysis")
-
-        # Corpus-level centroid similarity
-        ethics_vec = np.mean(
-            [
-                emb
-                for emb, c in zip(embeddings, df["corpus"], strict=True)
-                if c == "Ethics"
-            ],
-            axis=0,
-        )
-        safety_vec = np.mean(
-            [
-                emb
-                for emb, c in zip(embeddings, df["corpus"], strict=True)
-                if c == "Safety"
-            ],
-            axis=0,
-        )
-        corp_sim = cosine_similarity([ethics_vec], [safety_vec])[0][0]
-        console.print(f"Corpus-level cosine similarity: {corp_sim}")
 
 
 def plot_top_subgraph(
@@ -698,7 +708,7 @@ def analyze(
 
     console.print(f"Using only corpus: {corpus}" if corpus else "Using both corpora")
 
-    get_statistics(df, plot)
+    # get_statistics(df, plot)
 
     # Topic modeling with BERTopic
     topic_model = None
