@@ -37,9 +37,17 @@ from sentence_transformers import SentenceTransformer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+from aise.plot import app as plot_app
 from aise.util import pandas_to_rich, word_freqs
 
 app = typer.Typer(rich_markup_mode="rich")
+app.add_typer(
+    plot_app,
+    name="plot",
+    help="Plotting utilities.\nInvoke without a command to run all plots.",
+    invoke_without_command=True,
+)
+
 console = Console()
 
 RANDOM_SEED = 42
@@ -625,7 +633,7 @@ def plot_top_subgraph(
 @app.command()
 def analyze(
     file_path: Path = typer.Option(
-        Path("data/papers.csv"),
+        Path("data/annotated_papers.csv"),
         "-p",
         "--path",
         help="Path to the CSV file containing paper metadata.",
@@ -656,15 +664,15 @@ def analyze(
         help="Minimum cluster size for HDBSCAN in topic modeling.",
     ),
     topic_modeling: bool = typer.Option(
-        default=True,
+        default=False,
         help="Whether to perform topic modeling analysis.",
     ),
     network_analysis: bool = typer.Option(
-        default=True,
+        default=False,
         help="Whether to perform term co-occurrence network analysis.",
     ),
     plot: bool = typer.Option(
-        default=True,
+        default=False,
         help="Whether to plot visualizations.",
     ),
 ) -> int:

@@ -1,12 +1,14 @@
-import re
 import textwrap
+import re
 from collections import Counter
+from pathlib import Path
 
-import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import typer
+from matplotlib import cm
 from matplotlib.colors import Normalize
 
 ABBREVIATIONS = {
@@ -19,186 +21,406 @@ ABBREVIATIONS = {
     "rai": "responsible AI",
 }
 
-get_color = lambda z: cm.get_cmap("seismic")(Normalize(vmin=z.min(), vmax=z.max())(z))
-get_tops = lambda df, n: pd.concat([df.head(n), df.tail(n)]).sort_values("z_score")
+HATCHES = ["///", "\\\\", "...", "xxx", "+++", "***"]
 
-data = pd.read_csv("output/processed_data.csv", index_col=0)
-categories = pd.read_csv("data/categories.csv")
-corpus_ethics = data[data["corpus"] == "Ethics"]["clean_text"].tolist()
-corpus_safety = data[data["corpus"] == "Safety"]["clean_text"].tolist()
+get_color = lambda z: cm.get_cmap("seismic")(Normalize(vmin=z.min(), vmax=z.max())(z))  # noqa: E731
+get_tops = lambda df, n: pd.concat([df.head(n), df.tail(n)]).sort_values("z_score")  # noqa: E731
 
-tokens_ethics = [tok for doc in corpus_ethics for tok in doc.split()]
-tokens_safety = [tok for doc in corpus_safety for tok in doc.split()]
 
-counts_ethics = Counter(tokens_ethics)
-counts_safety = Counter(tokens_safety)
+def _ensure_plots_dir(output_dir: Path) -> Path:
+    plots_dir = output_dir / "plots"
+    plots_dir.mkdir(parents=True, exist_ok=True)
+    return plots_dir
 
-vocab = list(set(counts_ethics.keys()) | set(counts_safety.keys()))
 
-N_A = sum(counts_ethics.values())
-N_B = sum(counts_safety.values())
+def load_inputs(
+    data_path: Path = Path("output/processed_data.csv"),
+    categories_path: Path = Path("data/categories.csv"),
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    data = pd.read_csv(data_path, index_col=0)
+    categories = pd.read_csv(categories_path)
+    return data, categories
 
-# -----------------------------------------------------------
-# 4. Log-odds ratio with informative Dirichlet prior
-#    (Monroe et al., 2008)
-# -----------------------------------------------------------
-# Use background frequencies as priors
-alpha = 0.01
-alpha_0 = alpha * len(vocab)
 
-freq_data = []
-for word in vocab:
-    cA = counts_ethics[word]
-    cB = counts_safety[word]
+def compute_log_odds_df(data: pd.DataFrame, alpha: float = 0.01) -> pd.DataFrame:
+    corpus_ethics = data[data["corpus"] == "Ethics"]["clean_text"].tolist()
+    corpus_safety = data[data["corpus"] == "Safety"]["clean_text"].tolist()
 
-    # Smoothed frequencies
-    freq_A = (cA + alpha) / (N_A + alpha_0)
-    freq_B = (cB + alpha) / (N_B + alpha_0)
+    tokens_ethics = [tok for doc in corpus_ethics for tok in doc.split()]
+    tokens_safety = [tok for doc in corpus_safety for tok in doc.split()]
 
-    # Log odds for each corpus
-    log_odds_A = np.log(freq_A / (1 - freq_A))
-    log_odds_B = np.log(freq_B / (1 - freq_B))
+    counts_ethics = Counter(tokens_ethics)
+    counts_safety = Counter(tokens_safety)
 
-    # Variance
-    var = (1 / (cA + alpha)) + (1 / (cB + alpha))
+    vocab = list(set(counts_ethics.keys()) | set(counts_safety.keys()))
+    N_A = sum(counts_ethics.values())
+    N_B = sum(counts_safety.values())
+    alpha_0 = alpha * len(vocab)
 
-    # z-score
-    z = (log_odds_A - log_odds_B) / np.sqrt(var)
+    freq_data: list[tuple[str, float, int, int, int, float, float]] = []
+    for word in vocab:
+        cA = counts_ethics[word]
+        cB = counts_safety[word]
 
-    freq_data.append((word, z, cA + cB, cA, cB, freq_A, freq_B))
+        freq_A = (cA + alpha) / (N_A + alpha_0)
+        freq_B = (cB + alpha) / (N_B + alpha_0)
 
-df = pd.DataFrame(
-    freq_data,
-    columns=[
-        "word",
-        "z_score",
-        "total_count",
-        "ethics_count",
-        "safety_count",
-        "ethics_freq",
-        "safety_freq",
-    ],
-)
-df = df.sort_values("z_score", ascending=False)
+        log_odds_A = np.log(freq_A / (1 - freq_A))
+        log_odds_B = np.log(freq_B / (1 - freq_B))
+        var = (1 / (cA + alpha)) + (1 / (cB + alpha))
+        z = (log_odds_A - log_odds_B) / np.sqrt(var)
 
-# -----------------------------------------------------------
-# 5. Category Visualization
-# -----------------------------------------------------------
-cat_df = []
-for cat_type in ["risk", "mitigation"]:
-    cat_col = f"{cat_type}_categories"
-    all_cats = data[cat_col].dropna().str.split(";", expand=True).stack()
-    error_cat = all_cats[~all_cats.isin(categories["low"])]
-    if not error_cat.empty:
-        print(f"Unknown categories in {cat_col}:")
-        print(error_cat)
-    cat_counts = all_cats.value_counts()
-    cat_df.append(cat_counts.rename("count"))
-cat_df = pd.concat(cat_df).fillna(0).astype(int)
-cat_df.to_csv("output/category_counts.csv")
-cat_df = categories.join(cat_df, how="left", on="low")
-cat_df["count"] = cat_df["count"].fillna(0)
-counts = cat_df.groupby(["field", "type", "high"]).sum()["count"].reset_index()
-print(counts)
+        freq_data.append((word, z, cA + cB, cA, cB, freq_A, freq_B))
 
-hatches = ["///", "\\\\", "...", "xxx", "+++", "***"]
-for field, cat_type in counts[["field", "type"]].drop_duplicates().values:
-    sub_counts = counts[(counts["field"] == field) & (counts["type"] == cat_type)]
-    plt.figure(figsize=(8, 4))
-    sns.barplot(
-        data=sub_counts,
-        y="high",
-        x="count",
-        palette="Reds" if field == "Safety" else "Blues",
-        order=sub_counts.sort_values("count", ascending=False)["high"],
+    return pd.DataFrame(
+        freq_data,
+        columns=[
+            "word",
+            "z_score",
+            "total_count",
+            "ethics_count",
+            "safety_count",
+            "ethics_freq",
+            "safety_freq",
+        ],
+    ).sort_values("z_score", ascending=False)
+
+
+def plot_category_overlap(
+    data: pd.DataFrame,
+    categories: pd.DataFrame,
+    output_dir: Path = Path("output"),
+    n_labels: int = 10,
+    show: bool = False,
+) -> None:
+    for cat_type in ["risk", "mitigation"]:
+        cat_col = f"mixed_{cat_type}_categories"
+        all_cats = data[cat_col].dropna().str.split(";", expand=True).stack()
+        error_cat = all_cats[~all_cats.isin(categories["low"])]
+        if not error_cat.empty:
+            typer.secho(f"Unknown categories in {cat_col}:")
+            typer.secho(error_cat.to_string())
+        all_cats = all_cats.reset_index().rename(columns={"level_1": "cat_n", 0: "low"})
+        all_cats[f"{cat_type}_document_corpus"] = data.loc[
+            all_cats["custom_id"], "corpus"
+        ].to_numpy()
+        all_cats[f"{cat_type}_category_corpus"] = (
+            categories.set_index("low").loc[all_cats["low"], "field"].to_numpy()
+        )
+        all_cats["high"] = (
+            categories.set_index("low").loc[all_cats["low"], "high"].to_numpy()
+        )
+        all_cats["is_overlap"] = (
+            all_cats[f"{cat_type}_document_corpus"]
+            != all_cats[f"{cat_type}_category_corpus"]
+        )
+
+        for field in categories["field"].unique():
+            sub_cats = all_cats[all_cats[f"{cat_type}_category_corpus"] == field]
+            plots_dir = _ensure_plots_dir(output_dir)
+            palette = ["C3", "C0"] if field == "Safety" else ["C0", "C3"]
+            order = sub_cats[sub_cats["is_overlap"]]["low"].value_counts().index
+            plt.figure(figsize=(8, 6))
+            sns.countplot(
+                data=sub_cats,
+                y="low",
+                hue="is_overlap",
+                order=order[:n_labels],
+                palette=palette,
+            )
+            ax = plt.gca()
+            for bar in ax.patches:
+                bar.set_edgecolor("black")
+            max_width = 35
+            new_labels = []
+            for label in ax.get_yticklabels():
+                text = label.get_text()
+                label.set_color("red" if field == "Safety" else "blue")
+                text = re.sub(r"\(.*\)$", "", text).strip()
+                wrapped = "\n".join(textwrap.wrap(text[:90], max_width))
+                new_labels.append(wrapped)
+            ax.set_yticklabels(new_labels)
+
+            handles, labels = ax.get_legend_handles_labels()
+            labels = ["Safety", "Ethics"] if field == "Safety" else ["Ethics", "Safety"]
+            ax.legend(handles, labels, title="Annotated as")
+            plt.xlabel("Number of Documents")
+            plt.ylabel(f"{field} {cat_type.capitalize()} Categories")
+            plt.tight_layout()
+            plt.savefig(plots_dir / f"fig_overlap_{field}_{cat_type}.png", dpi=300)
+            if show:
+                plt.show()
+            plt.close()
+
+
+def plot_categories(
+    data: pd.DataFrame,
+    categories: pd.DataFrame,
+    output_dir: Path = Path("output"),
+    show: bool = False,
+) -> None:
+    cat_df = []
+    for cat_type in ["risk", "mitigation"]:
+        cat_col = f"{cat_type}_categories"
+        all_cats = data[cat_col].dropna().str.split(";", expand=True).stack()
+        error_cat = all_cats[~all_cats.isin(categories["low"])]
+        if not error_cat.empty:
+            typer.secho(f"Unknown categories in {cat_col}:")
+            typer.secho(error_cat.to_string())
+        cat_counts = all_cats.value_counts()
+        cat_df.append(cat_counts.rename("count"))
+    cat_df = pd.concat(cat_df).fillna(0).astype(int)
+    (output_dir / "category_counts.csv").write_text(cat_df.to_csv())
+    cat_df = categories.join(cat_df, how="left", on="low")
+    cat_df["count"] = cat_df["count"].fillna(0)
+    counts = cat_df.groupby(["field", "type", "high"]).sum()["count"].reset_index()
+
+    plots_dir = _ensure_plots_dir(output_dir)
+    for field, cat_type in counts[["field", "type"]].drop_duplicates().values:
+        sub_counts = counts[(counts["field"] == field) & (counts["type"] == cat_type)]
+        plt.figure(figsize=(8, 4))
+        sns.barplot(
+            data=sub_counts,
+            y="high",
+            x="count",
+            palette="Reds" if field == "Safety" else "Blues",
+            order=sub_counts.sort_values("count", ascending=False)["high"],
+        )
+        ax = plt.gca()
+        for i, bar in enumerate(ax.patches):
+            bar.set_hatch(HATCHES[i % len(HATCHES)])
+            bar.set_edgecolor("black")
+        max_width = 30
+        new_labels = []
+        for label in ax.get_yticklabels():
+            text = label.get_text()
+            wrapped = "\n".join(textwrap.wrap(text, max_width))
+            new_labels.append(wrapped)
+
+        ax.set_yticklabels(new_labels)
+        xlabel_str = "Risk Types" if cat_type == "Risk" else "Mitigation Strategies"
+        plt.xlabel(f"Category Counts for {field} {xlabel_str}")
+        plt.ylabel("")
+        plt.tight_layout()
+        plt.savefig(plots_dir / f"fig_category_counts_{field}_{cat_type}.png", dpi=300)
+        if show:
+            plt.show()
+        plt.close()
+
+
+def plot_log_odds(
+    df: pd.DataFrame,
+    output_dir: Path = Path("output"),
+    labels_top_n: int = 10,
+    tops_n: int = 20,
+    show: bool = False,
+) -> None:
+    plot_df = get_tops(df, tops_n)
+    score_type = "z_score"
+
+    plots_dir = _ensure_plots_dir(output_dir)
+    plt.figure(figsize=(7, 6))
+    plt.scatter(
+        df["total_count"], df[score_type], s=1, c=get_color(df[score_type]), alpha=0.5
     )
-    ax = plt.gca()
-    for i, bar in enumerate(ax.patches):
-        bar.set_hatch(hatches[i % len(hatches)])
-        bar.set_edgecolor("black")
-    max_width = 30  # character width before wrapping; adjust as needed
-    new_labels = []
-    for label in ax.get_yticklabels():
-        text = label.get_text()
-        wrapped = "\n".join(textwrap.wrap(text, max_width))
-        new_labels.append(wrapped)
-
-    ax.set_yticklabels(new_labels)
-    plt.xlabel(
-        f"Category Counts for {field} {'Risk Types' if cat_type == 'Risk' else 'Mitigation Strategies'}"
+    for _, plot_row in get_tops(df, labels_top_n).iterrows():
+        plt.text(
+            plot_row["total_count"],
+            plot_row[score_type],
+            plot_row["word"],
+            fontsize=10,
+            ha="center",
+            va="bottom",
+        )
+    font_sizes = np.interp(
+        np.abs(plot_df[score_type]), (0, max(np.abs(plot_df[score_type]))), (2, 12)
     )
-    plt.ylabel("")
+    for i, (_, plot_row) in enumerate(plot_df.iterrows()):
+        y_pos = plot_df[score_type].min() + i / len(plot_df) * (
+            plot_df[score_type].max() - plot_df[score_type].min()
+        )
+        plt.text(
+            1, y_pos, plot_row["word"], fontsize=font_sizes[i], ha="left", va="bottom"
+        )
+    plt.axhline(0, color="black", linewidth=1, ls=":", alpha=0.4)
+    plt.xscale("log")
+    plt.xlabel("Total Count (log scale)")
+    plt.ylabel("z-score (positive → Ethics, negative → Safety)")
     plt.tight_layout()
-    plt.savefig(f"output/plots/fig_category_counts_{field}_{cat_type}.png", dpi=300)
-    plt.show()
+    plt.savefig(plots_dir / "fig_log_odds.png", dpi=300)
+    if show:
+        plt.show()
+    plt.close()
 
 
-# -----------------------------------------------------------
-# 6. Frequency Visualization
-# -----------------------------------------------------------
-plot_df = get_tops(df, 20)
-score_type = "z_score"
+def plot_total_freq(
+    df: pd.DataFrame,
+    output_dir: Path = Path("output"),
+    show: bool = False,
+) -> None:
+    pA = df.sort_values("ethics_count", ascending=False)[df["safety_count"] < 5].head(20)
+    pB = df.sort_values("safety_count", ascending=False)[df["ethics_count"] < 5].head(20)
+    plot_df = pd.concat([pA, pB])
 
-plt.figure(figsize=(7, 6))
-plt.scatter(
-    df["total_count"], df[score_type], s=1, c=get_color(df[score_type]), alpha=0.5
-)
-for _, plot_row in get_tops(df, 10).iterrows():
-    plt.text(
-        plot_row["total_count"],
-        plot_row[score_type],
-        plot_row["word"],
-        fontsize=10,
-        ha="center",
-        va="bottom",
+    plots_dir = _ensure_plots_dir(output_dir)
+    plt.figure(figsize=(7, 6))
+    bars_ethics = plt.barh(
+        plot_df["word"], plot_df["ethics_freq"], color="blue", alpha=0.6, label="Ethics"
     )
-font_sizes = np.interp(
-    np.abs(plot_df[score_type]), (0, max(np.abs(plot_df[score_type]))), (2, 12)
-)
-for i, (_, plot_row) in enumerate(plot_df.iterrows()):
-    y_pos = plot_df[score_type].min() + i / len(plot_df) * (
-        plot_df[score_type].max() - plot_df[score_type].min()
+    plt.barh(
+        plot_df["word"], -plot_df["safety_freq"], color="red", alpha=0.6, label="Safety"
     )
-    plt.text(1, y_pos, plot_row["word"], fontsize=font_sizes[i], ha="left", va="bottom")
-plt.axhline(0, color="black", linewidth=1, ls=":", alpha=0.4)
-plt.xscale("log")
-plt.xlabel("Total Count (log scale)")
-plt.ylabel("z-score (positive → Ethics, negative → Safety)")
-plt.tight_layout()
-plt.savefig("output/plots/fig_log_odds.png", dpi=300)
-plt.show()
 
-pA = df.sort_values("ethics_count", ascending=False)[df["safety_count"] < 5].head(20)
-pB = df.sort_values("safety_count", ascending=False)[df["ethics_count"] < 5].head(20)
-plot_df = pd.concat([pA, pB])
+    plt.legend()
+    plt.axvline(0, color="black", linewidth=1)
+    plt.xlabel("Safety ← Corpus Frequency → Ethics")
+    plt.ylabel("Most Distinctive Words")
+    ax = plt.gca()
+    ax.set_yticks([])
+    for bar, label in zip(bars_ethics, plot_df["word"], strict=False):
+        y = bar.get_y() + bar.get_height() / 2
+        sign = -1 if plot_df[plot_df["word"] == label]["z_score"].to_numpy()[0] < 0 else 1
+        plt.text(
+            sign * -0.02 * ax.get_xlim()[1],
+            y,
+            ABBREVIATIONS.get(label, label),
+            va="center",
+            ha="right" if sign > 0 else "left",
+            fontsize=10,
+        )
+    xticks = ax.get_xticks()
+    ax.set_xticklabels([f"{abs(tick)}" for tick in xticks])
+    plt.tight_layout()
+    plt.savefig(plots_dir / "fig_total_freq.png", dpi=300)
+    if show:
+        plt.show()
+    plt.close()
 
-plt.figure(figsize=(7, 6))
-bars_ethics = plt.barh(
-    plot_df["word"], plot_df["ethics_freq"], color="blue", alpha=0.6, label="Ethics"
-)
-bars_safety = plt.barh(
-    plot_df["word"], -plot_df["safety_freq"], color="red", alpha=0.6, label="Safety"
-)
 
-plt.legend()
-plt.axvline(0, color="black", linewidth=1)
-plt.xlabel("Safety ← Corpus Frequency → Ethics")
-plt.ylabel("Most Distinctive Words")
-ax = plt.gca()
-ax.set_yticks([])
-for bar, label in zip(bars_ethics, plot_df["word"], strict=False):
-    y = bar.get_y() + bar.get_height() / 2
-    sign = -1 if plot_df[plot_df["word"] == label]["z_score"].to_numpy()[0] < 0 else 1
-    plt.text(
-        sign * -0.02 * ax.get_xlim()[1],
-        y,
-        ABBREVIATIONS.get(label, label),
-        va="center",
-        ha="right" if sign > 0 else "left",
-        fontsize=10,
+app = typer.Typer(rich_markup_mode="rich")
+
+
+@app.command()
+def overlap(
+    data_path: Path = typer.Option(
+        Path("output/processed_data.csv"),
+        "--data",
+        "-d",
+        help="Path to processed data CSV",
+    ),
+    categories_path: Path = typer.Option(
+        Path("data/categories.csv"), "--categories", "-c", help="Path to categories CSV"
+    ),
+    output_dir: Path = typer.Option(
+        Path("output"), "--output", "-o", help="Output directory"
+    ),
+    n_labels: int = typer.Option(10, "--n-labels", help="Number of category labels to show in each plot"),
+    show: bool = typer.Option(False, "--show", help="Show plots interactively"),
+) -> None:
+    """Plot category overlap between Safety and Ethics corpora."""
+    data, cats = load_inputs(data_path, categories_path)
+    plot_category_overlap(data, cats, output_dir=output_dir, show=show, n_labels=n_labels)
+    typer.secho("Generated category overlap plots.")
+
+
+@app.command()
+def categories(
+    data_path: Path = typer.Option(
+        Path("output/processed_data.csv"),
+        "--data",
+        "-d",
+        help="Path to processed data CSV",
+    ),
+    categories_path: Path = typer.Option(
+        Path("data/categories.csv"), "--categories", "-c", help="Path to categories CSV"
+    ),
+    output_dir: Path = typer.Option(
+        Path("output"), "--output", "-o", help="Output directory"
+    ),
+    show: bool = typer.Option(False, "--show", help="Show plots interactively"),
+) -> None:
+    """Plot category counts for Risk Types and Mitigation Strategies."""
+    data, cats = load_inputs(data_path, categories_path)
+    plot_categories(data, cats, output_dir=output_dir, show=show)
+    typer.secho("Generated category counts plot.")
+
+
+@app.command()
+def log_odds(
+    data_path: Path = typer.Option(
+        Path("output/processed_data.csv"),
+        "--data",
+        "-d",
+        help="Path to processed data CSV",
+    ),
+    output_dir: Path = typer.Option(
+        Path("output"), "--output", "-o", help="Output directory"
+    ),
+    alpha: float = typer.Option(0.01, "--alpha", help="Dirichlet prior strength"),
+    labels_top_n: int = typer.Option(10, "--labels-top-n", help="Top labels annotated"),
+    tops_n: int = typer.Option(20, "--tops-n", help="Top/Bottom words listed"),
+    show: bool = typer.Option(False, "--show", help="Show plots interactively"),
+) -> None:
+    """Plot log-odds ratios of words between Ethics and Safety corpora."""
+    data, _ = load_inputs(data_path)
+    df = compute_log_odds_df(data, alpha=alpha)
+    plot_log_odds(
+        df, output_dir=output_dir, labels_top_n=labels_top_n, tops_n=tops_n, show=show
     )
-xticks = ax.get_xticks()
-ax.set_xticklabels([f"{abs(tick)}" for tick in xticks])
-plt.tight_layout()
-plt.savefig("output/plots/fig_total_freq.png", dpi=300)
-plt.show()
+    typer.secho("Generated log-odds plot.")
+
+
+@app.command()
+def freqs(
+    data_path: Path = typer.Option(
+        Path("output/processed_data.csv"),
+        "--data",
+        "-d",
+        help="Path to processed data CSV",
+    ),
+    output_dir: Path = typer.Option(
+        Path("output"), "--output", "-o", help="Output directory"
+    ),
+    alpha: float = typer.Option(0.01, "--alpha", help="Dirichlet prior strength"),
+    show: bool = typer.Option(False, "--show", help="Show plots interactively"),
+) -> None:
+    """Plot total frequencies of most distinctive words."""
+    data, _ = load_inputs(data_path)
+    df = compute_log_odds_df(data, alpha=alpha)
+    plot_total_freq(df, output_dir=output_dir, show=show)
+    typer.secho("Generated total frequencies plot.")
+
+
+@app.command()
+def all(
+    data_path: Path = typer.Option(
+        Path("output/processed_data.csv"),
+        "--data",
+        "-d",
+        help="Path to processed data CSV",
+    ),
+    categories_path: Path = typer.Option(
+        Path("data/categories.csv"), "--categories", "-c", help="Path to categories CSV"
+    ),
+    output_dir: Path = typer.Option(
+        Path("output"), "--output", "-o", help="Output directory"
+    ),
+    alpha: float = typer.Option(0.01, "--alpha", help="Dirichlet prior strength"),
+    n_labels: int = typer.Option(10, "--n-labels", help="Number of category labels to show in overlap plots"),
+    show: bool = typer.Option(False, "--show", help="Show plots interactively"),
+) -> None:
+    """Run all plotting commands."""
+    data, cats = load_inputs(data_path, categories_path)
+    df = compute_log_odds_df(data, alpha=alpha)
+    plot_category_overlap(data, cats, output_dir=output_dir, show=show, n_labels=n_labels)
+    plot_categories(data, cats, output_dir=output_dir, show=show)
+    plot_log_odds(df, output_dir=output_dir, show=show)
+    plot_total_freq(df, output_dir=output_dir, show=show)
+
+
+def cli() -> None:
+    app()
+
+
+if __name__ == "__main__":
+    app()

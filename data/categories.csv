@@ -16,7 +16,7 @@ Safety,Risk,Lack of monitoring,Risks from hallucination
 Safety,Risk,Lack of monitoring,Risks from instrumental goals
 Safety,Risk,Lack of monitoring,Mesa-optimization
 Safety,Risk,Lack of monitoring,Alignment faking
-Safety,Risk,Lack of monitoring,Interpretability illusion
+Safety,Risk,Lack of monitoring,Lack of interpretability
 Safety,Risk,Lack of monitoring,Accumulative systemic risks
 Safety,Risk,Lack of monitoring,Inadvertent privacy and copyright violation
 Safety,Risk,Lack of monitoring,Memorization of false and outdated information
