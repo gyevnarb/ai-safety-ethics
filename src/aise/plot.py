@@ -9,11 +9,21 @@ import pandas as pd
 import seaborn as sns
 from matplotlib.colors import Normalize
 
+ABBREVIATIONS = {
+    "rl": "reinforcement learning",
+    "ais": "AI safety",
+    "sae": "sparse autoencoder",
+    "ssl": "self-supervised learning",
+    "cot": "chain of thought",
+    "ood": "out of distribution",
+    "rai": "responsible AI",
+}
+
 get_color = lambda z: cm.get_cmap("seismic")(Normalize(vmin=z.min(), vmax=z.max())(z))
 get_tops = lambda df, n: pd.concat([df.head(n), df.tail(n)]).sort_values("z_score")
 
 data = pd.read_csv("output/processed_data.csv", index_col=0)
-categories = pd.read_csv("data/categories.csv", index_col=0)
+categories = pd.read_csv("data/categories.csv")
 corpus_ethics = data[data["corpus"] == "Ethics"]["clean_text"].tolist()
 corpus_safety = data[data["corpus"] == "Safety"]["clean_text"].tolist()
 
@@ -77,14 +87,13 @@ df = df.sort_values("z_score", ascending=False)
 cat_df = []
 for cat_type in ["risk", "mitigation"]:
     cat_col = f"{cat_type}_categories"
-    if cat_col in data.columns:
-        all_cats = data[cat_col].dropna().str.split(";", expand=True).stack()
-        error_cat = all_cats[~all_cats.isin(categories["low"])]
-        if not error_cat.empty:
-            print(f"Unknown categories in {cat_col}:")
-            print(error_cat)
-        cat_counts = all_cats.value_counts()
-        cat_df.append(cat_counts.rename("count"))
+    all_cats = data[cat_col].dropna().str.split(";", expand=True).stack()
+    error_cat = all_cats[~all_cats.isin(categories["low"])]
+    if not error_cat.empty:
+        print(f"Unknown categories in {cat_col}:")
+        print(error_cat)
+    cat_counts = all_cats.value_counts()
+    cat_df.append(cat_counts.rename("count"))
 cat_df = pd.concat(cat_df).fillna(0).astype(int)
 cat_df.to_csv("output/category_counts.csv")
 cat_df = categories.join(cat_df, how="left", on="low")
@@ -93,8 +102,8 @@ counts = cat_df.groupby(["field", "type", "high"]).sum()["count"].reset_index()
 print(counts)
 
 hatches = ["///", "\\\\", "...", "xxx", "+++", "***"]
-for field, type in counts[["field", "type"]].drop_duplicates().values:
-    sub_counts = counts[(counts["field"] == field) & (counts["type"] == type)]
+for field, cat_type in counts[["field", "type"]].drop_duplicates().values:
+    sub_counts = counts[(counts["field"] == field) & (counts["type"] == cat_type)]
     plt.figure(figsize=(8, 4))
     sns.barplot(
         data=sub_counts,
@@ -116,12 +125,13 @@ for field, type in counts[["field", "type"]].drop_duplicates().values:
 
     ax.set_yticklabels(new_labels)
     plt.xlabel(
-        f"Category Counts for {field} {'Risk Types' if type == 'Risk' else 'Mitigation Strategies'}"
+        f"Category Counts for {field} {'Risk Types' if cat_type == 'Risk' else 'Mitigation Strategies'}"
     )
     plt.ylabel("")
     plt.tight_layout()
-    plt.savefig(f"output/plots/fig_category_counts_{field}_{type}.png", dpi=300)
+    plt.savefig(f"output/plots/fig_category_counts_{field}_{cat_type}.png", dpi=300)
     plt.show()
+
 
 # -----------------------------------------------------------
 # 6. Frequency Visualization
@@ -182,7 +192,7 @@ for bar, label in zip(bars_ethics, plot_df["word"], strict=False):
     plt.text(
         sign * -0.02 * ax.get_xlim()[1],
         y,
-        label,
+        ABBREVIATIONS.get(label, label),
         va="center",
         ha="right" if sign > 0 else "left",
         fontsize=10,
