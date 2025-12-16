@@ -40,7 +40,7 @@ Safety,Risk,Unsafe exploration,Unsafe behaviour under bounded rationality
 Safety,Risk,System misspecification and misidentification,Incorrect system requirement elicitation and specification
 Safety,Risk,System misspecification and misidentification,Suboptimal modeling choices
 Safety,Risk,System misspecification and misidentification,Inappropriate hyperparameter selection
-Safety,Risk,System misspecification and misidentification,Overfitting  (in supervised learning) and overoptimization (in RL)
+Safety,Risk,System misspecification and misidentification,Overfitting (in supervised learning) and overoptimization (in RL)
 Safety,Risk,System misspecification and misidentification,Benchmark inflation and reproduction crises
 Safety,Risk,System misspecification and misidentification,Inability to scale to large systems
 Safety,Risk,System misspecification and misidentification,Unintended misalignment from fine-tuning
