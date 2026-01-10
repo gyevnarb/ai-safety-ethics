@@ -27,7 +27,6 @@ Safety,Risk,Lack of control enforcement,Social dilemmas and coercive behaviour
 Safety,Risk,Lack of control enforcement,Miscoordination in multi-agent systems
 Safety,Risk,Lack of control enforcement,Agent shutdown resistance
 Safety,Risk,Lack of control enforcement,Sycophancy
-Safety,Risk,Lack of control enforcement,Jailbreaking
 Safety,Risk,Lack of control enforcement,Wireheading
 Safety,Risk,Lack of control enforcement,Reward hacking and specification gaming
 Safety,Risk,Lack of control enforcement,Recursive self-improvement
@@ -47,6 +46,7 @@ Safety,Risk,System misspecification and misidentification,Unintended misalignmen
 Safety,Risk,Adversarial attacks,Perturbation-based attacks
 Safety,Risk,Adversarial attacks,Adversarial prompt generation
 Safety,Risk,Adversarial attacks,Data poisoning
+Safety,Risk,Adversarial attacks,Jailbreaking
 Safety,Risk,Adversarial attacks,External reward tampering
 Safety,Risk,Adversarial attacks,Malicious deepfake
 Safety,Risk,Non-stationary distribution,Data distribution shifts
@@ -92,7 +92,7 @@ Safety,Mitigation,Reward modelling and learning,Reward modeling and inverse RL f
 Safety,Mitigation,Reward modelling and learning,Multi-agent cooperation via inverse RL
 Safety,Mitigation,Reward modelling and learning,RLHF / RLHAIF / RLAIF fine-tuning
 Safety,Mitigation,Reward modelling and learning,Accurate reward specification
-Safety,Mitigation,Reward modelling and learning,Audits for reward hacking and hidden goals
+Safety,Mitigation,Reward modelling and learning,Audits for reward hacking and hidden goalse
 Safety,Mitigation,Reward modelling and learning,Normative work on value alignment and corrigibility
 Safety,Mitigation,Reward modelling and learning,Preference learning under uncertainty
 Safety,Mitigation,Reward modelling and learning,Multi-stakeholder and multi-agent reward learning

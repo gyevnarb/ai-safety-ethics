@@ -438,13 +438,19 @@ def plot_topic_analysis(
         if "year" in df.columns:
             years = sorted(df["year"].dropna().unique())
             year_sims = []
+            average_safety_embedding = embedding_model.encode(
+                df[df.corpus == "Safety"]["clean_text"].tolist(),
+            ).mean(axis=0)
+            average_ethics_embedding = embedding_model.encode(
+                df[df.corpus == "Ethics"]["clean_text"].tolist(),
+            ).mean(axis=0)
             for y in years:
                 sub = df[df["year"] == y]
                 if (
                     len(sub[sub.corpus == "Ethics"]) < min_docs_per_year
                     or len(sub[sub.corpus == "Safety"]) < min_docs_per_year
                 ):
-                    year_sims.append((np.nan, np.nan))
+                    year_sims.append((np.nan, np.nan, np.nan, np.nan, np.nan, np.nan))
                     continue
                 e_vec = embedding_model.encode(
                     sub[sub.corpus == "Ethics"]["clean_text"].tolist(),
@@ -452,23 +458,68 @@ def plot_topic_analysis(
                 s_vec = embedding_model.encode(
                     sub[sub.corpus == "Safety"]["clean_text"].tolist(),
                 )
+                e_to_s_vec = cosine_similarity(e_vec, average_safety_embedding[None, :])
+                s_to_e_vec = cosine_similarity(s_vec, average_ethics_embedding[None, :])
                 sim = cosine_similarity(e_vec, s_vec)
                 year_sims.append(
-                    (np.nanmean(sim), np.nanstd(sim) / np.sqrt(np.sum(~np.isnan(sim))))
+                    (
+                        np.nanmean(sim),
+                        np.nanstd(sim) / np.sqrt(np.sum(~np.isnan(sim))),
+                        np.nanmean(e_to_s_vec),
+                        np.nanstd(e_to_s_vec) / np.sqrt(np.sum(~np.isnan(e_to_s_vec))),
+                        np.nanmean(s_to_e_vec),
+                        np.nanstd(s_to_e_vec) / np.sqrt(np.sum(~np.isnan(s_to_e_vec))),
+                    )
                 )
             plt.figure(figsize=(7, 3))
-            plt.plot(years, [sim[0] for sim in year_sims], marker="o")
+            plt.plot(
+                years,
+                [sim[0] for sim in year_sims],
+                marker="o",
+                label="Ethics and Safety",
+            )
             plt.fill_between(
                 years,
                 [sim[0] - sim[1] for sim in year_sims],
                 [sim[0] + sim[1] for sim in year_sims],
                 alpha=0.2,
             )
+            plt.plot(
+                years,
+                [sim[2] for sim in year_sims],
+                marker="o",
+                label="Ethics and Mean Safety",
+            )
+            plt.fill_between(
+                years,
+                [sim[2] - sim[3] for sim in year_sims],
+                [sim[2] + sim[3] for sim in year_sims],
+                alpha=0.2,
+            )
+            plt.plot(
+                years,
+                [sim[4] for sim in year_sims],
+                marker="o",
+                label="Safety and Mean Ethics",
+            )
+            plt.fill_between(
+                years,
+                [sim[4] - sim[5] for sim in year_sims],
+                [sim[4] + sim[5] for sim in year_sims],
+                alpha=0.2,
+            )
             plt.xlabel("Year")
             plt.ylabel("Mean Corpus Cosine Similarity")
-            # plt.title("Temporal semantic convergence")
-            plt.tight_layout()
-            plt.savefig(output_dir / "plots" / "temporal_semantic_drift.png", dpi=300)
+            # Place legend beneath the x-axis with three columns
+            plt.legend(
+                loc="upper center",
+                bbox_to_anchor=(0.5, -0.2),
+                ncol=3,
+                frameon=False,
+            )
+            # Ensure there's enough bottom margin for the legend
+            plt.subplots_adjust(bottom=0.25)
+            plt.savefig(output_dir / "plots" / "temporal_semantic_drift.pdf")
             plt.show()
         else:
             console.print("No year column found; skipping temporal drift analysis")

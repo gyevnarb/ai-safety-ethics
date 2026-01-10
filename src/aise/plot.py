@@ -1,5 +1,5 @@
-import textwrap
 import re
+import textwrap
 from collections import Counter
 from pathlib import Path
 
@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import typer
-from matplotlib import cm
+from matplotlib import cm, rcParams
 from matplotlib.colors import Normalize
 
 ABBREVIATIONS = {
@@ -19,12 +19,16 @@ ABBREVIATIONS = {
     "cot": "chain of thought",
     "ood": "out of distribution",
     "rai": "responsible AI",
+    "dnn": "deep neural network",
 }
 
 HATCHES = ["///", "\\\\", "...", "xxx", "+++", "***"]
 
 get_color = lambda z: cm.get_cmap("seismic")(Normalize(vmin=z.min(), vmax=z.max())(z))  # noqa: E731
 get_tops = lambda df, n: pd.concat([df.head(n), df.tail(n)]).sort_values("z_score")  # noqa: E731
+
+rcParams["pdf.fonttype"] = 42
+rcParams["ps.fonttype"] = 42
 
 
 def _ensure_plots_dir(output_dir: Path) -> Path:
@@ -118,9 +122,9 @@ def plot_category_overlap(
         for field in categories["field"].unique():
             sub_cats = all_cats[all_cats[f"{cat_type}_category_corpus"] == field]
             plots_dir = _ensure_plots_dir(output_dir)
-            palette = ["C3", "C0"] if field == "Safety" else ["C0", "C3"]
+            palette = ["C3", "C0"]
             order = sub_cats[sub_cats["is_overlap"]]["low"].value_counts().index
-            plt.figure(figsize=(8, 6))
+            plt.figure(figsize=(6, 4))
             sns.countplot(
                 data=sub_cats,
                 y="low",
@@ -135,7 +139,7 @@ def plot_category_overlap(
             new_labels = []
             for label in ax.get_yticklabels():
                 text = label.get_text()
-                label.set_color("red" if field == "Safety" else "blue")
+                # label.set_color("red" if field == "Safety" else "blue")
                 text = re.sub(r"\(.*\)$", "", text).strip()
                 wrapped = "\n".join(textwrap.wrap(text[:90], max_width))
                 new_labels.append(wrapped)
@@ -144,10 +148,11 @@ def plot_category_overlap(
             handles, labels = ax.get_legend_handles_labels()
             labels = ["Safety", "Ethics"] if field == "Safety" else ["Ethics", "Safety"]
             ax.legend(handles, labels, title="Annotated as")
-            plt.xlabel("Number of Documents")
-            plt.ylabel(f"{field} {cat_type.capitalize()} Categories")
+            # plt.xlabel("Number of Documents")
+            plt.xlabel(f"Number of {field} {cat_type.capitalize()} Categories")
+            plt.ylabel("")
             plt.tight_layout()
-            plt.savefig(plots_dir / f"fig_overlap_{field}_{cat_type}.png", dpi=300)
+            plt.savefig(plots_dir / f"fig_overlap_{field}_{cat_type}.pdf")
             if show:
                 plt.show()
             plt.close()
@@ -157,6 +162,8 @@ def plot_categories(
     data: pd.DataFrame,
     categories: pd.DataFrame,
     output_dir: Path = Path("output"),
+    level: str = "high",
+    n_labels: int = 10,
     show: bool = False,
 ) -> None:
     cat_df = []
@@ -173,36 +180,39 @@ def plot_categories(
     (output_dir / "category_counts.csv").write_text(cat_df.to_csv())
     cat_df = categories.join(cat_df, how="left", on="low")
     cat_df["count"] = cat_df["count"].fillna(0)
-    counts = cat_df.groupby(["field", "type", "high"]).sum()["count"].reset_index()
 
+    counts = cat_df.groupby(["field", "type", level]).sum()["count"].reset_index()
     plots_dir = _ensure_plots_dir(output_dir)
-    for field, cat_type in counts[["field", "type"]].drop_duplicates().values:
+    for field, cat_type in counts[["field", "type"]].drop_duplicates().to_numpy():
         sub_counts = counts[(counts["field"] == field) & (counts["type"] == cat_type)]
-        plt.figure(figsize=(8, 4))
+        # sub_counts = sub_counts.head(n_labels)
+        plt.figure(figsize=(6, 4))
         sns.barplot(
             data=sub_counts,
-            y="high",
+            y=level,
             x="count",
             palette="Reds" if field == "Safety" else "Blues",
-            order=sub_counts.sort_values("count", ascending=False)["high"],
+            order=sub_counts.sort_values("count", ascending=False)[level]
         )
         ax = plt.gca()
         for i, bar in enumerate(ax.patches):
-            bar.set_hatch(HATCHES[i % len(HATCHES)])
+            # bar.set_hatch(HATCHES[i % len(HATCHES)])
             bar.set_edgecolor("black")
         max_width = 30
         new_labels = []
         for label in ax.get_yticklabels():
             text = label.get_text()
-            wrapped = "\n".join(textwrap.wrap(text, max_width))
+            wrapped = "\n".join(textwrap.wrap(text[:100], max_width))
             new_labels.append(wrapped)
 
         ax.set_yticklabels(new_labels)
+        ax.set_axisbelow(True)
         xlabel_str = "Risk Types" if cat_type == "Risk" else "Mitigation Strategies"
         plt.xlabel(f"Category Counts for {field} {xlabel_str}")
         plt.ylabel("")
+        plt.grid(axis="x", linestyle=":", alpha=0.7)
         plt.tight_layout()
-        plt.savefig(plots_dir / f"fig_category_counts_{field}_{cat_type}.png", dpi=300)
+        plt.savefig(plots_dir / f"fig_category_counts_{level}_{field}_{cat_type}.pdf", bbox_inches='tight')
         if show:
             plt.show()
         plt.close()
@@ -239,15 +249,21 @@ def plot_log_odds(
         y_pos = plot_df[score_type].min() + i / len(plot_df) * (
             plot_df[score_type].max() - plot_df[score_type].min()
         )
+        word = plot_row["word"]
         plt.text(
-            1, y_pos, plot_row["word"], fontsize=font_sizes[i], ha="left", va="bottom"
+            1,
+            y_pos,
+            ABBREVIATIONS.get(word, word),
+            fontsize=font_sizes[i],
+            ha="left",
+            va="bottom",
         )
     plt.axhline(0, color="black", linewidth=1, ls=":", alpha=0.4)
     plt.xscale("log")
-    plt.xlabel("Total Count (log scale)")
-    plt.ylabel("z-score (positive → Ethics, negative → Safety)")
+    plt.xlabel("Total Count (log scale)", fontsize=14)
+    plt.ylabel("z-score (positive → Ethics, negative → Safety)", fontsize=14)
     plt.tight_layout()
-    plt.savefig(plots_dir / "fig_log_odds.png", dpi=300)
+    plt.savefig(plots_dir / "fig_log_odds.pdf")
     if show:
         plt.show()
     plt.close()
@@ -273,8 +289,8 @@ def plot_total_freq(
 
     plt.legend()
     plt.axvline(0, color="black", linewidth=1)
-    plt.xlabel("Safety ← Corpus Frequency → Ethics")
-    plt.ylabel("Most Distinctive Words")
+    plt.xlabel("Corpus Relative Frequency", fontsize=14)
+    plt.ylabel("Most Distinctive Words", fontsize=14)
     ax = plt.gca()
     ax.set_yticks([])
     for bar, label in zip(bars_ethics, plot_df["word"], strict=False):
@@ -291,7 +307,7 @@ def plot_total_freq(
     xticks = ax.get_xticks()
     ax.set_xticklabels([f"{abs(tick)}" for tick in xticks])
     plt.tight_layout()
-    plt.savefig(plots_dir / "fig_total_freq.png", dpi=300)
+    plt.savefig(plots_dir / "fig_total_freq.pdf")
     if show:
         plt.show()
     plt.close()
@@ -314,7 +330,9 @@ def overlap(
     output_dir: Path = typer.Option(
         Path("output"), "--output", "-o", help="Output directory"
     ),
-    n_labels: int = typer.Option(10, "--n-labels", help="Number of category labels to show in each plot"),
+    n_labels: int = typer.Option(
+        10, "--n-labels", help="Number of category labels to show in each plot"
+    ),
     show: bool = typer.Option(False, "--show", help="Show plots interactively"),
 ) -> None:
     """Plot category overlap between Safety and Ethics corpora."""
@@ -337,11 +355,17 @@ def categories(
     output_dir: Path = typer.Option(
         Path("output"), "--output", "-o", help="Output directory"
     ),
+    level: str = typer.Option("high", help="The taxonomic level to use for plotting."),
+    n_labels: int = typer.Option(
+        10, "--n-labels", help="Number of category labels to show in each plot"
+    ),
     show: bool = typer.Option(False, "--show", help="Show plots interactively"),
 ) -> None:
     """Plot category counts for Risk Types and Mitigation Strategies."""
     data, cats = load_inputs(data_path, categories_path)
-    plot_categories(data, cats, output_dir=output_dir, show=show)
+    plot_categories(
+        data, cats, output_dir=output_dir, level=level, n_labels=n_labels, show=show
+    )
     typer.secho("Generated category counts plot.")
 
 
@@ -406,14 +430,21 @@ def all(
         Path("output"), "--output", "-o", help="Output directory"
     ),
     alpha: float = typer.Option(0.01, "--alpha", help="Dirichlet prior strength"),
-    n_labels: int = typer.Option(10, "--n-labels", help="Number of category labels to show in overlap plots"),
+    n_labels: int = typer.Option(
+        10, "--n-labels", help="Number of category labels to show in overlap plots"
+    ),
+    level: str = typer.Option(
+        "high", help="The taxonomic level to use for tacetogory plotting."
+    ),
     show: bool = typer.Option(False, "--show", help="Show plots interactively"),
 ) -> None:
     """Run all plotting commands."""
     data, cats = load_inputs(data_path, categories_path)
     df = compute_log_odds_df(data, alpha=alpha)
     plot_category_overlap(data, cats, output_dir=output_dir, show=show, n_labels=n_labels)
-    plot_categories(data, cats, output_dir=output_dir, show=show)
+    plot_categories(
+        data, cats, output_dir=output_dir, level=level, n_labels=n_labels, show=show
+    )
     plot_log_odds(df, output_dir=output_dir, show=show)
     plot_total_freq(df, output_dir=output_dir, show=show)
 
