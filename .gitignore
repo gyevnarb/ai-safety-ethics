@@ -187,3 +187,5 @@ output/
 uv.lock
 .vscode/
 old/
+
+paper/
