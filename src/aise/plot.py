@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import typer
+from adjustText import adjust_text
 from matplotlib import cm, rcParams
 from matplotlib.colors import Normalize
 
@@ -300,8 +301,11 @@ def plot_log_odds(
     plt.scatter(
         df["total_count"], df[score_type], s=1, c=get_color(df[score_type]), alpha=0.5
     )
+
+    # Collect text objects for label adjustment
+    texts = []
     for _, plot_row in get_tops(df, labels_top_n).iterrows():
-        plt.text(
+        text = plt.text(
             plot_row["total_count"],
             plot_row[score_type],
             plot_row["word"],
@@ -309,6 +313,9 @@ def plot_log_odds(
             ha="center",
             va="bottom",
         )
+        texts.append(text)
+
+    # Adjust overlapping labels with connecting arrows
     font_sizes = np.interp(
         np.abs(plot_df[score_type]), (0, max(np.abs(plot_df[score_type]))), (2, 12)
     )
@@ -328,8 +335,10 @@ def plot_log_odds(
     plt.axhline(0, color="black", linewidth=1, ls=":", alpha=0.4)
     plt.xscale("log")
     plt.xlabel("Total Count (log scale)", fontsize=14)
-    plt.ylabel("z-score (positive → Ethics, negative → Safety)", fontsize=14)
+    plt.ylabel("Normalized log-odds ratio (z-score)", fontsize=14)
+    plt.grid(axis="both", linestyle=":", alpha=0.7)
     plt.tight_layout()
+    adjust_text(texts, arrowprops=dict(arrowstyle="-", color="gray", lw=0.5, alpha=0.6))
     plt.savefig(plots_dir / "fig_log_odds.pdf")
     if show:
         plt.show()
@@ -357,7 +366,7 @@ def plot_total_freq(
     plt.legend()
     plt.axvline(0, color="black", linewidth=1)
     plt.xlabel("Corpus Relative Frequency", fontsize=14)
-    plt.ylabel("Most Distinctive Words", fontsize=14)
+    plt.ylabel("Most Distinctive Words", fontsize=14, labelpad=20)
     ax = plt.gca()
     ax.set_yticks([])
     for bar, label in zip(bars_ethics, plot_df["word"], strict=False):
@@ -371,8 +380,11 @@ def plot_total_freq(
             ha="right" if sign > 0 else "left",
             fontsize=10,
         )
-    xticks = ax.get_xticks()
-    ax.set_xticklabels([f"{abs(tick)}" for tick in xticks])
+    # Format x-axis with scientific notation and add vertical grid lines
+    ax.ticklabel_format(style="sci", axis="x", scilimits=(0, 0))
+    plt.grid(axis="x", linestyle=":", alpha=0.7)
+    plt.xlim(-plot_df[["safety_freq"]].max().to_numpy()[0] * 1.01,
+             plot_df[["ethics_freq"]].max().to_numpy()[0] * 1.01)
     plt.tight_layout()
     plt.savefig(plots_dir / "fig_total_freq.pdf")
     if show:
