@@ -1,4 +1,4 @@
-# AI Safety and Ethics
+# Bridging the Gap in the Responsible AI Divides
 Bridging research problems of the fields AI safety and AI ethics.
 
 The package name is shortened to `aise` (short for AI Safety and Ethics).

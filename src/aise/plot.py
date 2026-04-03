@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import typer
+from adjustText import adjust_text
 from matplotlib import cm, rcParams
 from matplotlib.colors import Normalize
 
@@ -95,6 +96,7 @@ def plot_category_overlap(
     categories: pd.DataFrame,
     output_dir: Path = Path("output"),
     n_labels: int = 10,
+    ordering: str = "diff",  # or "sim"
     show: bool = False,
 ) -> None:
     for cat_type in ["risk", "mitigation"]:
@@ -123,7 +125,21 @@ def plot_category_overlap(
             sub_cats = all_cats[all_cats[f"{cat_type}_category_corpus"] == field]
             plots_dir = _ensure_plots_dir(output_dir)
             palette = ["C3", "C0"]
-            order = sub_cats[sub_cats["is_overlap"]]["low"].value_counts().index
+            if ordering == "sim":
+                order = (
+                    sub_cats[sub_cats["is_overlap"]]["low"]
+                    .value_counts()
+                    .sort_values(ascending=False)
+                    .index
+                )
+            else:
+                order = (
+                    sub_cats.value_counts(["low", "is_overlap"])
+                    .unstack(fill_value=0)
+                    .pipe(lambda x: (x[False] - x[True]) / (x[False]))
+                    .sort_values(ascending=False)
+                    .index
+                )
             plt.figure(figsize=(6, 4))
             sns.countplot(
                 data=sub_cats,
@@ -133,9 +149,35 @@ def plot_category_overlap(
                 palette=palette,
             )
             ax = plt.gca()
+            # Find the maximum width among all bars
+            max_width_bar = max((bar.get_width() for bar in ax.patches), default=0)
             for bar in ax.patches:
                 bar.set_edgecolor("black")
-            max_width = 35
+                # Add count labels to the right of bars (or inside for the longest bar)
+                width = bar.get_width()
+                if width > 0:
+                    if width == max_width_bar:
+                        # Longest bar: label inside to avoid border overlap
+                        ax.text(
+                            width * 0.98,
+                            bar.get_y() + bar.get_height() / 2,
+                            f"{int(width)}",
+                            ha="right",
+                            va="center",
+                            color="white",
+                            fontsize=9,
+                        )
+                    else:
+                        # Other bars: label to the right
+                        ax.text(
+                            width,
+                            bar.get_y() + bar.get_height() / 2,
+                            f" {int(width)}",
+                            ha="left",
+                            va="center",
+                            fontsize=9,
+                        )
+            max_width = 30
             new_labels = []
             for label in ax.get_yticklabels():
                 text = label.get_text()
@@ -151,8 +193,9 @@ def plot_category_overlap(
             # plt.xlabel("Number of Documents")
             plt.xlabel(f"Number of {field} {cat_type.capitalize()} Categories")
             plt.ylabel("")
+            plt.grid(axis="x", linestyle=":", alpha=0.7)
             plt.tight_layout()
-            plt.savefig(plots_dir / f"fig_overlap_{field}_{cat_type}.pdf")
+            plt.savefig(plots_dir / f"fig_overlap_{ordering}_{field}_{cat_type}.pdf")
             if show:
                 plt.show()
             plt.close()
@@ -192,12 +235,34 @@ def plot_categories(
             y=level,
             x="count",
             palette="Reds" if field == "Safety" else "Blues",
-            order=sub_counts.sort_values("count", ascending=False)[level]
+            order=sub_counts.sort_values("count", ascending=False)[level],
         )
         ax = plt.gca()
         for i, bar in enumerate(ax.patches):
             # bar.set_hatch(HATCHES[i % len(HATCHES)])
             bar.set_edgecolor("black")
+            # Add count labels next to bars (or inside for the first bar)
+            width = bar.get_width()
+            if i == 0:
+                # First label inside the bar to avoid border overlap
+                ax.text(
+                    width * 0.98,
+                    bar.get_y() + bar.get_height() / 2,
+                    f"{int(width)}",
+                    ha="right",
+                    va="center",
+                    fontsize=9,
+                )
+            else:
+                # Other labels next to bars
+                ax.text(
+                    width,
+                    bar.get_y() + bar.get_height() / 2,
+                    f" {int(width)}",
+                    ha="left",
+                    va="center",
+                    fontsize=9,
+                )
         max_width = 30
         new_labels = []
         for label in ax.get_yticklabels():
@@ -212,7 +277,10 @@ def plot_categories(
         plt.ylabel("")
         plt.grid(axis="x", linestyle=":", alpha=0.7)
         plt.tight_layout()
-        plt.savefig(plots_dir / f"fig_category_counts_{level}_{field}_{cat_type}.pdf", bbox_inches='tight')
+        plt.savefig(
+            plots_dir / f"fig_category_counts_{level}_{field}_{cat_type}.pdf",
+            bbox_inches="tight",
+        )
         if show:
             plt.show()
         plt.close()
@@ -233,8 +301,11 @@ def plot_log_odds(
     plt.scatter(
         df["total_count"], df[score_type], s=1, c=get_color(df[score_type]), alpha=0.5
     )
+
+    # Collect text objects for label adjustment
+    texts = []
     for _, plot_row in get_tops(df, labels_top_n).iterrows():
-        plt.text(
+        text = plt.text(
             plot_row["total_count"],
             plot_row[score_type],
             plot_row["word"],
@@ -242,6 +313,9 @@ def plot_log_odds(
             ha="center",
             va="bottom",
         )
+        texts.append(text)
+
+    # Adjust overlapping labels with connecting arrows
     font_sizes = np.interp(
         np.abs(plot_df[score_type]), (0, max(np.abs(plot_df[score_type]))), (2, 12)
     )
@@ -261,8 +335,10 @@ def plot_log_odds(
     plt.axhline(0, color="black", linewidth=1, ls=":", alpha=0.4)
     plt.xscale("log")
     plt.xlabel("Total Count (log scale)", fontsize=14)
-    plt.ylabel("z-score (positive → Ethics, negative → Safety)", fontsize=14)
+    plt.ylabel("Normalized log-odds ratio (z-score)", fontsize=14)
+    plt.grid(axis="both", linestyle=":", alpha=0.7)
     plt.tight_layout()
+    adjust_text(texts, arrowprops=dict(arrowstyle="-", color="gray", lw=0.5, alpha=0.6))
     plt.savefig(plots_dir / "fig_log_odds.pdf")
     if show:
         plt.show()
@@ -290,7 +366,7 @@ def plot_total_freq(
     plt.legend()
     plt.axvline(0, color="black", linewidth=1)
     plt.xlabel("Corpus Relative Frequency", fontsize=14)
-    plt.ylabel("Most Distinctive Words", fontsize=14)
+    plt.ylabel("Most Distinctive Words", fontsize=14, labelpad=20)
     ax = plt.gca()
     ax.set_yticks([])
     for bar, label in zip(bars_ethics, plot_df["word"], strict=False):
@@ -304,8 +380,11 @@ def plot_total_freq(
             ha="right" if sign > 0 else "left",
             fontsize=10,
         )
-    xticks = ax.get_xticks()
-    ax.set_xticklabels([f"{abs(tick)}" for tick in xticks])
+    # Format x-axis with scientific notation and add vertical grid lines
+    ax.ticklabel_format(style="sci", axis="x", scilimits=(0, 0))
+    plt.grid(axis="x", linestyle=":", alpha=0.7)
+    plt.xlim(-plot_df[["safety_freq"]].max().to_numpy()[0] * 1.01,
+             plot_df[["ethics_freq"]].max().to_numpy()[0] * 1.01)
     plt.tight_layout()
     plt.savefig(plots_dir / "fig_total_freq.pdf")
     if show:
@@ -333,11 +412,16 @@ def overlap(
     n_labels: int = typer.Option(
         10, "--n-labels", help="Number of category labels to show in each plot"
     ),
+    ordering: str = typer.Option(
+        "diff", help="Ordering method for overlap plots: 'diff' or 'sim'"
+    ),
     show: bool = typer.Option(False, "--show", help="Show plots interactively"),
 ) -> None:
     """Plot category overlap between Safety and Ethics corpora."""
     data, cats = load_inputs(data_path, categories_path)
-    plot_category_overlap(data, cats, output_dir=output_dir, show=show, n_labels=n_labels)
+    plot_category_overlap(
+        data, cats, output_dir=output_dir, show=show, n_labels=n_labels, ordering=ordering
+    )
     typer.secho("Generated category overlap plots.")
 
 
@@ -433,6 +517,9 @@ def all(
     n_labels: int = typer.Option(
         10, "--n-labels", help="Number of category labels to show in overlap plots"
     ),
+    ordering: str = typer.Option(
+        "diff", help="Ordering method for overlap plots: 'diff' or 'sim'"
+    ),
     level: str = typer.Option(
         "high", help="The taxonomic level to use for tacetogory plotting."
     ),
@@ -441,7 +528,9 @@ def all(
     """Run all plotting commands."""
     data, cats = load_inputs(data_path, categories_path)
     df = compute_log_odds_df(data, alpha=alpha)
-    plot_category_overlap(data, cats, output_dir=output_dir, show=show, n_labels=n_labels)
+    plot_category_overlap(
+        data, cats, output_dir=output_dir, show=show, n_labels=n_labels, ordering=ordering
+    )
     plot_categories(
         data, cats, output_dir=output_dir, level=level, n_labels=n_labels, show=show
     )

@@ -44,7 +44,7 @@ app = typer.Typer(rich_markup_mode="rich")
 app.add_typer(
     plot_app,
     name="plot",
-    help="Plotting utilities.\nInvoke without a command to run all plots.",
+    help="Plotting utilities.",
     invoke_without_command=True,
 )
 
@@ -510,6 +510,7 @@ def plot_topic_analysis(
             )
             plt.xlabel("Year")
             plt.ylabel("Mean Corpus Cosine Similarity")
+            plt.grid(axis="y", alpha=0.3)
             # Place legend beneath the x-axis with three columns
             plt.legend(
                 loc="upper center",
