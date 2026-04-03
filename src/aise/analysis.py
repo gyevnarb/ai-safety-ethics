@@ -476,7 +476,7 @@ def plot_topic_analysis(
                 years,
                 [sim[0] for sim in year_sims],
                 marker="o",
-                label="Ethics and Safety",
+                label="Ethics vs Safety",
             )
             plt.fill_between(
                 years,
@@ -488,7 +488,7 @@ def plot_topic_analysis(
                 years,
                 [sim[2] for sim in year_sims],
                 marker="o",
-                label="Ethics and Mean Safety",
+                label="Ethics vs Avg. Safety",
             )
             plt.fill_between(
                 years,
@@ -500,7 +500,7 @@ def plot_topic_analysis(
                 years,
                 [sim[4] for sim in year_sims],
                 marker="o",
-                label="Safety and Mean Ethics",
+                label="Safety vs Avg. Ethics",
             )
             plt.fill_between(
                 years,
