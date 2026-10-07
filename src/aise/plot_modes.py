@@ -1,0 +1,550 @@
+"""Figures for the engagement/integration classification (see aise.engagement).
+
+    uv run python -m aise.plot_modes join                 # classifications + annotations
+    uv run python -m aise.plot_modes figures              # all six figures
+    uv run python -m aise.plot_modes figures --pilot      # from the pilot CSV
+    uv run python -m aise.plot_modes figures --results a.jsonl --results b.jsonl
+
+Figures (written to output/plots/modes/ as PDF and PNG):
+
+1. fig_modes_grid        5x5 grid of engagement x integration levels, one panel per field
+2. fig_modes_shares      share of papers per mode by field, with a zoom on the rarer modes
+3. fig_modes_time        share of papers in each non-disengaged mode over time, by field
+4. fig_modes_problems    which risk / mitigation categories are over-represented among
+                         papers that integrate both fields' concerns
+5. fig_modes_levels      distribution of engagement and integration levels by field
+6. fig_modes_examples    one quoted example paper per mode, laid out like Figure 1
+
+The existing annotations in data/ are only read, never modified.
+"""
+
+import math
+import re
+import textwrap
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import typer
+from matplotlib import rcParams
+
+from aise import engagement as E
+
+rcParams["pdf.fonttype"] = 42
+rcParams["ps.fonttype"] = 42
+
+ANNOTATIONS = Path("data/annotated_papers.csv")
+CATEGORIES = Path("data/categories.csv")
+OUT = Path("output/plots/modes")
+
+MODES = E.CATEGORIES  # Disengagement, Compartmentalized coexistence, Radical ..., Critical ...
+RARE_MODES = MODES[1:]
+# Figure 1 hues, stepped to pass the categorical palette checks (all-pairs CVD
+# separation >= 8, chroma floor); Disengagement cannot be gray, so it is violet.
+MODE_COLORS = dict(zip(MODES, ["#4a3aa7", "#2a78d6", "#eb6834", "#1baf7a"], strict=True))
+# the fields keep the colours of the paper's existing figures (plot.py)
+FIELD_COLORS = {"Ethics": "#1f77b4", "Safety": "#d62728"}
+FIELD_NAMES = {"Ethics": "AI ethics", "Safety": "AI safety"}
+# single-hue sequential ramp for ordinal levels 1-5 (light -> dark)
+LEVEL_COLORS = ["#b7d3f6", "#6da7ec", "#2a78d6", "#1c5cab", "#0d366b"]
+INK, INK_2, INK_3, SURFACE = "#0b0b0b", "#52514e", "#8a8983", "#ffffff"
+# boundaries between low and high levels, for drawing the quadrant lines
+X_CUT, Y_CUT = E.ENGAGEMENT_HIGH - 0.5, E.INTEGRATION_HIGH - 0.5
+
+app = typer.Typer(help=__doc__.split("\n\n")[0])
+
+
+# ---- data ----------------------------------------------------------------------
+def load_results(paths: list[Path]) -> pd.DataFrame:
+    """Classified papers from parsed CSVs or raw result JSONL files, with metadata."""
+    frames = []
+    for path in paths:
+        if path.suffix == ".jsonl":
+            rows = [E.parse_line(line) for line in path.read_text().splitlines()]
+            frames.append(pd.DataFrame(rows).set_index("key"))
+        else:
+            frames.append(pd.read_csv(path, index_col=0))
+    df = pd.concat(frames)
+    df = df[~df.index.duplicated(keep="last")]
+    if "error" in df:
+        df = df[df["error"].isna()]
+    df["engagement"] = df["engagement"].astype(int)
+    df["integration"] = df["integration"].astype(int)
+    df["category"] = [E.quadrant(e, i) for e, i in zip(df["engagement"], df["integration"],
+                                                        strict=True)]
+    meta = E.load_papers()[["Retrieval", "Publication_Year", "Title", "Abstract"]]
+    df = df.drop(columns=[c for c in meta.columns if c in df]).join(meta, how="left")
+    df["input"] = ["full text" if (E.TXT_DIR / f"{k}.txt").exists() else "abstract only"
+                   for k in df.index]
+    return df
+
+
+def join_annotations(df: pd.DataFrame) -> pd.DataFrame:
+    """Add the existing risk and mitigation annotations (read-only) to classified papers.
+
+    Uses the ``mixed_*`` columns of data/annotated_papers.csv, as the paper's figures do,
+    and adds their high-level categories from data/categories.csv.
+    """
+    ann = pd.read_csv(ANNOTATIONS, index_col=0)
+    cols = {"mixed_risk_categories": "risk_categories",
+            "mixed_mitigation_categories": "mitigation_categories"}
+    joined = df.join(ann[list(cols)].rename(columns=cols), how="left")
+    low_to_high = (pd.read_csv(CATEGORIES).drop_duplicates("low")
+                   .set_index("low")["high"])
+    for kind in ("risk", "mitigation"):
+        joined[f"{kind}_categories_high"] = [
+            ";".join(dict.fromkeys(low_to_high.get(c.strip(), c.strip())
+                                   for c in str(v).split(";") if c.strip()))
+            if isinstance(v, str) else np.nan
+            for v in joined[f"{kind}_categories"]
+        ]
+    return joined
+
+
+def explode(joined: pd.DataFrame, kind: str, level: str = "high") -> pd.DataFrame:
+    """One row per (paper, category) for risk or mitigation categories."""
+    col = f"{kind}_categories_high" if level == "high" else f"{kind}_categories"
+    long = joined[col].dropna().str.split(";").explode().str.strip()
+    long = long[long != ""]
+    return long.rename("cat").to_frame().join(joined.drop(columns=[col]))
+
+
+def wilson(k: np.ndarray, n: np.ndarray, z: float = 1.96) -> tuple[np.ndarray, np.ndarray]:
+    """95% Wilson score interval for k successes out of n."""
+    k, n = np.asarray(k, float), np.asarray(n, float)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        p = k / n
+        centre = (p + z**2 / (2 * n)) / (1 + z**2 / n)
+        half = z * np.sqrt(p * (1 - p) / n + z**2 / (4 * n**2)) / (1 + z**2 / n)
+    return np.clip(centre - half, 0, 1), np.clip(centre + half, 0, 1)
+
+
+# ---- quotes (figure 6) ------------------------------------------------------------
+def _normalize(text: str) -> str:
+    text = text.lower().replace("’", "'").replace("‘", "'")
+    text = re.sub(r"[“”\"]", "", text)
+    text = re.sub(r"-\s*\n\s*", "", text)
+    return re.sub(r"[^\w']+", " ", text).strip()
+
+
+def verified_quotes(key: str, evidence) -> list[str]:
+    """Evidence quotes that occur verbatim in the paper's text (the model may paraphrase)."""
+    txt = E.TXT_DIR / f"{key}.txt"
+    if not txt.exists() or not isinstance(evidence, str) or not evidence.strip():
+        return []
+    body = _normalize(txt.read_text())
+    quotes = [q.strip().strip("\"“”") for q in evidence.split(" | ")]
+    return [q for q in quotes if q and _normalize(q) in body]
+
+
+def pick_quote(key: str, row: pd.Series, max_words: int = 45,
+               use_evidence: bool = True) -> tuple[str, str]:
+    """(quote, source): a verified evidence quote, else the abstract's first sentence."""
+    quotes = verified_quotes(key, row.get("evidence")) if use_evidence else []
+    if quotes:
+        quote, source = min(quotes, key=lambda q: abs(len(q.split()) - 25)), "evidence"
+    elif isinstance(row.get("Abstract"), str):
+        quote = re.split(r"(?<=[.!?])\s+", row["Abstract"].strip())[0]
+        source = "abstract"
+    else:
+        return "", "none"
+    words = quote.split()
+    return (" ".join(words[:max_words]) + " …" if len(words) > max_words else quote,
+            source)
+
+
+def pick_examples(df: pd.DataFrame, overrides: dict[str, str]) -> dict:
+    """One representative paper per mode.
+
+    Preference: full text; a quote verifiable against the text; levels furthest from
+    the quadrant boundaries (most typical of the mode).
+    """
+    examples = {}
+    for mode in MODES:
+        if mode in overrides:
+            key = overrides[mode]
+        else:
+            cands = df[df["category"] == mode].copy()
+            if cands.empty:
+                examples[mode] = None
+                continue
+            cands["full_text"] = cands["input"] == "full text"
+            # a disengaged paper is best shown by its own framing (the abstract), so
+            # evidence quotes are not needed for it
+            cands["has_quote"] = [mode == MODES[0] or bool(verified_quotes(k, r.get("evidence")))
+                                  for k, r in cands.iterrows()]
+            cands["depth"] = np.hypot(cands["engagement"] - X_CUT,
+                                      cands["integration"] - Y_CUT)
+            cands = cands.sort_values(["full_text", "has_quote", "depth"],
+                                      ascending=False, kind="stable")
+            key = cands.index[0]
+        quote, source = pick_quote(key, df.loc[key], use_evidence=mode != MODES[0])
+        examples[mode] = (key, quote, source)
+    return examples
+
+
+# ---- figure helpers ------------------------------------------------------------------
+def _style(ax, grid_axis: str | None = None):
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    for side in ("left", "bottom"):
+        ax.spines[side].set_color(INK_3)
+    ax.tick_params(colors=INK_2, labelsize=9, length=3)
+    if grid_axis:
+        ax.grid(axis=grid_axis, color="#e6e5e1", lw=0.8, zorder=0)
+        ax.set_axisbelow(True)
+
+
+def _save(fig, name: str, out_dir: Path):
+    out_dir.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_dir / f"{name}.pdf", bbox_inches="tight", facecolor=SURFACE)
+    fig.savefig(out_dir / f"{name}.png", dpi=160, bbox_inches="tight", facecolor=SURFACE)
+    plt.close(fig)
+    typer.secho(f"  wrote {out_dir / name}.pdf")
+
+
+def _fields(df: pd.DataFrame) -> list[str]:
+    return [f for f in FIELD_COLORS if f in set(df["Retrieval"])]
+
+
+# ---- figure 1: 5x5 grid ------------------------------------------------------------------
+def fig_grid(df: pd.DataFrame, out_dir: Path):
+    fields = _fields(df)
+    fig, axes = plt.subplots(1, len(fields), figsize=(5.2 * len(fields), 5.0),
+                             sharey=True, facecolor=SURFACE)
+    axes = np.atleast_1d(axes)
+    counts = df.groupby(["Retrieval", "engagement", "integration"]).size()
+    max_share = (counts / counts.groupby(level=0).transform("sum")).max()
+    for ax, field in zip(axes, fields, strict=True):
+        sub = df[df["Retrieval"] == field]
+        n = len(sub)
+        # quadrant tint, so the Figure 1 structure reads at a glance
+        for mode, (x0, x1, y0, y1) in {
+            "Disengagement": (0.5, X_CUT, 0.5, Y_CUT),
+            "Compartmentalized coexistence": (0.5, X_CUT, Y_CUT, 5.5),
+            "Radical confrontation": (X_CUT, 5.5, 0.5, Y_CUT),
+            "Critical bridging": (X_CUT, 5.5, Y_CUT, 5.5),
+        }.items():
+            ax.add_patch(plt.Rectangle((x0, y0), x1 - x0, y1 - y0, color=MODE_COLORS[mode],
+                                       alpha=0.07, lw=0, zorder=0))
+        ax.axvline(X_CUT, color=INK_3, lw=1, ls=(0, (4, 3)), zorder=1)
+        ax.axhline(Y_CUT, color=INK_3, lw=1, ls=(0, (4, 3)), zorder=1)
+        for (e, i), k in sub.groupby(["engagement", "integration"]).size().items():
+            share = k / n
+            # circle area proportional to the share of the field's papers
+            ax.scatter(e, i, s=max(260, 2600 * share / max_share),
+                       color=MODE_COLORS[E.quadrant(e, i)],
+                       edgecolors=SURFACE, linewidths=1.5, alpha=0.9, zorder=3)
+            ax.text(e, i, f"{k}", ha="center", va="center", fontsize=8.5, zorder=4,
+                    color=SURFACE)
+        ax.set_xlim(0.5, 5.5)
+        ax.set_ylim(0.5, 5.5)
+        ax.set_xticks(E.LEVELS)
+        ax.set_yticks(E.LEVELS)
+        ax.set_aspect("equal")
+        ax.set_title(f"{FIELD_NAMES[field]} papers (n = {n})", fontsize=11, color=INK,
+                     loc="left")
+        ax.set_xlabel("Engagement", fontsize=11, color=INK)
+        _style(ax)
+    axes[0].set_ylabel("Integration", fontsize=11, color=INK)
+    handles = [plt.Line2D([], [], marker="o", ls="", ms=8, mfc=MODE_COLORS[m], mec=SURFACE,
+                          label=m) for m in MODES]
+    fig.legend(handles=handles, loc="lower center", ncol=4, frameon=False, fontsize=9,
+               labelcolor=INK_2, bbox_to_anchor=(0.5, -0.06))
+    fig.text(0.5, -0.1, "Circle area: share of the field's papers (with a minimum size "
+             "for legibility); numbers: paper counts. "
+             "Dashed lines: quadrant boundaries.", ha="center", fontsize=8.5, color=INK_2)
+    _save(fig, "fig_modes_grid", out_dir)
+
+
+# ---- figure 2: shares by field ---------------------------------------------------------------
+def fig_shares(df: pd.DataFrame, out_dir: Path):
+    fields = _fields(df)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 2.9), facecolor=SURFACE,
+                                   gridspec_kw={"width_ratios": [1.1, 1]})
+    # left: 100% stacked bars
+    for y, field in enumerate(fields):
+        sub = df[df["Retrieval"] == field]
+        left = 0.0
+        for mode in MODES:
+            share = (sub["category"] == mode).mean() * 100
+            ax1.barh(y, share, left=left, color=MODE_COLORS[mode], height=0.6,
+                     edgecolor=SURFACE, linewidth=2, zorder=2)
+            if share >= 6:
+                ax1.text(left + share / 2, y, f"{share:.0f}%", ha="center", va="center",
+                         fontsize=8.5, color=SURFACE)
+            left += share
+    ax1.set_yticks(range(len(fields)), [f"{FIELD_NAMES[f]}\n(n = "
+                                        f"{(df['Retrieval'] == f).sum()})" for f in fields])
+    ax1.invert_yaxis()
+    ax1.set_xlim(0, 100)
+    ax1.set_xlabel("Share of papers (%)", fontsize=10, color=INK)
+    ax1.set_title("All modes", fontsize=10.5, color=INK, loc="left")
+    _style(ax1, "x")
+    # right: zoom on the rarer modes, with 95% Wilson intervals
+    offsets = np.linspace(-0.15, 0.15, len(fields))
+    for off, field in zip(offsets, fields, strict=True):
+        sub = df[df["Retrieval"] == field]
+        k = np.array([(sub["category"] == m).sum() for m in RARE_MODES])
+        n = np.full(len(RARE_MODES), len(sub))
+        lo, hi = wilson(k, n)
+        ys = np.arange(len(RARE_MODES)) + off
+        ax2.errorbar(k / n * 100, ys, xerr=[(k / n - lo) * 100, (hi - k / n) * 100], fmt="o",
+                     color=FIELD_COLORS[field], ms=6, capsize=0, lw=1.6,
+                     label=FIELD_NAMES[field], zorder=3)
+    ax2.set_yticks(range(len(RARE_MODES)), RARE_MODES)
+    ax2.invert_yaxis()
+    ax2.set_xlim(left=0)
+    ax2.set_xlabel("Share of papers (%), 95% CI", fontsize=10, color=INK)
+    ax2.set_title("Modes other than disengagement", fontsize=10.5, color=INK, loc="left")
+    ax2.legend(frameon=False, fontsize=9, labelcolor=INK_2, loc="lower right")
+    _style(ax2, "x")
+    handles = [plt.Rectangle((0, 0), 1, 1, color=MODE_COLORS[m], label=m) for m in MODES]
+    fig.legend(handles=handles, loc="lower center", ncol=4, frameon=False, fontsize=9,
+               labelcolor=INK_2, bbox_to_anchor=(0.5, -0.14))
+    fig.tight_layout()
+    _save(fig, "fig_modes_shares", out_dir)
+
+
+# ---- figure 3: over time --------------------------------------------------------------------
+def fig_time(df: pd.DataFrame, out_dir: Path, period_years: int, start_year: int,
+             min_n: int):
+    """Papers before start_year are pooled into the first period (the AI ethics
+    venues start in 2018); periods with fewer than min_n papers in a field are
+    not plotted for that field."""
+    fields = _fields(df)
+    year = df["Publication_Year"].astype(int).clip(lower=start_year)
+    df = df.assign(period=start_year + (year - start_year) // period_years * period_years)
+    periods = sorted(df["period"].unique())
+    early = (df["Publication_Year"].astype(int) < start_year).any()
+    labels = [str(p) if period_years == 1 else f"{p}–{str(p + period_years - 1)[-2:]}"
+              for p in periods]
+    if early:
+        labels[0] = f"≤{periods[0] + period_years - 1}"
+    fig, axes = plt.subplots(1, len(RARE_MODES), figsize=(4.2 * len(RARE_MODES), 3.4),
+                             sharey=True, facecolor=SURFACE)
+    for ax, mode in zip(axes, RARE_MODES, strict=True):
+        for field in fields:
+            sub = df[df["Retrieval"] == field]
+            n = sub.groupby("period").size().reindex(periods, fill_value=0).to_numpy()
+            k = (sub[sub["category"] == mode].groupby("period").size()
+                 .reindex(periods, fill_value=0).to_numpy())
+            n = np.where(n >= min_n, n, 0)  # too few papers: leave a gap
+            lo, hi = wilson(k, n)
+            x = np.arange(len(periods))
+            with np.errstate(invalid="ignore", divide="ignore"):
+                ax.plot(x, np.where(n > 0, k / n * 100, np.nan), "-o",
+                        color=FIELD_COLORS[field], lw=2, ms=5, label=FIELD_NAMES[field],
+                        zorder=3)
+            ax.fill_between(x, lo * 100, hi * 100, color=FIELD_COLORS[field], alpha=0.12,
+                            lw=0, zorder=2)
+        ax.set_xticks(range(len(periods)), labels, rotation=0)
+        ax.set_title(mode, fontsize=10.5, color=INK, loc="left")
+        ax.set_ylim(bottom=0)
+        _style(ax, "y")
+    axes[0].set_ylabel("Share of the field's papers (%)", fontsize=10, color=INK)
+    axes[-1].legend(frameon=False, fontsize=9, labelcolor=INK_2)
+    counts = df.groupby("period").size().reindex(periods).tolist()
+    fig.text(0.5, -0.05, f"Shaded bands: 95% Wilson intervals; periods with fewer than "
+             f"{min_n} papers in a field are not shown. Papers per period (both "
+             f"fields): {', '.join(f'{lab}: {c}' for lab, c in zip(labels, counts, strict=True))}.",
+             ha="center", fontsize=8.5, color=INK_2)
+    fig.tight_layout()
+    _save(fig, "fig_modes_time", out_dir)
+
+
+# ---- figure 4: bridging problems --------------------------------------------------------------
+def problem_table(joined: pd.DataFrame, kind: str, level: str, min_papers: int):
+    """Log odds ratio of integrating both fields' concerns, in vs outside each category.
+
+    A paper "integrates" when its integration level is high (Compartmentalized
+    coexistence or Critical bridging). Haldane-Anscombe correction (+0.5) and a Wald
+    95% interval.
+    """
+    joined = joined.assign(integrating=joined["integration"] >= E.INTEGRATION_HIGH)
+    long = explode(joined, kind, level)
+    total_k, total_n = int(joined["integrating"].sum()), len(joined)
+    rows = []
+    for cat, g in long.groupby("cat"):
+        papers = g[~g.index.duplicated()]
+        n, k = len(papers), int(papers["integrating"].sum())
+        if n < min_papers:
+            continue
+        a, b = k + 0.5, n - k + 0.5  # in category: integrating / not
+        c, d = total_k - k + 0.5, total_n - n - (total_k - k) + 0.5  # outside
+        lor = math.log(a * d / (b * c))
+        se = math.sqrt(1 / a + 1 / b + 1 / c + 1 / d)
+        rows.append({"category": cat, "n": n, "integrating": k, "share": k / n,
+                     "log_or": lor, "lo": lor - 1.96 * se, "hi": lor + 1.96 * se})
+    return pd.DataFrame(rows).sort_values("log_or") if rows else pd.DataFrame()
+
+
+def fig_problems(joined: pd.DataFrame, out_dir: Path, level: str, min_papers: int):
+    tables = {k: problem_table(joined, k, level, min_papers) for k in ("risk", "mitigation")}
+    heights = [max(len(t), 1) for t in tables.values()]
+    fig, axes = plt.subplots(1, 2, figsize=(13, 0.28 * max(heights) + 1.6),
+                             facecolor=SURFACE)
+    for ax, (kind, t) in zip(axes, tables.items(), strict=True):
+        ax.set_title(f"{kind.capitalize()} categories", fontsize=10.5, color=INK, loc="left")
+        _style(ax, "x")
+        if t.empty:
+            ax.text(0.5, 0.5, f"No category with >= {min_papers} papers", ha="center",
+                    transform=ax.transAxes, color=INK_2)
+            continue
+        y = np.arange(len(t))
+        sig = (t["lo"] > 0) | (t["hi"] < 0)
+        color = np.where(t["log_or"] > 0, MODE_COLORS["Critical bridging"], INK_3)
+        ax.hlines(y, t["lo"], t["hi"], color=color, lw=1.6, zorder=2)
+        ax.scatter(t["log_or"], y, s=36, zorder=3, color=np.where(sig, color, SURFACE),
+                   edgecolors=color, linewidths=1.6)
+        ax.axvline(0, color=INK_3, lw=1, zorder=1)
+        ax.set_yticks(y, [f"{textwrap.shorten(c, 48, placeholder='…')} "
+                          f"({i}/{n})" for c, i, n in zip(t["category"], t["integrating"],
+                                                       t["n"], strict=True)], fontsize=8.5)
+        ax.set_xlabel("Log odds ratio, integrating papers (95% CI)", fontsize=9.5,
+                      color=INK)
+    fig.text(0.5, -0.02, "Integrating = integration level ≥ "
+             f"{E.INTEGRATION_HIGH} (compartmentalized coexistence or critical bridging). "
+             "(k/n): integrating papers / papers with the category. Filled: CI excludes 0. "
+             f"Categories with fewer than {min_papers} papers omitted.",
+             ha="center", fontsize=8.5, color=INK_2, wrap=True)
+    fig.tight_layout()
+    _save(fig, "fig_modes_problems", out_dir)
+
+
+# ---- figure 5: level distributions ---------------------------------------------------------------
+def fig_levels(df: pd.DataFrame, out_dir: Path):
+    fields = _fields(df)
+    fig, axes = plt.subplots(1, 2, figsize=(11, 0.75 * len(fields) + 1.4), sharey=True,
+                             facecolor=SURFACE)
+    for ax, axis in zip(axes, ("engagement", "integration"), strict=True):
+        for y, field in enumerate(fields):
+            sub = df[df["Retrieval"] == field]
+            shares = sub[axis].value_counts(normalize=True).reindex(E.LEVELS, fill_value=0)
+            left = 0.0
+            for level, share in shares.items():
+                share *= 100
+                ax.barh(y, share, left=left, color=LEVEL_COLORS[level - 1], height=0.6,
+                        edgecolor=SURFACE, linewidth=2, zorder=2)
+                if share >= 5:
+                    ax.text(left + share / 2, y, f"{share:.0f}%", ha="center", va="center",
+                            fontsize=8.5, color=INK if level <= 2 else SURFACE)
+                left += share
+        cut = E.ENGAGEMENT_HIGH if axis == "engagement" else E.INTEGRATION_HIGH
+        ax.set_title(f"{axis.capitalize()} (high: level ≥ {cut})", fontsize=10.5,
+                     color=INK, loc="left")
+        ax.set_xlim(0, 100)
+        ax.set_xlabel("Share of papers (%)", fontsize=10, color=INK)
+        _style(ax, "x")
+    axes[0].set_yticks(range(len(fields)), [FIELD_NAMES[f] for f in fields])
+    axes[0].invert_yaxis()
+    handles = [plt.Rectangle((0, 0), 1, 1, color=c, label=f"Level {i}")
+               for i, c in enumerate(LEVEL_COLORS, start=1)]
+    fig.legend(handles=handles, loc="lower center", ncol=5, frameon=False, fontsize=9,
+               labelcolor=INK_2, bbox_to_anchor=(0.5, -0.12))
+    fig.tight_layout()
+    _save(fig, "fig_modes_levels", out_dir)
+
+
+# ---- figure 6: examples ------------------------------------------------------------------------
+def fig_examples(df: pd.DataFrame, examples: dict, out_dir: Path):
+    # same layout as Figure 1: low engagement on the left, high integration on top
+    layout = {"Compartmentalized coexistence": (0, 0), "Critical bridging": (0, 1),
+              "Disengagement": (1, 0), "Radical confrontation": (1, 1)}
+    fig, axes = plt.subplots(2, 2, figsize=(11, 5.0), facecolor=SURFACE)
+    for mode, (r, c) in layout.items():
+        ax = axes[r, c]
+        ax.set_xticks([])
+        ax.set_yticks([])
+        for spine in ax.spines.values():
+            spine.set_color(MODE_COLORS[mode])
+            spine.set_linewidth(2)
+        ax.set_facecolor(SURFACE)
+        n = int((df["category"] == mode).sum())
+        ax.text(0.04, 0.93, f"{mode}", transform=ax.transAxes, fontsize=12,
+                fontweight="bold", color=INK, va="top")
+        ax.text(0.96, 0.93, f"n = {n}", transform=ax.transAxes, fontsize=9.5, color=INK_2,
+                va="top", ha="right")
+        ex = examples.get(mode)
+        if ex is None:
+            ax.text(0.04, 0.72, "No paper in this quadrant.", transform=ax.transAxes,
+                    fontsize=9.5, color=INK_2, va="top")
+            continue
+        key, quote, source = ex
+        row = df.loc[key]
+        head = textwrap.fill(f"{row['Title']}", 56)
+        meta = (f"{FIELD_NAMES[row['Retrieval']]}, {row['Publication_Year']} · "
+                f"engagement {row['engagement']}, integration {row['integration']}")
+        body = textwrap.fill(f"“{quote}”", 64) if quote else ""
+        note = " · quote from abstract" if source == "abstract" else ""
+        ax.text(0.04, 0.78, head, transform=ax.transAxes, fontsize=9.5, color=INK, va="top",
+                fontweight="semibold", linespacing=1.3)
+        ax.text(0.04, 0.78 - 0.09 * (head.count("\n") + 1), meta + note,
+                transform=ax.transAxes, fontsize=8.5, color=INK_2, va="top")
+        ax.text(0.04, 0.78 - 0.09 * (head.count("\n") + 1) - 0.14, body,
+                transform=ax.transAxes, fontsize=9, color=INK, va="top", style="italic",
+                linespacing=1.35)
+    fig.text(0.5, 0.005, "Engagement →", ha="center", fontsize=10, color=INK_2)
+    fig.text(0.005, 0.5, "Integration →", va="center", rotation=90, fontsize=10,
+             color=INK_2)
+    fig.tight_layout(rect=(0.02, 0.02, 1, 1))
+    _save(fig, "fig_modes_examples", out_dir)
+
+
+# ---- commands ---------------------------------------------------------------------------------
+def _resolve(results: list[Path] | None, pilot: bool) -> list[Path]:
+    if results:
+        return results
+    return [E.out_dir() / ("engagement_pilot.csv" if pilot else "engagement.csv")]
+
+
+@app.command()
+def join(
+    results: list[Path] = typer.Option(None, help="Parsed CSV or .jsonl result files."),
+    pilot: bool = typer.Option(False, help="Use the pilot CSV instead of the full run."),
+):
+    """Join classifications with the existing annotations into a new CSV."""
+    joined = join_annotations(load_results(_resolve(results, pilot)))
+    dest = E.out_dir() / ("engagement_joined_pilot.csv" if pilot else "engagement_joined.csv")
+    joined.to_csv(dest)
+    typer.secho(f"Wrote {dest} ({len(joined)} papers; data/ left unchanged)")
+
+
+@app.command()
+def figures(
+    results: list[Path] = typer.Option(None, help="Parsed CSV or .jsonl result files."),
+    pilot: bool = typer.Option(False, help="Use the pilot CSV instead of the full run."),
+    include_abstract_only: bool = typer.Option(
+        False, help="Include papers classified from their abstract only."),
+    period_years: int = typer.Option(2, help="Years per period in the time figure."),
+    start_year: int = typer.Option(2018, help="Earlier years join the first period."),
+    min_period_papers: int = typer.Option(5, help="Hide periods with fewer papers."),
+    level: str = typer.Option("high", help="Category level for figure 4: high or low."),
+    min_papers: int = typer.Option(10, help="Minimum papers per category in figure 4."),
+    example: list[str] = typer.Option(
+        None, help='Override an example in figure 6, e.g. "Critical bridging=PUPA48EE".'),
+    out_dir: Path = typer.Option(OUT),
+):
+    """Draw all six figures."""
+    df = load_results(_resolve(results, pilot))
+    if not include_abstract_only:
+        dropped = int((df["input"] != "full text").sum())
+        df = df[df["input"] == "full text"]
+        typer.secho(f"{len(df)} papers ({dropped} abstract-only papers left out)")
+    joined = join_annotations(df)
+    examples = pick_examples(df, dict(e.split("=", 1) for e in example or []))
+    for mode, ex in examples.items():
+        if ex:
+            note = "" if ex[2] == "evidence" else f"  [quote from {ex[2]}]"
+            typer.secho(f"example {mode}: {ex[0]} {df.loc[ex[0], 'Title'][:55]}{note}")
+    fig_grid(df, out_dir)
+    fig_shares(df, out_dir)
+    fig_time(df, out_dir, period_years, start_year, min_period_papers)
+    fig_problems(joined, out_dir, level, min_papers)
+    fig_levels(df, out_dir)
+    fig_examples(df, examples, out_dir)
+
+
+if __name__ == "__main__":
+    app()
