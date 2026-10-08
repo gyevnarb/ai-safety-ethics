@@ -528,9 +528,25 @@ def problem_table(joined: pd.DataFrame, kind: str, level: str, min_papers: int):
     return pd.DataFrame(rows).sort_values("log_or") if rows else pd.DataFrame()
 
 
-def fig_problems(joined: pd.DataFrame, out_dir: Path, level: str, min_papers: int):
-    tables = {k: problem_table(joined, k, level, min_papers) for k in ("risk", "mitigation")}
-    heights = [max(len(t), 1) for t in tables.values()]
+def _trim(t: pd.DataFrame, keep: int) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """The keep categories at each end of a table sorted by log odds ratio, and the
+    middle ones left out (the categories closest to no association)."""
+    if len(t) <= 2 * keep + 1:
+        return t, t.iloc[0:0]
+    return pd.concat([t.iloc[:keep], t.iloc[-keep:]]), t.iloc[keep:-keep]
+
+
+def fig_problems(joined: pd.DataFrame, out_dir: Path, level: str, min_papers: int,
+                 keep: int):
+    tables, gaps = {}, {}
+    for kind in ("risk", "mitigation"):
+        t, cut = _trim(problem_table(joined, kind, level, min_papers), keep)
+        tables[kind], gaps[kind] = t, len(cut)
+        if len(cut):
+            sig = ((cut["lo"] > 0) | (cut["hi"] < 0)).sum()
+            typer.secho(f"  {kind}: left out {len(cut)} middle categories ({sig} with a CI "
+                        f"excluding 0): {', '.join(cut['category'])}")
+    heights = [len(t) + (gaps[k] > 0) or 1 for k, t in tables.items()]
     fig, axes = plt.subplots(1, 2, figsize=(13, 0.28 * max(heights) + 1.6),
                              facecolor=SURFACE)
     for ax, (kind, t) in zip(axes, tables.items(), strict=True):
@@ -539,16 +555,24 @@ def fig_problems(joined: pd.DataFrame, out_dir: Path, level: str, min_papers: in
             ax.text(0.5, 0.5, f"No category with >= {min_papers} papers", ha="center",
                     transform=ax.transAxes, color=INK_2)
             continue
-        y = np.arange(len(t))
+        # rows bottom to top; a gap row between the two ends marks the left-out middle
+        gap = gaps[kind] > 0
+        y = np.arange(len(t)) + (gap & (np.arange(len(t)) >= keep))
         sig = (t["lo"] > 0) | (t["hi"] < 0)
         color = np.where(t["log_or"] > 0, MODE_COLORS["Critical bridging"], INK_3)
         ax.hlines(y, t["lo"], t["hi"], color=color, lw=1.6, zorder=2)
         ax.scatter(t["log_or"], y, s=36, zorder=3, color=np.where(sig, color, SURFACE),
                    edgecolors=color, linewidths=1.6)
         ax.axvline(0, color=INK_3, lw=1, zorder=1)
-        ax.set_yticks(y, [f"{textwrap.shorten(c, 48, placeholder='…')} "
-                          f"({i}/{n})" for c, i, n in zip(t["category"], t["integrating"],
-                                                       t["n"], strict=True)], fontsize=8.5)
+        labels = [f"{textwrap.shorten(c, 48, placeholder='…')} ({i}/{n})"
+                  for c, i, n in zip(t["category"], t["integrating"], t["n"], strict=True)]
+        if gap:
+            y = np.append(y, keep)
+            labels.append(f"⋯ {gaps[kind]} more categories")
+        ax.set_yticks(y, labels, fontsize=8.5)
+        if gap:
+            ax.get_yticklabels()[-1].set_color(INK_3)
+            ax.get_yticklabels()[-1].set_fontstyle("italic")
         ax.set_xlabel("Log odds ratio, integrating papers (95% CI)", fontsize=9.5,
                       color=INK)
     fig.tight_layout()
@@ -662,6 +686,8 @@ def figures(
     min_period_papers: int = typer.Option(5, help="Hide periods with fewer papers."),
     level: str = typer.Option("high", help="Category level for figure 4: high or low."),
     min_papers: int = typer.Option(10, help="Minimum papers per category in figure 4."),
+    problem_rows: int = typer.Option(
+        5, help="Categories kept at each end of figure 4's panels; the middle is cut."),
     example: list[str] = typer.Option(
         None, help='Override an example in figure 6, e.g. "Critical bridging=PUPA48EE".'),
     out_dir: Path = typer.Option(OUT),
@@ -687,7 +713,7 @@ def figures(
     # one point per year; everything before 2019 pooled into the first point
     fig_time_combined(df, out_dir, 1, 2018, min_period_papers,
                       name="fig_modes_time_combined_yearly")
-    fig_problems(joined, out_dir, level, min_papers)
+    fig_problems(joined, out_dir, level, min_papers, problem_rows)
     fig_levels(df, out_dir)
     fig_examples(df, examples, out_dir)
 
