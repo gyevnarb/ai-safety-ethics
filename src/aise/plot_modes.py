@@ -7,7 +7,7 @@
 
 Figures (written to output/plots/modes/ as PDF and PNG):
 
-1. fig_modes_grid        5x5 grid of engagement x integration levels, one panel per field
+1. fig_modes_grid        grid of engagement x integration levels, one panel per field
 2. fig_modes_shares      share of papers per mode by field, with a zoom on the rarer modes
 3. fig_modes_time        share of papers in each non-disengaged mode over time, by field
 4. fig_modes_problems    which risk / mitigation categories are over-represented among
@@ -46,11 +46,15 @@ MODE_COLORS = dict(zip(MODES, ["#4a3aa7", "#2a78d6", "#eb6834", "#1baf7a"], stri
 # the fields keep the colours of the paper's existing figures (plot.py)
 FIELD_COLORS = {"Ethics": "#1f77b4", "Safety": "#d62728"}
 FIELD_NAMES = {"Ethics": "AI ethics", "Safety": "AI safety"}
-# single-hue sequential ramp for ordinal levels 1-5 (light -> dark)
-LEVEL_COLORS = ["#b7d3f6", "#6da7ec", "#2a78d6", "#1c5cab", "#0d366b"]
+# single-hue sequential ramp for the ordinal levels (light -> dark); a 4-level scale
+# skips the middle step so neighbouring levels stay well apart
+LEVEL_RAMP = ["#b7d3f6", "#6da7ec", "#2a78d6", "#1c5cab", "#0d366b"]
+LEVEL_COLORS = dict(zip(E.LEVELS, LEVEL_RAMP if len(E.LEVELS) == 5
+                        else [LEVEL_RAMP[i] for i in (0, 1, 3, 4)], strict=True))
 INK, INK_2, INK_3, SURFACE = "#0b0b0b", "#52514e", "#8a8983", "#ffffff"
 # boundaries between low and high levels, for drawing the quadrant lines
 X_CUT, Y_CUT = E.ENGAGEMENT_HIGH - 0.5, E.INTEGRATION_HIGH - 0.5
+TOP = max(E.LEVELS) + 0.5  # upper edge of the level grid
 
 app = typer.Typer(help=__doc__.split("\n\n")[0])
 
@@ -208,7 +212,7 @@ def _fields(df: pd.DataFrame) -> list[str]:
     return [f for f in FIELD_COLORS if f in set(df["Retrieval"])]
 
 
-# ---- figure 1: 5x5 grid ------------------------------------------------------------------
+# ---- figure 1: level grid ---------------------------------------------------------------
 def fig_grid(df: pd.DataFrame, out_dir: Path):
     fields = _fields(df)
     fig, axes = plt.subplots(1, len(fields), figsize=(5.2 * len(fields), 5.0),
@@ -222,9 +226,9 @@ def fig_grid(df: pd.DataFrame, out_dir: Path):
         # quadrant tint, so the Figure 1 structure reads at a glance
         for mode, (x0, x1, y0, y1) in {
             "Disengagement": (0.5, X_CUT, 0.5, Y_CUT),
-            "Compartmentalized coexistence": (0.5, X_CUT, Y_CUT, 5.5),
-            "Radical confrontation": (X_CUT, 5.5, 0.5, Y_CUT),
-            "Critical bridging": (X_CUT, 5.5, Y_CUT, 5.5),
+            "Compartmentalized coexistence": (0.5, X_CUT, Y_CUT, TOP),
+            "Radical confrontation": (X_CUT, TOP, 0.5, Y_CUT),
+            "Critical bridging": (X_CUT, TOP, Y_CUT, TOP),
         }.items():
             ax.add_patch(plt.Rectangle((x0, y0), x1 - x0, y1 - y0, color=MODE_COLORS[mode],
                                        alpha=0.07, lw=0, zorder=0))
@@ -238,8 +242,8 @@ def fig_grid(df: pd.DataFrame, out_dir: Path):
                        edgecolors=SURFACE, linewidths=1.5, alpha=0.9, zorder=3)
             ax.text(e, i, f"{k}", ha="center", va="center", fontsize=8.5, zorder=4,
                     color=SURFACE)
-        ax.set_xlim(0.5, 5.5)
-        ax.set_ylim(0.5, 5.5)
+        ax.set_xlim(0.5, TOP)
+        ax.set_ylim(0.5, TOP)
         ax.set_xticks(E.LEVELS)
         ax.set_yticks(E.LEVELS)
         ax.set_aspect("equal")
@@ -425,7 +429,7 @@ def fig_levels(df: pd.DataFrame, out_dir: Path):
             left = 0.0
             for level, share in shares.items():
                 share *= 100
-                ax.barh(y, share, left=left, color=LEVEL_COLORS[level - 1], height=0.6,
+                ax.barh(y, share, left=left, color=LEVEL_COLORS[level], height=0.6,
                         edgecolor=SURFACE, linewidth=2, zorder=2)
                 if share >= 5:
                     ax.text(left + share / 2, y, f"{share:.0f}%", ha="center", va="center",
@@ -440,8 +444,8 @@ def fig_levels(df: pd.DataFrame, out_dir: Path):
     axes[0].set_yticks(range(len(fields)), [FIELD_NAMES[f] for f in fields])
     axes[0].invert_yaxis()
     handles = [plt.Rectangle((0, 0), 1, 1, color=c, label=f"Level {i}")
-               for i, c in enumerate(LEVEL_COLORS, start=1)]
-    fig.legend(handles=handles, loc="lower center", ncol=5, frameon=False, fontsize=9,
+               for i, c in LEVEL_COLORS.items()]
+    fig.legend(handles=handles, loc="lower center", ncol=len(handles), frameon=False, fontsize=9,
                labelcolor=INK_2, bbox_to_anchor=(0.5, -0.12))
     fig.tight_layout()
     _save(fig, "fig_modes_levels", out_dir)

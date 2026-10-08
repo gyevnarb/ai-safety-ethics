@@ -2,14 +2,17 @@
 
 The model scores each paper on two axes, in one call:
 
-* ``engagement``, an integer level from 1 to 5: how directly the paper engages the
+* ``engagement``, an integer level from 1 to 4: how directly the paper engages the
   other field or the tensions between AI ethics (AIE) and AI safety (AIS);
-* ``integration``, an integer level from 1 to 5: how far it brings AIE and AIS
+* ``integration``, an integer level from 1 to 4: how far it brings AIE and AIS
   concerns into one frame.
 
+Prompts up to v6 used a 1 to 5 scale; v7 drops their middle level 3 and renumbers
+levels 4 and 5 as 3 and 4.
+
 The model is not told about the four modes of Figure 1. ``parse`` assigns each paper
-its ``category`` (quadrant) from the two levels: high means engagement >= 4 and
-integration >= 3.
+its ``category`` (quadrant) from the two levels: high means engagement >= 3 and
+integration >= 3 (v6: engagement >= 4 and integration >= 3).
 
 Typical loop while iterating on the prompt::
 
@@ -26,7 +29,8 @@ Full run through the OpenAI Batch API::
 
 Needs ``OPENAI_API_KEY`` in the environment and ``pdftotext`` (poppler) on the path.
 Outputs go to ``output/engagement/<PROMPT_VERSION>/`` so prompt iterations never
-overwrite each other.
+overwrite each other. Set ``AISE_PROMPT_VERSION=v6`` to fetch, parse or plot an
+earlier run.
 """
 
 import json
@@ -40,7 +44,10 @@ import pandas as pd
 import typer
 from openai import Client
 
-PROMPT_VERSION = "v6"
+# AISE_PROMPT_VERSION selects an earlier run's folder for fetch / parse / plotting;
+# prepare and pilot always send the PROMPT below (earlier prompts are kept in the
+# request files of their run)
+PROMPT_VERSION = os.environ.get("AISE_PROMPT_VERSION", "v7")
 MODEL = "gpt-6-luna"
 REASONING_EFFORT = "medium"
 MAX_COMPLETION_TOKENS = 8000  # includes reasoning tokens
@@ -48,14 +55,18 @@ MAX_CHARS = 60_000  # ~15k tokens of body text per paper
 MIN_TEXT_CHARS = 1000  # less than this means extraction failed (e.g. scanned PDF)
 MAX_SHARD_BYTES = 150_000_000  # OpenAI batch input files are capped at 200 MB
 MAX_SHARD_REQUESTS = 1000
-LEVELS = (1, 2, 3, 4, 5)  # both axes are scored on this integer scale
+FIVE_LEVELS = int(PROMPT_VERSION[1:]) <= 6  # v6 and earlier scored 1 to 5
+LEVELS = (1, 2, 3, 4, 5) if FIVE_LEVELS else (1, 2, 3, 4)  # integer scale of both axes
 # lowest level that counts as "high" on each axis when computing the quadrant
-ENGAGEMENT_HIGH = 4  # level 3 is one substantive passage, not a thread
-INTEGRATION_HIGH = 3  # level 3 is both fields' concerns side by side
+# v7: level 3 is a major thread / explicitly connected concerns
+# v6: engagement 3 was one substantive passage, not a thread; integration 3 was both
+#     fields' concerns side by side
+ENGAGEMENT_HIGH = 4 if FIVE_LEVELS else 3
+INTEGRATION_HIGH = 3
 
 PAPERS = Path("data/papers_all_fields.csv")
 PDF_DIR = Path("pdf")
-TXT_DIR = Path("output/engagement/txt")
+TXT_DIR = Path("data/txt")
 OUT_ROOT = Path("output/engagement")
 
 CATEGORIES = [
@@ -79,88 +90,44 @@ SYSTEM = (
 )
 
 PROMPT = """\
-We study how research papers position themselves with respect to the divide between \
-two research communities.
+We study how research papers position themselves with respect to the divide between two clusters of research.
 
 ## The two fields
-- AI ethics (AIE): the broad field studying the ethical and technosocial dimensions of AI, \
-represented by, but not limited to, venues such as ACM FAccT and AIES. It includes \
-work in philosophy and machine ethics, law and policy, science and technology \
-studies, and critical AI studies. Typical concerns: fairness and discrimination, \
-accountability, transparency, privacy, labour, power and structural injustice, the \
-moral status and values of AI systems, present-day and tangible harms of deployed \
-systems.
-- AI safety (AIS): the practices of alignment and safety research labs and researchers. \
-Typical concerns: alignment, robustness, interpretability, dangerous capabilities, \
-evaluation of frontier models, misuse, loss of control, catastrophic and existential \
-risk from advanced AI.
+- AI ethics (AIE): the broad field studying the ethical and technosocial impacts of AI. Typical topics of study are fairness and discrimination, accountability, transparency, privacy, structural injustice, present-day and tangible harms of deployed systems.
+- AI safety (AIS): the broad field studying the safety and technosocial impacts of AI. Typical topics of study are alignment, robustness, interpretability, dangerous capabilities, loss of control, existential risk from advanced AI.
 
 This paper was retrieved from the {home} corpus, so its "other field" is {other}.
 
-## Axis 1: engagement (1 to 5)
-How directly and substantively does the paper engage with the other field as a field: \
-its community, its positions, priorities and arguments, or the tensions between AIE and \
-AIS (their differing priorities, values, evidence standards, risk framings)? Engagement \
-can be critical or constructive; what matters is directness.
+## Axis 1: engagement (1 to 4)
+How directly and substantively does the paper engage with the other field as a field: its positions, priorities and arguments, or the tensions between AIE and AIS (their differing priorities, evidence standards, risk framings)? Engagement can be critical or constructive; what matters is directness.
 
-Using concepts, methods or topics that happen to belong to the other field is NOT \
-engagement by itself. For example, an AI ethics paper that studies RLHF or alignment, or \
-an AI safety paper that also covers fairness or privacy, has engagement 1 unless it \
-addresses the other field's positions or its relationship to the paper's own field. \
-Such topical overlap belongs on the integration axis instead.
-- 1: the other field is never addressed as a field, and the AIE-AIS relationship is \
-never mentioned (topical overlap alone still scores 1).
-- 2: the other field is named or cited in passing (related work, motivation), \
-without discussing its positions.
-- 3: one substantive passage discusses the other field's positions, priorities or \
-arguments, or how the paper relates to them, but this is not a thread of the paper.
-- 4: engaging the other field's positions, or the AIE-AIS tensions, is a major \
-thread of the paper.
-- 5: the AIE-AIS relationship, or the other field's positions, is the central topic.
+Using concepts, methods or topics that happen to belong to the other field is NOT engagement by itself. For example, an AI ethics paper that studies RLHF or alignment, or an AI safety paper that also covers fairness or privacy, has engagement 1 unless it addresses the other field's positions or its relationship to the paper's own field. Such topical overlap belongs on the integration axis instead.
+- 1: the other field is never addressed as a field, and the AIE-AIS relationship is never mentioned (topical overlap alone still scores 1).
+- 2: the other field is named or cited in passing (related work, motivation), without discussing its positions.
+- 3: engaging the other field's positions, or the AIE-AIS tensions, is a major thread of the paper.
+- 4: the AIE-AIS relationship, or the other field's positions, is the central topic.
 
-## Axis 2: integration (1 to 5)
-How far does the paper bring AIE and AIS concerns, concepts, methods or problem \
-framings together within one frame, rather than working within a single field or \
-setting the fields against each other?
+## Axis 2: integration (1 to 4)
+How far does the paper bring AIE and AIS concepts, methods, or problem framings together within one frame, rather than working within a single field or setting the fields against each other?
 
-Mixing topics is not the same as integrating the fields. A technical paper that \
-combines, say, a fairness metric with a robustness technique uses ingredients from \
-both fields, but integrates them only if it treats them as the concerns of each field \
-and connects them. Showing that a technical property (e.g. lack of robustness) leads \
-to a harm (e.g. discrimination) is not enough by itself.
+Mixing topics is not the same as integrating the fields. A technical paper that combines, say, a fairness metric with a robustness technique uses ingredients from both fields, but integrates them only if it treats them as the concerns of each field and connects them. Showing that a technical property (e.g. lack of robustness) leads to a harm (e.g. discrimination) is not enough by itself.
 
-Taking the other field's concerns into the paper's own framework while dismissing \
-that field's approaches or positions is low integration, however much of both \
-fields the paper discusses.
-- 1: works entirely within one field's framing, or treats the other field only as \
-an opponent to be discredited.
-- 2: topics or techniques from both fields appear, but as technical ingredients \
-rather than as concerns of the other field; or the other field's concerns are only \
-acknowledged, kept separate, or mentioned in passing (e.g. a paragraph noting safety \
-risks in an otherwise fairness-focused paper).
-- 3: treats concerns from both fields as concerns, side by side in the same work \
-(e.g. both discrimination and loss of control), with little connection between them.
-- 4: explicitly argues that the fields' concerns are connected, treating each as a \
-concern of that field, e.g. shows how one problem is both an ethics problem and a \
-safety problem and draws on both fields to address it.
-- 5: builds a genuinely joint framing, problem definition, method or governance \
-proposal that serves both fields.
+Taking the other field's concerns into the paper's own framework while dismissing that field's approaches or positions is low integration, however much of both fields the paper discusses.
+- 1: works entirely within one field's framing, or treats the other field only as an opponent to be discredited.
+- 2: topics or techniques from both fields appear, but as technical ingredients rather than as concerns of the other field; or the other field's concerns are only acknowledged, kept separate, or mentioned in passing (e.g. a paragraph noting safety risks in an otherwise fairness-focused paper).
+- 3: explicitly argues that the fields' concerns are connected, treating each as a concern of that field, e.g. shows how one problem is both an ethics problem and a safety problem and draws on both fields to address it.
+- 4: builds a genuinely joint framing, problem definition, method or governance proposal that serves both fields.
 
-Score the two axes independently: a paper can engage the other field intensely while \
-integrating nothing (e.g. a polemic), or place both fields' concerns side by side \
-without engaging the tensions between them.
+Score the two axes independently: a paper can engage the other field intensely while integrating nothing (e.g. a polemic), or place both fields' concerns side by side without engaging the tensions between them.
 
-Score each axis as an integer from 1 to 5: the level whose description best fits \
-the paper as a whole.
+Score each axis as an integer from 1 to 4: the level whose description best fits the paper as a whole.
 
 ## Output
 Return JSON with:
-- "evidence": up to 3 short verbatim quotes (each under 40 words) that most inform \
-your scores; an empty list if the paper never touches the other field;
+- "evidence": up to 3 short verbatim quotes (each under 40 words) that most inform your scores; an empty list if the paper never touches the other field;
 - "rationale": 2-4 sentences explaining the scores;
-- "engagement" and "integration": integers from 1 to 5, as defined above;
-- "other_field_referenced": true if the paper refers to the other field or its \
-literature at all.
+- "engagement" and "integration": integers from 1 to 4, as defined above;
+- "other_field_referenced": true if the paper refers to the other field or its literature at all.
 
 ## Paper ({source})
 ### Title
@@ -520,7 +487,7 @@ def parse_line(line: str) -> dict:
     for axis in ("engagement", "integration"):
         value = result[axis]
         if not isinstance(value, (int, float)) or value not in LEVELS:
-            row["error"] = f"{axis} is not a level from 1 to 5: {value!r}"
+            row["error"] = f"{axis} is not one of the levels {LEVELS}: {value!r}"
             return row
         row[axis] = int(value)
     row["category"] = quadrant(row["engagement"], row["integration"])
