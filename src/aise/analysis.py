@@ -29,6 +29,7 @@ import seaborn as sns
 import spacy
 import typer
 import umap
+from adjustText import adjust_text
 from bertopic import BERTopic
 from hdbscan import HDBSCAN
 from networkx.drawing.nx_pydot import graphviz_layout
@@ -433,7 +434,7 @@ def plot_topic_analysis(
 
     # Temporal semantic drift: average embedding by year &
     # cosine similarity between corpora per year
-    if "Ethics" in df["corpus"].to_numpy() and "Safety" in df["corpus"].to_numpy():
+    if False and "Ethics" in df["corpus"].to_numpy() and "Safety" in df["corpus"].to_numpy():
         min_docs_per_year = 2
         if "year" in df.columns:
             years = sorted(df["year"].dropna().unique())
@@ -589,11 +590,12 @@ def plot_topic_analysis(
     topic_centroids = df.groupby("topic")[["umap_x", "umap_y"]].mean().reset_index()
 
     # Annotate each topic with its label
+    texts = []
     for _, row in topic_centroids.iterrows():
         topic_label = topic_model.get_topic(row["topic"])
         if topic_label:
             label_text = "_".join(label[0] for label in topic_label[:3])
-            plt.text(
+            txt = plt.text(
                 row["umap_x"],
                 row["umap_y"],
                 label_text,
@@ -603,10 +605,13 @@ def plot_topic_analysis(
                 alpha=0.8,
                 ha="center",
             )
+            texts.append(txt)
 
     plt.title("UMAP projection: documents by topic and corpus (with topic labels)")
     plt.xlabel("UMAP-1")
     plt.ylabel("UMAP-2")
+    plt.tight_layout()
+    adjust_text(texts, arrowprops=dict(arrowstyle="-", color="gray", lw=0.5, alpha=0.6))
     plt.savefig(output_dir / "umap_topics.png", dpi=300)
     plt.show()
 

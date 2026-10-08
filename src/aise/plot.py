@@ -11,6 +11,8 @@ import typer
 from adjustText import adjust_text
 from matplotlib import cm, rcParams
 from matplotlib.colors import Normalize
+from matplotlib.offsetbox import HPacker
+from matplotlib.transforms import blended_transform_factory, offset_copy
 
 ABBREVIATIONS = {
     "rl": "reinforcement learning",
@@ -91,6 +93,41 @@ def compute_log_odds_df(data: pd.DataFrame, alpha: float = 0.01) -> pd.DataFrame
     ).sort_values("z_score", ascending=False)
 
 
+# corpus colours shared with aise.plot_modes, and the ink used for text
+FIELD_COLORS = {"Ethics": "#1f77b4", "Safety": "#d62728"}
+# hatching tells the corpora apart in greyscale print
+FIELD_HATCHES = {"Ethics": None, "Safety": "//////"}
+FIELD_NAMES = {"Ethics": "AI ethics", "Safety": "AI safety"}
+INK, INK_2, GRID = "#0b0b0b", "#52514e", "#e6e5e1"
+
+# Overlap figures are sized to sit two abreast (one per field) on a ~7in text width.
+OVERLAP_WIDTH = 3.4
+OVERLAP_ROW = 0.27  # height per category
+OVERLAP_MARGIN = 0.65  # height for the legend and axis labels
+OVERLAP_LEGEND = 0.16  # height of the legend strip at the top
+OVERLAP_XLABEL_OFFSET = 15  # points from the x axis down to its label
+OVERLAP_RC = {
+    "font.size": 7,
+    "axes.labelsize": 7,
+    "xtick.labelsize": 6.5,
+    "ytick.labelsize": 6.5,
+    "legend.fontsize": 6.5,
+    "axes.edgecolor": INK_2,
+    "xtick.color": INK_2,
+    "ytick.color": INK,
+    "hatch.linewidth": 0.5,
+}
+
+
+def _overlap_label(text: str, width: int = 28, max_lines: int = 2) -> str:
+    text = re.sub(r"\(.*\)$", "", text).strip()
+    lines = textwrap.wrap(text, width)
+    if len(lines) > max_lines:
+        lines = lines[:max_lines]
+        lines[-1] = lines[-1][: width - 1].rstrip() + "\u2026"
+    return "\n".join(lines)
+
+
 def plot_category_overlap(
     data: pd.DataFrame,
     categories: pd.DataFrame,
@@ -98,7 +135,17 @@ def plot_category_overlap(
     n_labels: int = 10,
     ordering: str = "diff",  # or "sim"
     show: bool = False,
+    png: bool = False,
 ) -> None:
+    """For each field's categories, count papers from each corpus annotated with them.
+
+    One figure per field and category type, each sized to half the text width, with
+    the same size, x-scale and colours so that the Ethics and Safety figures
+    can be placed side by side.
+    """
+    plots_dir = _ensure_plots_dir(output_dir)
+    fields = list(FIELD_COLORS)
+    field_of = categories.set_index("low")["field"]
     for cat_type in ["risk", "mitigation"]:
         cat_col = f"mixed_{cat_type}_categories"
         all_cats = data[cat_col].dropna().str.split(";", expand=True).stack()
@@ -106,99 +153,97 @@ def plot_category_overlap(
         if not error_cat.empty:
             typer.secho(f"Unknown categories in {cat_col}:")
             typer.secho(error_cat.to_string())
+        all_cats = all_cats[all_cats.isin(categories["low"])]
         all_cats = all_cats.reset_index().rename(columns={"level_1": "cat_n", 0: "low"})
-        all_cats[f"{cat_type}_document_corpus"] = data.loc[
-            all_cats["custom_id"], "corpus"
-        ].to_numpy()
-        all_cats[f"{cat_type}_category_corpus"] = (
-            categories.set_index("low").loc[all_cats["low"], "field"].to_numpy()
-        )
-        all_cats["high"] = (
-            categories.set_index("low").loc[all_cats["low"], "high"].to_numpy()
-        )
-        all_cats["is_overlap"] = (
-            all_cats[f"{cat_type}_document_corpus"]
-            != all_cats[f"{cat_type}_category_corpus"]
-        )
+        all_cats["corpus"] = data.loc[all_cats["custom_id"], "corpus"].to_numpy()
+        all_cats["field"] = field_of.loc[all_cats["low"]].to_numpy()
 
-        for field in categories["field"].unique():
-            sub_cats = all_cats[all_cats[f"{cat_type}_category_corpus"] == field]
-            plots_dir = _ensure_plots_dir(output_dir)
-            palette = ["C3", "C0"]
+        # papers per category and corpus, restricted to each field's own categories
+        tables = {}
+        for field in fields:
+            counts = pd.crosstab(
+                all_cats.loc[all_cats["field"] == field, "low"],
+                all_cats.loc[all_cats["field"] == field, "corpus"],
+            ).reindex(columns=fields, fill_value=0)
+            other = fields[1 - fields.index(field)]
             if ordering == "sim":
-                order = (
-                    sub_cats[sub_cats["is_overlap"]]["low"]
-                    .value_counts()
-                    .sort_values(ascending=False)
-                    .index
-                )
+                key = counts[other]
             else:
-                order = (
-                    sub_cats.value_counts(["low", "is_overlap"])
-                    .unstack(fill_value=0)
-                    .pipe(lambda x: (x[False] - x[True]) / (x[False]))
-                    .sort_values(ascending=False)
-                    .index
-                )
-            plt.figure(figsize=(6, 4))
-            sns.countplot(
-                data=sub_cats,
-                y="low",
-                hue="is_overlap",
-                order=order[:n_labels],
-                palette=palette,
-            )
-            ax = plt.gca()
-            # Find the maximum width among all bars
-            max_width_bar = max((bar.get_width() for bar in ax.patches), default=0)
-            for bar in ax.patches:
-                bar.set_edgecolor("black")
-                # Add count labels to the right of bars (or inside for the longest bar)
-                width = bar.get_width()
-                if width > 0:
-                    if width == max_width_bar:
-                        # Longest bar: label inside to avoid border overlap
-                        ax.text(
-                            width * 0.98,
-                            bar.get_y() + bar.get_height() / 2,
-                            f"{int(width)}",
-                            ha="right",
-                            va="center",
-                            color="white",
-                            fontsize=9,
-                        )
-                    else:
-                        # Other bars: label to the right
-                        ax.text(
-                            width,
-                            bar.get_y() + bar.get_height() / 2,
-                            f" {int(width)}",
-                            ha="left",
-                            va="center",
-                            fontsize=9,
-                        )
-            max_width = 30
-            new_labels = []
-            for label in ax.get_yticklabels():
-                text = label.get_text()
-                # label.set_color("red" if field == "Safety" else "blue")
-                text = re.sub(r"\(.*\)$", "", text).strip()
-                wrapped = "\n".join(textwrap.wrap(text[:90], max_width))
-                new_labels.append(wrapped)
-            ax.set_yticklabels(new_labels)
+                key = (counts[field] - counts[other]) / counts[field].clip(lower=1)
+            tables[field] = counts.loc[key.sort_values(ascending=False).index[:n_labels]]
+        # a common x-scale so bar lengths compare across the two panels
+        xmax = max(t.to_numpy().max() for t in tables.values()) * 1.12
 
-            handles, labels = ax.get_legend_handles_labels()
-            labels = ["Safety", "Ethics"] if field == "Safety" else ["Ethics", "Safety"]
-            ax.legend(handles, labels, title="Annotated as")
-            # plt.xlabel("Number of Documents")
-            plt.xlabel(f"Number of {field} {cat_type.capitalize()} Categories")
-            plt.ylabel("")
-            plt.grid(axis="x", linestyle=":", alpha=0.7)
-            plt.tight_layout()
-            plt.savefig(plots_dir / f"fig_overlap_{ordering}_{field}_{cat_type}.pdf")
-            if show:
-                plt.show()
-            plt.close()
+        for field, counts in tables.items():
+            n = len(counts)
+            height = OVERLAP_MARGIN + n * OVERLAP_ROW
+            with plt.rc_context(OVERLAP_RC):
+                fig, ax = plt.subplots(figsize=(OVERLAP_WIDTH, height))
+                y = np.arange(n)
+                bar_h = 0.38
+                for j, corpus in enumerate(fields):
+                    offset = (j - 0.5) * (bar_h + 0.04)
+                    values = counts[corpus].to_numpy()
+                    ax.barh(
+                        y + offset, values, height=bar_h, facecolor=FIELD_COLORS[corpus],
+                        hatch=FIELD_HATCHES[corpus], edgecolor="white", linewidth=0,
+                        label=corpus, zorder=2,
+                    )
+                    for yi, v in zip(y + offset, values, strict=True):
+                        ax.text(
+                            v + xmax * 0.01, yi, f"{v}", ha="left", va="center",
+                            fontsize=5.5, color=INK_2,
+                        )
+                ax.set_yticks(y, [_overlap_label(c) for c in counts.index])
+                ax.set_ylim(n - 0.5, -0.5)
+                ax.set_xlim(0, xmax)
+                ax.tick_params(axis="y", length=0, pad=3)
+                ax.tick_params(axis="x", length=2.5, width=0.6)
+                ax.grid(axis="x", color=GRID, lw=0.6, zorder=0)
+                for side in ["top", "right", "left"]:
+                    ax.spines[side].set_visible(False)
+                ax.spines["bottom"].set_linewidth(0.6)
+                ax.set_xlabel(
+                    rf"Number of $\bf{{{field}}}$ $\bf{{{cat_type.capitalize()}}}$ Categories",
+                    color=INK_2,
+                )
+                # centred on the canvas like the legend, so a label wider than the bar
+                # area is not pushed off the right edge
+                below_ticks = offset_copy(
+                    blended_transform_factory(fig.transFigure, ax.transAxes),
+                    fig=fig, y=-OVERLAP_XLABEL_OFFSET, units="points",
+                )
+                ax.xaxis.set_label_coords(0.5, 0, transform=below_ticks)
+                # the field's own corpus first, as in the legend's original order
+                handles = dict(zip(*ax.get_legend_handles_labels()[::-1], strict=True))
+                order = sorted(handles, key=lambda c: c != field)
+                leg = ax.legend(
+                    [handles[c] for c in order], order, title="Annotated as",
+                    loc="upper center", bbox_to_anchor=(0.5, 1.0),
+                    bbox_transform=fig.transFigure, ncol=2, frameon=False,
+                    borderaxespad=0.3, handlelength=1.2, handleheight=0.8,
+                    columnspacing=1.2, title_fontproperties={"size": 6.5},
+                )
+                # put the title on the same line as the entries (matplotlib always
+                # stacks it above them)
+                box = leg._legend_box
+                leg._legend_box = HPacker(
+                    pad=box.pad, sep=leg.columnspacing * leg._fontsize, align="center",
+                    children=[leg._legend_title_box, leg._legend_handle_box],
+                )
+                leg._legend_box.set_figure(fig)
+                leg._legend_box.axes = ax
+                leg._legend_box.set_offset(leg._findoffset)
+                # the legend spans the canvas, so lay out the axes below its strip
+                leg.set_in_layout(False)
+                fig.tight_layout(rect=(0, 0, 1, 1 - OVERLAP_LEGEND / height))
+                stem = f"fig_overlap_{ordering}_{field}_{cat_type}"
+                fig.savefig(plots_dir / f"{stem}.pdf")
+                if png:
+                    fig.savefig(plots_dir / f"{stem}.png", dpi=300)
+                if show:
+                    plt.show()
+                plt.close(fig)
 
 
 def plot_categories(
@@ -416,11 +461,13 @@ def overlap(
         "diff", help="Ordering method for overlap plots: 'diff' or 'sim'"
     ),
     show: bool = typer.Option(False, "--show", help="Show plots interactively"),
+    png: bool = typer.Option(False, "--png", help="Also save PNG copies of the PDFs"),
 ) -> None:
     """Plot category overlap between Safety and Ethics corpora."""
     data, cats = load_inputs(data_path, categories_path)
     plot_category_overlap(
-        data, cats, output_dir=output_dir, show=show, n_labels=n_labels, ordering=ordering
+        data, cats, output_dir=output_dir, show=show, n_labels=n_labels, ordering=ordering,
+        png=png,
     )
     typer.secho("Generated category overlap plots.")
 

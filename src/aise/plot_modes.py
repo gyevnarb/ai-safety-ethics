@@ -8,7 +8,9 @@
 Figures (written to output/plots/modes/ as PDF and PNG):
 
 1. fig_modes_grid        grid of engagement x integration levels, one panel per field
+   fig_modes_grid_combined   the same grid with both fields pooled into one panel
 2. fig_modes_shares      share of papers per mode by field, with a zoom on the rarer modes
+   fig_modes_shares_rare     the zoom on its own, to sit beneath fig_modes_grid_combined
 3. fig_modes_time        share of papers in each non-disengaged mode over time, by field
 4. fig_modes_problems    which risk / mitigation categories are over-represented among
                          papers that integrate both fields' concerns
@@ -40,12 +42,15 @@ OUT = Path("output/plots/modes")
 
 MODES = E.CATEGORIES  # Disengagement, Compartmentalized coexistence, Radical ..., Critical ...
 RARE_MODES = MODES[1:]
-# Figure 1 hues, stepped to pass the categorical palette checks (all-pairs CVD
-# separation >= 8, chroma floor); Disengagement cannot be gray, so it is violet.
-MODE_COLORS = dict(zip(MODES, ["#4a3aa7", "#2a78d6", "#eb6834", "#1baf7a"], strict=True))
+# The colours of the paper's Figure 1 (TikZ): marks use each mode box's outline,
+# draw=<c>!70!black, and backgrounds its fill, fill=<c>!12, with c = gray, blue,
+# orange and green!60!black.
+MODE_COLORS = dict(zip(MODES, ["#595959", "#0000b3", "#b35900", "#006b00"], strict=True))
+MODE_FILLS = dict(zip(MODES, ["#f0f0f0", "#e0e0ff", "#fff0e0", "#e0f3e0"], strict=True))
 # the fields keep the colours of the paper's existing figures (plot.py)
 FIELD_COLORS = {"Ethics": "#1f77b4", "Safety": "#d62728"}
 FIELD_NAMES = {"Ethics": "AI ethics", "Safety": "AI safety"}
+FIELD_ABBREV = {"Ethics": "AIE", "Safety": "AIS"}
 # single-hue sequential ramp for the ordinal levels (light -> dark); a 4-level scale
 # skips the middle step so neighbouring levels stay well apart
 LEVEL_RAMP = ["#b7d3f6", "#6da7ec", "#2a78d6", "#1c5cab", "#0d366b"]
@@ -213,6 +218,20 @@ def _fields(df: pd.DataFrame) -> list[str]:
 
 
 # ---- figure 1: level grid ---------------------------------------------------------------
+def _quadrants(ax, bottom: float = 0.5):
+    """Quadrant tint and boundaries, so the Figure 1 structure reads at a glance."""
+    for mode, (x0, x1, y0, y1) in {
+        "Disengagement": (0.5, X_CUT, bottom, Y_CUT),
+        "Compartmentalized coexistence": (0.5, X_CUT, Y_CUT, TOP),
+        "Radical confrontation": (X_CUT, TOP, bottom, Y_CUT),
+        "Critical bridging": (X_CUT, TOP, Y_CUT, TOP),
+    }.items():
+        ax.add_patch(plt.Rectangle((x0, y0), x1 - x0, y1 - y0, color=MODE_FILLS[mode],
+                                   lw=0, zorder=0))
+    ax.axvline(X_CUT, color=INK_3, lw=1, ls=(0, (4, 3)), zorder=1)
+    ax.axhline(Y_CUT, color=INK_3, lw=1, ls=(0, (4, 3)), zorder=1)
+
+
 def fig_grid(df: pd.DataFrame, out_dir: Path):
     fields = _fields(df)
     fig, axes = plt.subplots(1, len(fields), figsize=(5.2 * len(fields), 5.0),
@@ -223,23 +242,13 @@ def fig_grid(df: pd.DataFrame, out_dir: Path):
     for ax, field in zip(axes, fields, strict=True):
         sub = df[df["Retrieval"] == field]
         n = len(sub)
-        # quadrant tint, so the Figure 1 structure reads at a glance
-        for mode, (x0, x1, y0, y1) in {
-            "Disengagement": (0.5, X_CUT, 0.5, Y_CUT),
-            "Compartmentalized coexistence": (0.5, X_CUT, Y_CUT, TOP),
-            "Radical confrontation": (X_CUT, TOP, 0.5, Y_CUT),
-            "Critical bridging": (X_CUT, TOP, Y_CUT, TOP),
-        }.items():
-            ax.add_patch(plt.Rectangle((x0, y0), x1 - x0, y1 - y0, color=MODE_COLORS[mode],
-                                       alpha=0.07, lw=0, zorder=0))
-        ax.axvline(X_CUT, color=INK_3, lw=1, ls=(0, (4, 3)), zorder=1)
-        ax.axhline(Y_CUT, color=INK_3, lw=1, ls=(0, (4, 3)), zorder=1)
+        _quadrants(ax)
         for (e, i), k in sub.groupby(["engagement", "integration"]).size().items():
             share = k / n
             # circle area proportional to the share of the field's papers
             ax.scatter(e, i, s=max(260, 2600 * share / max_share),
                        color=MODE_COLORS[E.quadrant(e, i)],
-                       edgecolors=SURFACE, linewidths=1.5, alpha=0.9, zorder=3)
+                       linewidths=0, zorder=3)
             ax.text(e, i, f"{k}", ha="center", va="center", fontsize=8.5, zorder=4,
                     color=SURFACE)
         ax.set_xlim(0.5, TOP)
@@ -247,25 +256,54 @@ def fig_grid(df: pd.DataFrame, out_dir: Path):
         ax.set_xticks(E.LEVELS)
         ax.set_yticks(E.LEVELS)
         ax.set_aspect("equal")
-        ax.set_title(f"{FIELD_NAMES[field]} papers (n = {n})", fontsize=11, color=INK,
-                     loc="left")
         ax.set_xlabel("Engagement", fontsize=11, color=INK)
         _style(ax)
     axes[0].set_ylabel("Integration", fontsize=11, color=INK)
-    handles = [plt.Line2D([], [], marker="o", ls="", ms=8, mfc=MODE_COLORS[m], mec=SURFACE,
+    handles = [plt.Line2D([], [], marker="o", ls="", ms=8, mfc=MODE_COLORS[m], mew=0,
                           label=m) for m in MODES]
     fig.legend(handles=handles, loc="lower center", ncol=4, frameon=False, fontsize=9,
                labelcolor=INK_2, bbox_to_anchor=(0.5, -0.06))
-    fig.text(0.5, -0.1, "Circle area: share of the field's papers (with a minimum size "
-             "for legibility); numbers: paper counts. "
-             "Dashed lines: quadrant boundaries.", ha="center", fontsize=8.5, color=INK_2)
     _save(fig, "fig_modes_grid", out_dir)
+
+
+def fig_grid_combined(df: pd.DataFrame, out_dir: Path):
+    """One grid for both fields: pooled counts, with each field's count beneath."""
+    fields = _fields(df)
+    fig, ax = plt.subplots(figsize=(5.4, 5.6), facecolor=SURFACE)
+    bottom = 0.1  # room for the breakdown under the bottom row
+    _quadrants(ax, bottom)
+    counts = df.groupby(["engagement", "integration", "Retrieval"]).size().unstack(
+        fill_value=0).reindex(columns=fields, fill_value=0)
+    totals = counts.sum(axis=1)
+    for (e, i), k in totals.items():
+        # circle area proportional to the share of all papers
+        size = max(420, 3000 * k / totals.max())
+        ax.scatter(e, i, s=size,
+                   color=MODE_COLORS[E.quadrant(e, i)],
+                   linewidths=0, zorder=3)
+        ax.text(e, i, f"{k}", ha="center", va="center", fontsize=11, zorder=4,
+                color=SURFACE)
+        split = "\n".join(f"{FIELD_ABBREV[f]} {counts.loc[(e, i), f]}" for f in fields)
+        # just below the circle's edge (marker size is an area in points^2)
+        ax.annotate(split, (e, i), xytext=(0, -(math.sqrt(size / math.pi) + 3)),
+                    textcoords="offset points", ha="center", va="top", fontsize=9, linespacing=1.1,
+                    zorder=4, color=INK_2)
+    ax.set_xlim(0.5, TOP)
+    ax.set_ylim(bottom, TOP)
+    ax.set_xticks(E.LEVELS)
+    ax.set_yticks(E.LEVELS)
+    ax.set_xlabel("Engagement", fontsize=13, color=INK)
+    ax.set_ylabel("Integration", fontsize=13, color=INK)
+    _style(ax)
+    ax.tick_params(labelsize=11)
+    fig.tight_layout()
+    _save(fig, "fig_modes_grid_combined", out_dir)
 
 
 # ---- figure 2: shares by field ---------------------------------------------------------------
 def fig_shares(df: pd.DataFrame, out_dir: Path):
     fields = _fields(df)
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 2.9), facecolor=SURFACE,
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 3.4), facecolor=SURFACE,
                                    gridspec_kw={"width_ratios": [1.1, 1]})
     # left: 100% stacked bars
     for y, field in enumerate(fields):
@@ -277,15 +315,15 @@ def fig_shares(df: pd.DataFrame, out_dir: Path):
                      edgecolor=SURFACE, linewidth=2, zorder=2)
             if share >= 6:
                 ax1.text(left + share / 2, y, f"{share:.0f}%", ha="center", va="center",
-                         fontsize=8.5, color=SURFACE)
+                         fontsize=11, color=SURFACE)
             left += share
     ax1.set_yticks(range(len(fields)), [f"{FIELD_NAMES[f]}\n(n = "
                                         f"{(df['Retrieval'] == f).sum()})" for f in fields])
     ax1.invert_yaxis()
     ax1.set_xlim(0, 100)
-    ax1.set_xlabel("Share of papers (%)", fontsize=10, color=INK)
-    ax1.set_title("All modes", fontsize=10.5, color=INK, loc="left")
+    ax1.set_xlabel("Share of papers (%)", fontsize=13, color=INK)
     _style(ax1, "x")
+    ax1.tick_params(labelsize=11)
     # right: zoom on the rarer modes, with 95% Wilson intervals
     offsets = np.linspace(-0.15, 0.15, len(fields))
     for off, field in zip(offsets, fields, strict=True):
@@ -300,15 +338,42 @@ def fig_shares(df: pd.DataFrame, out_dir: Path):
     ax2.set_yticks(range(len(RARE_MODES)), RARE_MODES)
     ax2.invert_yaxis()
     ax2.set_xlim(left=0)
-    ax2.set_xlabel("Share of papers (%), 95% CI", fontsize=10, color=INK)
-    ax2.set_title("Modes other than disengagement", fontsize=10.5, color=INK, loc="left")
-    ax2.legend(frameon=False, fontsize=9, labelcolor=INK_2, loc="lower right")
+    ax2.set_xlabel("Share of papers (%), 95% CI", fontsize=13, color=INK)
+    ax2.legend(frameon=False, fontsize=11, labelcolor=INK_2, loc="lower right")
     _style(ax2, "x")
+    ax2.tick_params(labelsize=11)
     handles = [plt.Rectangle((0, 0), 1, 1, color=MODE_COLORS[m], label=m) for m in MODES]
-    fig.legend(handles=handles, loc="lower center", ncol=4, frameon=False, fontsize=9,
-               labelcolor=INK_2, bbox_to_anchor=(0.5, -0.14))
+    fig.legend(handles=handles, loc="lower center", ncol=4, frameon=False, fontsize=11,
+               labelcolor=INK_2, bbox_to_anchor=(0.5, -0.16))
     fig.tight_layout()
     _save(fig, "fig_modes_shares", out_dir)
+
+
+def fig_shares_rare(df: pd.DataFrame, out_dir: Path):
+    """The right panel of fig_shares on its own, as wide as fig_grid_combined (5.4in)
+    and with its font sizes, to sit beneath it at the same scale."""
+    fields = _fields(df)
+    fig, ax = plt.subplots(figsize=(5.4, 2.0), facecolor=SURFACE)
+    offsets = np.linspace(-0.17, 0.17, len(fields))
+    for off, field in zip(offsets, fields, strict=True):
+        sub = df[df["Retrieval"] == field]
+        k = np.array([(sub["category"] == m).sum() for m in RARE_MODES])
+        n = np.full(len(RARE_MODES), len(sub))
+        lo, hi = wilson(k, n)
+        ys = np.arange(len(RARE_MODES)) + off
+        ax.errorbar(k / n * 100, ys, xerr=[(k / n - lo) * 100, (hi - k / n) * 100], fmt="o",
+                    color=FIELD_COLORS[field], ms=7, capsize=0, lw=1.8,
+                    label=FIELD_ABBREV[field], zorder=3)
+    labels = [textwrap.fill(m, 16, break_long_words=False) for m in RARE_MODES]
+    ax.set_yticks(range(len(RARE_MODES)), labels)
+    ax.invert_yaxis()
+    ax.set_xlim(left=0)
+    ax.set_xlabel("Share of papers (%), 95% CI", fontsize=13, color=INK)
+    ax.legend(frameon=False, fontsize=11, labelcolor=INK_2, loc="lower right")
+    _style(ax, "x")
+    ax.tick_params(labelsize=11)
+    fig.tight_layout()
+    _save(fig, "fig_modes_shares_rare", out_dir)
 
 
 # ---- figure 3: over time --------------------------------------------------------------------
@@ -344,16 +409,10 @@ def fig_time(df: pd.DataFrame, out_dir: Path, period_years: int, start_year: int
             ax.fill_between(x, lo * 100, hi * 100, color=FIELD_COLORS[field], alpha=0.12,
                             lw=0, zorder=2)
         ax.set_xticks(range(len(periods)), labels, rotation=0)
-        ax.set_title(mode, fontsize=10.5, color=INK, loc="left")
         ax.set_ylim(bottom=0)
         _style(ax, "y")
     axes[0].set_ylabel("Share of the field's papers (%)", fontsize=10, color=INK)
     axes[-1].legend(frameon=False, fontsize=9, labelcolor=INK_2)
-    counts = df.groupby("period").size().reindex(periods).tolist()
-    fig.text(0.5, -0.05, f"Shaded bands: 95% Wilson intervals; periods with fewer than "
-             f"{min_n} papers in a field are not shown. Papers per period (both "
-             f"fields): {', '.join(f'{lab}: {c}' for lab, c in zip(labels, counts, strict=True))}.",
-             ha="center", fontsize=8.5, color=INK_2)
     fig.tight_layout()
     _save(fig, "fig_modes_time", out_dir)
 
@@ -390,7 +449,6 @@ def fig_problems(joined: pd.DataFrame, out_dir: Path, level: str, min_papers: in
     fig, axes = plt.subplots(1, 2, figsize=(13, 0.28 * max(heights) + 1.6),
                              facecolor=SURFACE)
     for ax, (kind, t) in zip(axes, tables.items(), strict=True):
-        ax.set_title(f"{kind.capitalize()} categories", fontsize=10.5, color=INK, loc="left")
         _style(ax, "x")
         if t.empty:
             ax.text(0.5, 0.5, f"No category with >= {min_papers} papers", ha="center",
@@ -408,11 +466,6 @@ def fig_problems(joined: pd.DataFrame, out_dir: Path, level: str, min_papers: in
                                                        t["n"], strict=True)], fontsize=8.5)
         ax.set_xlabel("Log odds ratio, integrating papers (95% CI)", fontsize=9.5,
                       color=INK)
-    fig.text(0.5, -0.02, "Integrating = integration level ≥ "
-             f"{E.INTEGRATION_HIGH} (compartmentalized coexistence or critical bridging). "
-             "(k/n): integrating papers / papers with the category. Filled: CI excludes 0. "
-             f"Categories with fewer than {min_papers} papers omitted.",
-             ha="center", fontsize=8.5, color=INK_2, wrap=True)
     fig.tight_layout()
     _save(fig, "fig_modes_problems", out_dir)
 
@@ -420,7 +473,7 @@ def fig_problems(joined: pd.DataFrame, out_dir: Path, level: str, min_papers: in
 # ---- figure 5: level distributions ---------------------------------------------------------------
 def fig_levels(df: pd.DataFrame, out_dir: Path):
     fields = _fields(df)
-    fig, axes = plt.subplots(1, 2, figsize=(11, 0.75 * len(fields) + 1.4), sharey=True,
+    fig, axes = plt.subplots(1, 2, figsize=(11, 0.85 * len(fields) + 1.8), sharey=True,
                              facecolor=SURFACE)
     for ax, axis in zip(axes, ("engagement", "integration"), strict=True):
         for y, field in enumerate(fields):
@@ -433,20 +486,18 @@ def fig_levels(df: pd.DataFrame, out_dir: Path):
                         edgecolor=SURFACE, linewidth=2, zorder=2)
                 if share >= 5:
                     ax.text(left + share / 2, y, f"{share:.0f}%", ha="center", va="center",
-                            fontsize=8.5, color=INK if level <= 2 else SURFACE)
+                            fontsize=11, color=INK if level <= 2 else SURFACE)
                 left += share
-        cut = E.ENGAGEMENT_HIGH if axis == "engagement" else E.INTEGRATION_HIGH
-        ax.set_title(f"{axis.capitalize()} (high: level ≥ {cut})", fontsize=10.5,
-                     color=INK, loc="left")
         ax.set_xlim(0, 100)
-        ax.set_xlabel("Share of papers (%)", fontsize=10, color=INK)
+        ax.set_xlabel("Share of papers (%)", fontsize=13, color=INK)
         _style(ax, "x")
+        ax.tick_params(labelsize=11)
     axes[0].set_yticks(range(len(fields)), [FIELD_NAMES[f] for f in fields])
     axes[0].invert_yaxis()
     handles = [plt.Rectangle((0, 0), 1, 1, color=c, label=f"Level {i}")
                for i, c in LEVEL_COLORS.items()]
-    fig.legend(handles=handles, loc="lower center", ncol=len(handles), frameon=False, fontsize=9,
-               labelcolor=INK_2, bbox_to_anchor=(0.5, -0.12))
+    fig.legend(handles=handles, loc="lower center", ncol=len(handles), frameon=False, fontsize=11,
+               labelcolor=INK_2, bbox_to_anchor=(0.5, -0.14))
     fig.tight_layout()
     _save(fig, "fig_modes_levels", out_dir)
 
@@ -464,7 +515,7 @@ def fig_examples(df: pd.DataFrame, examples: dict, out_dir: Path):
         for spine in ax.spines.values():
             spine.set_color(MODE_COLORS[mode])
             spine.set_linewidth(2)
-        ax.set_facecolor(SURFACE)
+        ax.set_facecolor(MODE_FILLS[mode])
         n = int((df["category"] == mode).sum())
         ax.text(0.04, 0.93, f"{mode}", transform=ax.transAxes, fontsize=12,
                 fontweight="bold", color=INK, va="top")
@@ -530,7 +581,7 @@ def figures(
         None, help='Override an example in figure 6, e.g. "Critical bridging=PUPA48EE".'),
     out_dir: Path = typer.Option(OUT),
 ):
-    """Draw all six figures."""
+    """Draw all figures."""
     df = load_results(_resolve(results, pilot))
     if not include_abstract_only:
         dropped = int((df["input"] != "full text").sum())
@@ -543,7 +594,9 @@ def figures(
             note = "" if ex[2] == "evidence" else f"  [quote from {ex[2]}]"
             typer.secho(f"example {mode}: {ex[0]} {df.loc[ex[0], 'Title'][:55]}{note}")
     fig_grid(df, out_dir)
+    fig_grid_combined(df, out_dir)
     fig_shares(df, out_dir)
+    fig_shares_rare(df, out_dir)
     fig_time(df, out_dir, period_years, start_year, min_period_papers)
     fig_problems(joined, out_dir, level, min_papers)
     fig_levels(df, out_dir)
