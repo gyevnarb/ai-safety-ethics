@@ -16,6 +16,10 @@ Figures (written to output/plots/modes/ as PDF and PNG):
    fig_modes_time_combined_yearly   the same by single year (before 2019 pooled)
 4. fig_modes_problems    which risk / mitigation categories are over-represented among
                          papers that integrate both fields' concerns
+   fig_modes_problems_adjusted_integration   the same from one Firth logistic regression of all
+                         categories with field, period and paper length as controls
+   fig_modes_problems_adjusted_engagement   the same model for engaging papers (high
+                         engagement: Radical confrontation or Critical bridging)
 5. fig_modes_levels      distribution of engagement and integration levels by field
 6. fig_modes_examples    one quoted example paper per mode, laid out like Figure 1
 
@@ -35,6 +39,7 @@ from matplotlib import rcParams
 from matplotlib.path import Path as MPath
 
 from aise import engagement as E
+from aise.firth import firth_logit, holm
 
 rcParams["pdf.fonttype"] = 42
 rcParams["ps.fonttype"] = 42
@@ -304,8 +309,11 @@ def fig_grid(df: pd.DataFrame, out_dir: Path):
         _style(ax)
     axes[0].set_ylabel("Integration", fontsize=11, color=INK, fontweight="bold")
     handles = _mode_handles()
-    fig.legend(handles=handles, loc="lower center", ncol=len(handles), frameon=False, fontsize=9,
-               labelcolor=INK_2, bbox_to_anchor=(0.5, -0.06))
+    for h in handles:
+        h.set_markersize(10)
+    # two rows, so the larger text fits within the width of the panels
+    fig.legend(handles=handles, loc="lower center", ncol=math.ceil(len(handles) / 2),
+               frameon=False, fontsize=12, labelcolor=INK_2, bbox_to_anchor=(0.5, -0.13))
     _save(fig, "fig_modes_grid", out_dir)
 
 
@@ -503,27 +511,35 @@ def fig_time_combined(df: pd.DataFrame, out_dir: Path, period_years: int,
 
 
 # ---- figure 4: bridging problems --------------------------------------------------------------
-def problem_table(joined: pd.DataFrame, kind: str, level: str, min_papers: int):
-    """Log odds ratio of integrating both fields' concerns, in vs outside each category.
+# the outcome of the problems models: a paper is high on the axis (integration: it
+# integrates both fields' concerns; engagement: it engages the other field or the divide)
+AXIS_HIGH = {"integration": E.INTEGRATION_HIGH, "engagement": E.ENGAGEMENT_HIGH}
+AXIS_PAPERS = {"integration": "integrating", "engagement": "engaging"}
+
+
+def problem_table(joined: pd.DataFrame, kind: str, level: str, min_papers: int,
+                  axis: str = "integration"):
+    """Log odds ratio of being high on axis, in vs outside each category.
 
     A paper "integrates" when its integration level is high (Compartmentalized
-    coexistence or Critical bridging). Haldane-Anscombe correction (+0.5) and a Wald
-    95% interval.
+    coexistence or Critical bridging) and "engages" when its engagement level is high
+    (Radical confrontation or Critical bridging). Haldane-Anscombe correction (+0.5)
+    and a Wald 95% interval.
     """
-    joined = joined.assign(integrating=joined["integration"] >= E.INTEGRATION_HIGH)
+    joined = joined.assign(high=joined[axis] >= AXIS_HIGH[axis])
     long = explode(joined, kind, level)
-    total_k, total_n = int(joined["integrating"].sum()), len(joined)
+    total_k, total_n = int(joined["high"].sum()), len(joined)
     rows = []
     for cat, g in long.groupby("cat"):
         papers = g[~g.index.duplicated()]
-        n, k = len(papers), int(papers["integrating"].sum())
+        n, k = len(papers), int(papers["high"].sum())
         if n < min_papers:
             continue
-        a, b = k + 0.5, n - k + 0.5  # in category: integrating / not
+        a, b = k + 0.5, n - k + 0.5  # in category: high / not
         c, d = total_k - k + 0.5, total_n - n - (total_k - k) + 0.5  # outside
         lor = math.log(a * d / (b * c))
         se = math.sqrt(1 / a + 1 / b + 1 / c + 1 / d)
-        rows.append({"category": cat, "n": n, "integrating": k, "share": k / n,
+        rows.append({"category": cat, "n": n, "k": k, "share": k / n,
                      "log_or": lor, "lo": lor - 1.96 * se, "hi": lor + 1.96 * se})
     return pd.DataFrame(rows).sort_values("log_or") if rows else pd.DataFrame()
 
@@ -551,6 +567,7 @@ def fig_problems(joined: pd.DataFrame, out_dir: Path, level: str, min_papers: in
                              facecolor=SURFACE)
     for ax, (kind, t) in zip(axes, tables.items(), strict=True):
         _style(ax, "x")
+        ax.set_title(f"{kind.capitalize()} categories", fontsize=10.5, color=INK, loc="left")
         if t.empty:
             ax.text(0.5, 0.5, f"No category with >= {min_papers} papers", ha="center",
                     transform=ax.transAxes, color=INK_2)
@@ -565,7 +582,7 @@ def fig_problems(joined: pd.DataFrame, out_dir: Path, level: str, min_papers: in
                    edgecolors=color, linewidths=1.6)
         ax.axvline(0, color=INK_3, lw=1, zorder=1)
         labels = [f"{textwrap.shorten(c, 48, placeholder='…')} ({i}/{n})"
-                  for c, i, n in zip(t["category"], t["integrating"], t["n"], strict=True)]
+                  for c, i, n in zip(t["category"], t["k"], t["n"], strict=True)]
         if gap:
             y = np.append(y, keep)
             labels.append(f"⋯ {gaps[kind]} more categories")
@@ -577,6 +594,140 @@ def fig_problems(joined: pd.DataFrame, out_dir: Path, level: str, min_papers: in
                       color=INK)
     fig.tight_layout()
     _save(fig, "fig_modes_problems", out_dir)
+
+
+YEAR_BINS = [(None, 2018), (2019, 2020), (2021, 2022), (2023, 2023), (2024, 2024),
+             (2025, None)]  # the first bin is the reference
+
+
+def problem_design(joined: pd.DataFrame, level: str, min_papers: int,
+                   axis: str = "integration"):
+    """Design matrix for the adjusted problems model, and the outcome (high on axis).
+
+    One indicator per risk and per mitigation category with at least min_papers papers
+    (all in one model, so each is adjusted for the others), plus controls: home field,
+    publication period and log full-text length in words (longer papers have more room
+    to take up both fields' concerns).
+    """
+    X = pd.DataFrame({"const": 1.0}, index=joined.index)
+    terms = []
+    for kind in ("risk", "mitigation"):
+        long = explode(joined, kind, level)
+        for cat, g in long.groupby("cat"):
+            keys = g.index.unique()
+            if len(keys) >= min_papers:
+                X[f"{kind}: {cat}"] = joined.index.isin(keys).astype(float)
+                terms.append((kind, cat))
+    X["Field: AI safety"] = (joined["Retrieval"] == "Safety").astype(float)
+    year = joined["Publication_Year"].astype(int)
+    for lo, hi in YEAR_BINS[1:]:
+        name = f"Year: {lo}" if lo == hi else f"Year: {lo}+" if hi is None else \
+            f"Year: {lo}-{hi}"
+        X[name] = ((year >= lo) & (year <= (hi or year.max()))).astype(float)
+    words = pd.Series({k: len((E.TXT_DIR / f"{k}.txt").read_text(errors="ignore").split())
+                       for k in joined.index})
+    log_words = np.log(words.clip(lower=1))
+    X["Log words (centred)"] = log_words - log_words.mean()
+    y = (joined[axis] >= AXIS_HIGH[axis]).astype(float)
+    return X, y, terms
+
+
+def problem_regression(joined: pd.DataFrame, level: str, min_papers: int,
+                       axis: str = "integration") -> pd.DataFrame:
+    """Adjusted log odds ratios of being high on axis, from one Firth logistic regression.
+
+    Profile-likelihood 95% intervals; Holm-adjusted p-values across the category terms.
+    The unadjusted log odds ratio of problem_table is kept alongside for comparison.
+    """
+    X, y, terms = problem_design(joined, level, min_papers, axis)
+    res = firth_logit(X, y)
+    cats = [f"{k}: {c}" for k, c in terms]
+    res["p_holm"] = np.nan
+    res.loc[cats, "p_holm"] = holm(res.loc[cats, "p"])
+    res["kind"] = [t.split(": ", 1)[0] if t in cats else "control" for t in res.index]
+    res["category"] = [t.split(": ", 1)[1] if t in cats else t for t in res.index]
+    res["n"] = X.sum().astype(int)
+    res["k"] = X.mul(y, axis=0).sum().astype(int)
+    for kind in ("risk", "mitigation"):
+        raw = problem_table(joined, kind, level, min_papers, axis).set_index("category")
+        idx = res.index[res["kind"] == kind]
+        res.loc[idx, "log_or_unadjusted"] = raw.loc[res.loc[idx, "category"],
+                                                    "log_or"].to_numpy()
+    res.attrs["papers"], res.attrs["events"] = len(y), int(y.sum())
+    return res
+
+
+def fig_problems_adjusted(joined: pd.DataFrame, out_dir: Path, level: str,
+                          min_papers: int, keep: int, axis: str = "integration"):
+    suffix = f"_{axis}"
+    res = problem_regression(joined, level, min_papers, axis)
+    res.to_csv(out_dir / f"problems_regression{suffix}.csv")
+    n, events = res.attrs["papers"], res.attrs["events"]
+    typer.secho(f"  adjusted {axis} model: {n} papers, {events} {AXIS_PAPERS[axis]}, "
+                f"{len(res)} parameters ({events / (len(res) - 1):.1f} events per term)")
+    ctrl = res[res["kind"] == "control"]
+    for term, r in ctrl.iterrows():
+        typer.secho(f"    {term:24s} {r['coef']:+.2f} [{r['lo']:+.2f}, {r['hi']:+.2f}] "
+                    f"p={r['p']:.3f}")
+    tables, gaps = {}, {}
+    for kind in ("risk", "mitigation"):
+        t = res[res["kind"] == kind].rename(columns={"coef": "log_or"}).sort_values("log_or")
+        tables[kind], cut = _trim(t, keep)
+        gaps[kind] = len(cut)
+        if len(cut):
+            sig = ((cut["lo"] > 0) | (cut["hi"] < 0)).sum()
+            typer.secho(f"  {kind} (adjusted): left out {len(cut)} middle categories "
+                        f"({sig} with a CI excluding 0): {', '.join(cut['category'])}")
+    heights = [len(t) + (gaps[k] > 0) for k, t in tables.items()]
+    fig, axes = plt.subplots(1, 2, figsize=(16, 0.42 * max(heights) + 2.4),
+                             facecolor=SURFACE)
+    for ax, (kind, t) in zip(axes, tables.items(), strict=True):
+        _style(ax, "x")
+        ax.tick_params(labelsize=12)
+        ax.set_title(f"{kind.capitalize()} categories", fontsize=14, color=INK, loc="left",
+                     fontweight="bold")
+        gap = gaps[kind] > 0
+        y = np.arange(len(t)) + (gap & (np.arange(len(t)) >= keep))
+        sig = (t["lo"] > 0) | (t["hi"] < 0)
+        color = np.where(t["log_or"] > 0, MODE_COLORS["Critical bridging"], INK_3)
+        # unbounded profile intervals (no high paper) run to the panel edge
+        ax.hlines(y, t["lo"].clip(-8, 8), t["hi"].clip(-8, 8), color=color, lw=2,
+                  zorder=2)
+        ax.scatter(t["log_or_unadjusted"], y, marker="|", s=110, color=INK_3, lw=1.5,
+                   zorder=2.5)
+        ax.scatter(t["log_or"], y, s=60, zorder=3, color=np.where(sig, color, SURFACE),
+                   edgecolors=color, linewidths=2)
+        ax.axvline(0, color=INK_3, lw=1, zorder=1)
+        labels = [f"{textwrap.shorten(c, 48, placeholder='…')} ({i}/{m})"
+                  + (" *" if p < 0.05 else "")
+                  for c, i, m, p in zip(t["category"], t["k"], t["n"],
+                                        t["p_holm"], strict=True)]
+        if gap:
+            y = np.append(y, keep)
+            labels.append(f"⋯ {gaps[kind]} more categories")
+        ax.set_yticks(y, labels, fontsize=12)
+        if gap:
+            ax.get_yticklabels()[-1].set_color(INK_3)
+            ax.get_yticklabels()[-1].set_fontstyle("italic")
+        lo, hi = t["lo"].replace(-np.inf, np.nan).min(), t["hi"].replace(np.inf,
+                                                                         np.nan).max()
+        ax.set_xlim(min(lo, t["log_or_unadjusted"].min()) - 0.3,
+                    max(hi, t["log_or_unadjusted"].max()) + 0.3)
+        ax.set_xlabel("Adjusted log odds ratio (95% CI)",
+                      fontsize=13, color=INK, fontweight="bold")
+    handles = [
+        plt.Line2D([], [], marker="o", ls="-", color=INK_2, mfc=INK_2, ms=9,
+                   label="Adjusted (95% profile CI excludes 0)"),
+        plt.Line2D([], [], marker="o", ls="-", color=INK_2, mfc=SURFACE, ms=9,
+                   label="Adjusted (CI includes 0)"),
+        plt.Line2D([], [], marker="|", ls="none", color=INK_3, ms=14, mew=1.6,
+                   label="Unadjusted"),
+        plt.Line2D([], [], ls="none", label="* Holm-adjusted p < 0.05"),
+    ]
+    fig.legend(handles=handles, loc="lower center", ncol=4, frameon=False, fontsize=14,
+               labelcolor=INK_2, handlelength=1.6)
+    fig.tight_layout(rect=(0, 0.09, 1, 1))
+    _save(fig, f"fig_modes_problems_adjusted{suffix}", out_dir)
 
 
 # ---- figure 5: level distributions ---------------------------------------------------------------
@@ -714,6 +865,8 @@ def figures(
     fig_time_combined(df, out_dir, 1, 2018, min_period_papers,
                       name="fig_modes_time_combined_yearly")
     fig_problems(joined, out_dir, level, min_papers, problem_rows)
+    fig_problems_adjusted(joined, out_dir, level, min_papers, problem_rows)
+    fig_problems_adjusted(joined, out_dir, level, min_papers, problem_rows, "engagement")
     fig_levels(df, out_dir)
     fig_examples(df, examples, out_dir)
 
