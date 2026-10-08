@@ -12,6 +12,8 @@ Figures (written to output/plots/modes/ as PDF and PNG):
 2. fig_modes_shares      share of papers per mode by field, with a zoom on the rarer modes
    fig_modes_shares_rare     the zoom on its own, to sit beneath fig_modes_grid_combined
 3. fig_modes_time        share of papers in each non-disengaged mode over time, by field
+   fig_modes_time_combined   the same in one panel, both fields pooled
+   fig_modes_time_combined_yearly   the same by single year (before 2019 pooled)
 4. fig_modes_problems    which risk / mitigation categories are over-represented among
                          papers that integrate both fields' concerns
 5. fig_modes_levels      distribution of engagement and integration levels by field
@@ -30,6 +32,7 @@ import numpy as np
 import pandas as pd
 import typer
 from matplotlib import rcParams
+from matplotlib.path import Path as MPath
 
 from aise import engagement as E
 
@@ -60,6 +63,10 @@ INK, INK_2, INK_3, SURFACE = "#0b0b0b", "#52514e", "#8a8983", "#ffffff"
 # boundaries between low and high levels, for drawing the quadrant lines
 X_CUT, Y_CUT = E.ENGAGEMENT_HIGH - 0.5, E.INTEGRATION_HIGH - 0.5
 TOP = max(E.LEVELS) + 0.5  # upper edge of the level grid
+# On the 1-5 scale (v6) the grids draw the quadrant boundaries through the middle
+# level 3, so nodes with a 3 sit on a boundary, split between the modes either side.
+MID = 3 if E.FIVE_LEVELS else None
+GRID_X, GRID_Y = (MID, MID) if MID else (X_CUT, Y_CUT)
 
 app = typer.Typer(help=__doc__.split("\n\n")[0])
 
@@ -221,15 +228,52 @@ def _fields(df: pd.DataFrame) -> list[str]:
 def _quadrants(ax, bottom: float = 0.5):
     """Quadrant tint and boundaries, so the Figure 1 structure reads at a glance."""
     for mode, (x0, x1, y0, y1) in {
-        "Disengagement": (0.5, X_CUT, bottom, Y_CUT),
-        "Compartmentalized coexistence": (0.5, X_CUT, Y_CUT, TOP),
-        "Radical confrontation": (X_CUT, TOP, bottom, Y_CUT),
-        "Critical bridging": (X_CUT, TOP, Y_CUT, TOP),
+        "Disengagement": (0.5, GRID_X, bottom, GRID_Y),
+        "Compartmentalized coexistence": (0.5, GRID_X, GRID_Y, TOP),
+        "Radical confrontation": (GRID_X, TOP, bottom, GRID_Y),
+        "Critical bridging": (GRID_X, TOP, GRID_Y, TOP),
     }.items():
         ax.add_patch(plt.Rectangle((x0, y0), x1 - x0, y1 - y0, color=MODE_FILLS[mode],
                                    lw=0, zorder=0))
-    ax.axvline(X_CUT, color=INK_3, lw=1, ls=(0, (4, 3)), zorder=1)
-    ax.axhline(Y_CUT, color=INK_3, lw=1, ls=(0, (4, 3)), zorder=1)
+    ax.axvline(GRID_X, color=INK_3, lw=1, ls=(0, (4, 3)), zorder=1)
+    ax.axhline(GRID_Y, color=INK_3, lw=1, ls=(0, (4, 3)), zorder=1)
+
+
+def _wedges(e: int, i: int) -> list[tuple[float, float, str]]:
+    """(start angle, end angle, mode) pieces of the node at (e, i): one whole circle,
+    or, on a boundary through the middle level, one piece per adjacent quadrant."""
+    on_x, on_y = e == MID, i == MID
+    if on_x and on_y:
+        return [(0, 90, "Critical bridging"), (90, 180, "Compartmentalized coexistence"),
+                (180, 270, "Disengagement"), (270, 360, "Radical confrontation")]
+    if on_x:  # left half: low engagement, right half: high
+        return [(90, 270, E.quadrant(1, i)), (-90, 90, E.quadrant(max(E.LEVELS), i))]
+    if on_y:  # bottom half: low integration, top half: high
+        return [(180, 360, E.quadrant(e, 1)), (0, 180, E.quadrant(e, max(E.LEVELS)))]
+    return [(0, 360, E.quadrant(e, i))]
+
+
+def _node(ax, e: int, i: int, size: float):
+    """A grid node of the given marker area; split into coloured wedges on a boundary."""
+    pieces = _wedges(e, i)
+    if len(pieces) == 1:
+        ax.scatter(e, i, s=size, color=MODE_COLORS[pieces[0][2]], linewidths=0, zorder=3)
+        return
+    for start, end, mode in pieces:
+        # a wedge path spans the unit circle, so it scales like a full circle marker
+        # no seam between the pieces: it would cut through the count on top
+        ax.scatter(e, i, s=size, marker=MPath.wedge(start, end), color=MODE_COLORS[mode],
+                   linewidths=0, zorder=3)
+
+
+def _mode_handles() -> list:
+    handles = [plt.Line2D([], [], marker="o", ls="", ms=8, mfc=MODE_COLORS[m], mew=0,
+                          label=m) for m in MODES]
+    if MID:
+        handles.append(plt.Line2D([], [], marker="o", ls="", ms=8, fillstyle="left",
+                                  mfc=MODE_COLORS[MODES[0]], mfcalt=MODE_COLORS[MODES[1]],
+                                  mew=0, label=f"Score {MID}: between modes"))
+    return handles
 
 
 def fig_grid(df: pd.DataFrame, out_dir: Path):
@@ -246,9 +290,7 @@ def fig_grid(df: pd.DataFrame, out_dir: Path):
         for (e, i), k in sub.groupby(["engagement", "integration"]).size().items():
             share = k / n
             # circle area proportional to the share of the field's papers
-            ax.scatter(e, i, s=max(260, 2600 * share / max_share),
-                       color=MODE_COLORS[E.quadrant(e, i)],
-                       linewidths=0, zorder=3)
+            _node(ax, e, i, max(260, 2600 * share / max_share))
             ax.text(e, i, f"{k}", ha="center", va="center", fontsize=8.5, zorder=4,
                     color=SURFACE)
         ax.set_xlim(0.5, TOP)
@@ -256,12 +298,13 @@ def fig_grid(df: pd.DataFrame, out_dir: Path):
         ax.set_xticks(E.LEVELS)
         ax.set_yticks(E.LEVELS)
         ax.set_aspect("equal")
-        ax.set_xlabel("Engagement", fontsize=11, color=INK)
+        ax.set_title(f"{FIELD_NAMES[field]} papers (n = {n})", fontsize=11, color=INK,
+                     loc="left")
+        ax.set_xlabel("Engagement", fontsize=11, color=INK, fontweight="bold")
         _style(ax)
-    axes[0].set_ylabel("Integration", fontsize=11, color=INK)
-    handles = [plt.Line2D([], [], marker="o", ls="", ms=8, mfc=MODE_COLORS[m], mew=0,
-                          label=m) for m in MODES]
-    fig.legend(handles=handles, loc="lower center", ncol=4, frameon=False, fontsize=9,
+    axes[0].set_ylabel("Integration", fontsize=11, color=INK, fontweight="bold")
+    handles = _mode_handles()
+    fig.legend(handles=handles, loc="lower center", ncol=len(handles), frameon=False, fontsize=9,
                labelcolor=INK_2, bbox_to_anchor=(0.5, -0.06))
     _save(fig, "fig_modes_grid", out_dir)
 
@@ -278,22 +321,23 @@ def fig_grid_combined(df: pd.DataFrame, out_dir: Path):
     for (e, i), k in totals.items():
         # circle area proportional to the share of all papers
         size = max(420, 3000 * k / totals.max())
-        ax.scatter(e, i, s=size,
-                   color=MODE_COLORS[E.quadrant(e, i)],
-                   linewidths=0, zorder=3)
+        _node(ax, e, i, size)
         ax.text(e, i, f"{k}", ha="center", va="center", fontsize=11, zorder=4,
                 color=SURFACE)
         split = "\n".join(f"{FIELD_ABBREV[f]} {counts.loc[(e, i), f]}" for f in fields)
         # just below the circle's edge (marker size is an area in points^2)
         ax.annotate(split, (e, i), xytext=(0, -(math.sqrt(size / math.pi) + 3)),
                     textcoords="offset points", ha="center", va="top", fontsize=9, linespacing=1.1,
-                    zorder=4, color=INK_2)
+                    zorder=4, color=INK_2,
+                    # on the vertical boundary, mask the dashed line behind the text
+                    bbox=dict(boxstyle="round,pad=0.15", fc=SURFACE, ec="none", alpha=0.85)
+                    if e == MID else None)
     ax.set_xlim(0.5, TOP)
     ax.set_ylim(bottom, TOP)
     ax.set_xticks(E.LEVELS)
     ax.set_yticks(E.LEVELS)
-    ax.set_xlabel("Engagement", fontsize=13, color=INK)
-    ax.set_ylabel("Integration", fontsize=13, color=INK)
+    ax.set_xlabel("Engagement", fontsize=13, color=INK, fontweight="bold")
+    ax.set_ylabel("Integration", fontsize=13, color=INK, fontweight="bold")
     _style(ax)
     ax.tick_params(labelsize=11)
     fig.tight_layout()
@@ -368,7 +412,7 @@ def fig_shares_rare(df: pd.DataFrame, out_dir: Path):
     ax.set_yticks(range(len(RARE_MODES)), labels)
     ax.invert_yaxis()
     ax.set_xlim(left=0)
-    ax.set_xlabel("Share of papers (%), 95% CI", fontsize=13, color=INK)
+    ax.set_xlabel("Share of papers (%), 95% CI", fontsize=13, color=INK, fontweight="bold")
     ax.legend(frameon=False, fontsize=11, labelcolor=INK_2, loc="lower right")
     _style(ax, "x")
     ax.tick_params(labelsize=11)
@@ -377,20 +421,25 @@ def fig_shares_rare(df: pd.DataFrame, out_dir: Path):
 
 
 # ---- figure 3: over time --------------------------------------------------------------------
-def fig_time(df: pd.DataFrame, out_dir: Path, period_years: int, start_year: int,
-             min_n: int):
-    """Papers before start_year are pooled into the first period (the AI ethics
-    venues start in 2018); periods with fewer than min_n papers in a field are
-    not plotted for that field."""
-    fields = _fields(df)
+def _periods(df: pd.DataFrame, period_years: int, start_year: int):
+    """Add a ``period`` column of period_years-long bins; papers before start_year are
+    pooled into the first period (the AI ethics venues start in 2018). Returns the
+    frame, the sorted periods and their tick labels."""
     year = df["Publication_Year"].astype(int).clip(lower=start_year)
     df = df.assign(period=start_year + (year - start_year) // period_years * period_years)
     periods = sorted(df["period"].unique())
-    early = (df["Publication_Year"].astype(int) < start_year).any()
     labels = [str(p) if period_years == 1 else f"{p}–{str(p + period_years - 1)[-2:]}"
               for p in periods]
-    if early:
+    if (df["Publication_Year"].astype(int) < start_year).any():
         labels[0] = f"≤{periods[0] + period_years - 1}"
+    return df, periods, labels
+
+
+def fig_time(df: pd.DataFrame, out_dir: Path, period_years: int, start_year: int,
+             min_n: int):
+    """Periods with fewer than min_n papers in a field are not plotted for that field."""
+    fields = _fields(df)
+    df, periods, labels = _periods(df, period_years, start_year)
     fig, axes = plt.subplots(1, len(RARE_MODES), figsize=(4.2 * len(RARE_MODES), 3.4),
                              sharey=True, facecolor=SURFACE)
     for ax, mode in zip(axes, RARE_MODES, strict=True):
@@ -415,6 +464,42 @@ def fig_time(df: pd.DataFrame, out_dir: Path, period_years: int, start_year: int
     axes[-1].legend(frameon=False, fontsize=9, labelcolor=INK_2)
     fig.tight_layout()
     _save(fig, "fig_modes_time", out_dir)
+
+
+# one marker per mode, so the lines stay apart without colour (print, colour blindness)
+MODE_MARKERS = dict(zip(RARE_MODES, ["s", "^", "D"], strict=True))
+
+
+def fig_time_combined(df: pd.DataFrame, out_dir: Path, period_years: int,
+                      start_year: int, min_n: int, name: str = "fig_modes_time_combined"):
+    """The rarer modes over time in one panel, both fields pooled: the share of all
+    papers in each period, with 95% Wilson bands. Periods with fewer than min_n
+    papers are left out. As wide as fig_grid_combined, with its font sizes."""
+    df, periods, labels = _periods(df, period_years, start_year)
+    n = df.groupby("period").size().reindex(periods, fill_value=0).to_numpy()
+    n = np.where(n >= min_n, n, 0)  # too few papers: leave a gap
+    x = np.arange(len(periods))
+    fig, ax = plt.subplots(figsize=(5.4, 3.2), facecolor=SURFACE)
+    top = 0.0
+    for mode in RARE_MODES:
+        k = (df[df["category"] == mode].groupby("period").size()
+             .reindex(periods, fill_value=0).to_numpy())
+        lo, hi = wilson(k, n)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            ax.plot(x, np.where(n > 0, k / n * 100, np.nan), "-",
+                    marker=MODE_MARKERS[mode], color=MODE_COLORS[mode], lw=2, ms=8,
+                    mec=SURFACE, mew=1.5, label=mode, zorder=3)
+        ax.fill_between(x, lo * 100, hi * 100, color=MODE_COLORS[mode], alpha=0.10, lw=0,
+                        zorder=2)
+        top = max(top, np.nanmax(hi) * 100)
+    ax.set_xticks(x, labels)
+    ax.set_ylim(0, top * 1.4)  # headroom so the legend clears the bands
+    ax.set_ylabel("Share of papers (%)", fontsize=13, color=INK, fontweight="bold")
+    ax.legend(frameon=False, fontsize=11, labelcolor=INK_2, loc="upper left")
+    _style(ax, "y")
+    ax.tick_params(labelsize=11)
+    fig.tight_layout()
+    _save(fig, name, out_dir)
 
 
 # ---- figure 4: bridging problems --------------------------------------------------------------
@@ -598,6 +683,10 @@ def figures(
     fig_shares(df, out_dir)
     fig_shares_rare(df, out_dir)
     fig_time(df, out_dir, period_years, start_year, min_period_papers)
+    fig_time_combined(df, out_dir, period_years, start_year, min_period_papers)
+    # one point per year; everything before 2019 pooled into the first point
+    fig_time_combined(df, out_dir, 1, 2018, min_period_papers,
+                      name="fig_modes_time_combined_yearly")
     fig_problems(joined, out_dir, level, min_papers)
     fig_levels(df, out_dir)
     fig_examples(df, examples, out_dir)
