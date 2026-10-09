@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agreement annotation</title>
+<style>
+  :root {
+    --ink: #0b0b0b; --ink-2: #52514e; --ink-3: #8a8983; --line: #e6e5e1;
+    --surface: #ffffff; --panel: #f7f7f5; --accent: #2a78d6;
+    --ethics: #1f77b4; --ethics-bg: #dcebf8; --safety: #d62728; --safety-bg: #fadede;
+    --ev: #fff1a8; --ok: #006b00; --bad: #b3261e;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink);
+         background: var(--surface); display: flex; flex-direction: column; }
+  button { font: inherit; cursor: pointer; border: 1px solid var(--line); background: var(--surface);
+           border-radius: 6px; padding: 4px 10px; color: var(--ink); }
+  button:hover { border-color: var(--ink-3); }
+  button.primary { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+  button:disabled { opacity: .4; cursor: default; }
+  kbd { font: 11px ui-monospace, monospace; border: 1px solid var(--line); border-bottom-width: 2px;
+        border-radius: 4px; padding: 0 4px; color: var(--ink-2); background: var(--surface); }
+
+  header { display: flex; align-items: center; gap: 10px; padding: 8px 16px;
+           border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  header h1 { font-size: 15px; margin: 0 8px 0 0; }
+  .progress { flex: 1; min-width: 140px; display: flex; align-items: center; gap: 8px;
+              color: var(--ink-2); font-size: 13px; }
+  .bar { flex: 1; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .bar > div { height: 100%; background: var(--ink); transition: width .2s; }
+  select { font: inherit; max-width: 280px; padding: 3px; border-radius: 6px; border: 1px solid var(--line); }
+  label.toggle { font-size: 13px; color: var(--ink-2); display: flex; gap: 4px; align-items: center; }
+
+  main { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 440px; min-height: 0; }
+  #paper { overflow-y: auto; padding: 0 28px 40px; }
+  #side { overflow-y: auto; border-left: 1px solid var(--line); background: var(--panel); padding: 14px 16px 40px; }
+
+  .terms { position: sticky; top: 0; background: var(--surface); z-index: 2; padding: 8px 0;
+           border-bottom: 1px solid var(--line); display: flex; gap: 12px; align-items: center;
+           font-size: 13px; color: var(--ink-2); flex-wrap: wrap; }
+  .meta { margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); }
+  .badge { border-radius: 99px; padding: 1px 9px; font-weight: 600; font-size: 12px; }
+  .badge.ethics { background: var(--ethics-bg); color: var(--ethics); }
+  .badge.safety { background: var(--safety-bg); color: var(--safety); }
+  #paper h2 { font-size: 22px; line-height: 1.3; margin: 8px 0 12px; max-width: 75ch; }
+  #paper h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); margin: 22px 0 6px; }
+  .abstract, .body { max-width: 80ch; }
+  .body { white-space: pre-wrap; font-size: 14.5px; }
+  .trunc { margin-top: 16px; padding: 8px 12px; border: 1px dashed var(--ink-3); color: var(--ink-2); font-size: 13px; max-width: 80ch; }
+  mark { border-radius: 3px; padding: 0 1px; color: inherit; }
+  mark.t-ethics { background: var(--ethics-bg); }
+  mark.t-safety { background: var(--safety-bg); }
+  mark.other { box-shadow: inset 0 -2px 0 currentColor; }
+  mark.t-ethics.other { color: var(--ethics); } mark.t-safety.other { color: var(--safety); }
+  mark.current { outline: 2px solid var(--ink); }
+  .ev { background: var(--ev); }
+  .ev.flash { outline: 3px solid #e0b400; }
+  .hide-home mark.home, .hide-other mark.other { background: none; box-shadow: none; color: inherit; }
+
+  .axis { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
+  .axis-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .axis-head b { font-size: 15px; }
+  .axis details { font-size: 12.5px; color: var(--ink-2); margin: 4px 0 6px; }
+  .axis details p { margin: 4px 0; white-space: pre-wrap; }
+  .level { display: flex; gap: 10px; width: 100%; text-align: left; padding: 7px 9px; margin-top: 6px;
+           font-size: 13px; line-height: 1.35; border-radius: 8px; align-items: flex-start; }
+  .level .n { font-weight: 700; font-size: 16px; min-width: 16px; }
+  .level.high .n::after { content: "↑"; font-size: 10px; color: var(--ink-3); margin-left: 1px; }
+  .level.sel { border: 2px solid var(--ink); background: #eeeeea; padding: 6px 8px; }
+  .level.llm { box-shadow: inset 4px 0 0 var(--accent); }
+  .mode { display: flex; align-items: center; gap: 8px; margin: 4px 0 10px; font-size: 14px; }
+  .chip { border-radius: 99px; padding: 2px 10px; color: #fff; font-weight: 600; font-size: 13px; }
+  .row { display: flex; gap: 14px; flex-wrap: wrap; margin: 6px 0; font-size: 13.5px; }
+  .row label { display: flex; gap: 5px; align-items: center; cursor: pointer; }
+  textarea { width: 100%; min-height: 60px; font: inherit; font-size: 13px; padding: 6px 8px;
+             border: 1px solid var(--line); border-radius: 8px; resize: vertical; }
+  .actions { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+  .status { font-size: 12.5px; color: var(--ink-3); }
+  .status.dirty { color: var(--bad); }
+
+  #llm { margin-top: 16px; border: 1px solid var(--accent); border-radius: 10px; padding: 10px 12px; background: var(--surface); }
+  #llm h4 { margin: 0 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); }
+  #llm .cmp { display: grid; grid-template-columns: auto auto auto; gap: 2px 14px; font-size: 13.5px; margin-bottom: 8px; }
+  .agree { color: var(--ok); font-weight: 700; } .disagree { color: var(--bad); font-weight: 700; }
+  #llm p { font-size: 13px; margin: 6px 0; }
+  #llm ul { padding-left: 18px; margin: 4px 0; font-size: 12.5px; }
+  #llm li { cursor: pointer; margin-bottom: 4px; } #llm li:hover { text-decoration: underline; }
+  .warn { font-size: 12px; color: var(--ink-2); background: #fff7e0; border-radius: 6px; padding: 5px 8px; }
+
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: none; align-items: flex-start;
+           justify-content: center; z-index: 10; overflow-y: auto; padding: 30px 16px; }
+  .modal.open { display: flex; }
+  .dialog { background: var(--surface); border-radius: 12px; max-width: 1100px; width: 100%; padding: 18px 22px 24px; }
+  .dialog h2 { margin: 0 0 4px; font-size: 18px; }
+  .dialog table { border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+  .dialog th, .dialog td { padding: 4px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  .dialog th:first-child, .dialog td:first-child { text-align: left; }
+  .dialog td.sec { font-weight: 700; padding-top: 12px; text-align: left; }
+  .ci { color: var(--ink-3); }
+  .grids { display: flex; gap: 28px; flex-wrap: wrap; }
+  .conf td.diag { background: #e6f2e6; font-weight: 700; }
+  .note { font-size: 12.5px; color: var(--ink-2); max-width: 90ch; }
+  .help td:first-child { white-space: nowrap; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Agreement annotation <span id="ver" class="status"></span></h1>
+  <button id="prev" title="Previous paper (←)">←</button>
+  <select id="jump"></select>
+  <button id="next" title="Next paper (→)">→</button>
+  <button id="nextTodo" title="Next unannotated paper (N)">Next unannotated</button>
+  <div class="progress"><span id="count"></span><div class="bar"><div id="fill"></div></div></div>
+  <label class="toggle" title="After saving a judgement, show the classifier's answer for that paper">
+    <input type="checkbox" id="reveal"> Show classifier after saving</label>
+  <button id="agreeBtn">Agreement metrics</button>
+  <button id="helpBtn" title="Keyboard shortcuts (?)">?</button>
+</header>
+<main>
+  <section id="paper"></section>
+  <aside id="side">
+    <div id="axes"></div>
+    <div class="mode">Mode: <span id="mode" class="chip" style="background:#bbb">—</span></div>
+    <div class="row">
+      <label><input type="checkbox" id="ref"> Refers to the other field at all <kbd>O</kbd></label>
+      <label><input type="checkbox" id="unsure"> Unsure <kbd>U</kbd></label>
+    </div>
+    <textarea id="notes" placeholder="Notes (optional) — press M to type, Esc to leave"></textarea>
+    <div class="actions">
+      <button id="save" class="primary" disabled>Save <kbd style="color:#ddd;border-color:#555;background:none">Enter</kbd></button>
+      <button id="revealNow" style="display:none">Show classifier</button>
+      <span id="status" class="status"></span>
+    </div>
+    <div id="llm" style="display:none"></div>
+    <p class="note" id="rubricNote" style="margin-top:14px"></p>
+  </aside>
+</main>
+
+<div class="modal" id="agreeModal"><div class="dialog" id="agreeBody"></div></div>
+<div class="modal" id="helpModal"><div class="dialog" style="max-width:560px">
+  <h2>Keyboard shortcuts</h2>
+  <table class="help">
+    <tr><td><kbd>1</kbd>–<kbd>4</kbd></td><td>Engagement level</td></tr>
+    <tr><td><kbd>Q</kbd> <kbd>W</kbd> <kbd>E</kbd> <kbd>R</kbd></td><td>Integration level 1–4</td></tr>
+    <tr><td><kbd>O</kbd> / <kbd>U</kbd></td><td>Toggle “refers to the other field” / “unsure”</td></tr>
+    <tr><td><kbd>Enter</kbd></td><td>Save; press again to go to the next paper</td></tr>
+    <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Previous / next paper (unsaved complete judgements are saved first)</td></tr>
+    <tr><td><kbd>N</kbd></td><td>Next unannotated paper</td></tr>
+    <tr><td><kbd>J</kbd> <kbd>K</kbd></td><td>Next / previous mention of the other field in the text</td></tr>
+    <tr><td><kbd>M</kbd></td><td>Write a note (<kbd>Esc</kbd> to leave the box, <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to save)</td></tr>
+    <tr><td><kbd>?</kbd> / <kbd>Esc</kbd></td><td>This help / close dialogs</td></tr>
+  </table>
+  <p class="note">Highlights: terms of the <b>other</b> field are underlined in that field's colour
+  (blue: AI ethics, red: AI safety); the paper's own field's terms are shaded only. After the classifier
+  is shown, its evidence quotes are marked in yellow; click a quote to jump to it.</p>
+  <p class="note">The classifier's answer is never sent before your judgement is saved. Your judgement
+  stays blind until you reveal it; edits after that are recorded but the agreement metrics use the blind one.</p>
+</div></div>
+
+<script>
+const TERMS = {
+  safety: ["AI safety", "safety", "alignment", "aligned", "misalign", "existential", "x-risk",
+           "catastroph", "longtermis", "superintelligen", "general intelligence", "loss of control", "power-seeking",
+           "deceptive", "frontier model", "frontier AI", "dangerous capabilit", "effective altruis",
+           "interpretability", "scalable oversight", "AI risk"],
+  ethics: ["AI ethics", "ethics", "ethical", "fairness", "unfair", "bias", "discriminat", "FAccT",
+           "justice", "injustice", "accountab", "harms", "present-day", "marginali", "privacy",
+           "transparen", "sociotechnical", "socio-technical", "equity", "stereotyp"],
+};
+const S = { init: null, i: 0, paper: null, form: null, saved: null, hits: [], hit: -1 };
+const $ = (id) => document.getElementById(id);
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+const reRaw = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+function store(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+function recall(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }
+
+async function api(path, body) {
+  const r = await fetch(path, body ? {method: "POST", headers: {"Content-Type": "application/json"},
+                                      body: JSON.stringify(body)} : {});
+  if (!r.ok) throw new Error((await r.json()).error || r.statusText);
+  return r.json();
+}
+
+// ---- layout ------------------------------------------------------------------------
+function buildAxes() {
+  const R = S.init.rubric, box = $("axes");
+  box.innerHTML = "";
+  [["engagement", "1–4", ["1", "2", "3", "4"]], ["integration", "Q W E R", ["Q", "W", "E", "R"]]]
+    .forEach(([axis, keys, kk]) => {
+      const div = document.createElement("div");
+      div.className = "axis";
+      div.innerHTML = `<div class="axis-head"><b>${axis[0].toUpperCase() + axis.slice(1)}</b>
+        <span class="status">keys ${keys} · ↑ = high</span></div>
+        <details><summary>Definition</summary><p>${esc(R[axis].intro)}</p></details>`;
+      S.init.levels.forEach((lv, j) => {
+        const b = document.createElement("button");
+        b.className = "level" + (lv >= S.init.high[axis] ? " high" : "");
+        b.dataset.axis = axis; b.dataset.level = lv;
+        b.innerHTML = `<span class="n">${lv}</span><span>${esc(R[axis].levels[lv])}</span>`;
+        b.title = `Key ${kk[j]}`;
+        b.onclick = () => setLevel(axis, lv);
+        div.appendChild(b);
+      });
+      box.appendChild(div);
+    });
+  $("rubricNote").textContent = S.init.rubric.note;
+}
+
+function quadrant(e, i) {
+  return S.init.modes[(e >= S.init.high.engagement ? 2 : 0) + (i >= S.init.high.integration ? 1 : 0)];
+}
+
+function render() {
+  const f = S.form;
+  document.querySelectorAll(".level").forEach((b) => {
+    b.classList.toggle("sel", f[b.dataset.axis] === +b.dataset.level);
+    b.classList.toggle("llm", !!(S.paper.llm && S.paper.llm[b.dataset.axis] === +b.dataset.level));
+  });
+  const done = f.engagement && f.integration;
+  const m = done ? quadrant(f.engagement, f.integration) : null;
+  $("mode").textContent = m || "—";
+  $("mode").style.background = m ? S.init.colors[m] : "#bbb";
+  $("ref").checked = f.other_field_referenced;
+  $("unsure").checked = f.unsure;
+  if (document.activeElement !== $("notes")) $("notes").value = f.notes;
+  const dirty = isDirty();
+  $("save").disabled = !done;
+  $("save").firstChild.textContent = dirty || !S.saved ? "Save " : "Next ";
+  $("status").textContent = !S.saved ? (done ? "not saved yet" : "choose both levels")
+    : dirty ? "unsaved changes" : "saved " + new Date(S.saved.updated).toLocaleTimeString();
+  $("status").className = "status" + (dirty ? " dirty" : "");
+  $("revealNow").style.display = S.saved && !S.paper.llm ? "" : "none";
+  renderProgress();
+}
+
+function renderProgress() {
+  const n = S.init.order.length, d = S.init.done.length;
+  $("count").textContent = `${d} / ${n} annotated`;
+  $("fill").style.width = (100 * d / n) + "%";
+  const sel = $("jump");
+  sel.innerHTML = S.init.order.map((k, j) =>
+    `<option value="${j}" ${j === S.i ? "selected" : ""}>${S.init.done.includes(k) ? "✓" : "·"} ${j + 1}. ${esc((S.init.titles[k] || k).slice(0, 60))}</option>`).join("");
+}
+
+// ---- paper text with highlights -------------------------------------------------------
+function termRegex() {
+  const all = [...TERMS.safety.map((t) => [t, "safety"]), ...TERMS.ethics.map((t) => [t, "ethics"])]
+    .sort((a, b) => b[0].length - a[0].length);
+  return { re: new RegExp("\\b(" + all.map(([t]) => reRaw(t) + "\\w*").join("|") + ")", "gi"),
+           field: (m) => all.find(([t]) => m.toLowerCase().startsWith(t.toLowerCase()))[1] };
+}
+const TR = termRegex();
+
+function highlight(text) {
+  const otherField = S.paper.other === "AI safety" ? "safety" : "ethics";
+  return esc(text).replace(TR.re, (m) => {
+    const f = TR.field(m);
+    return `<mark class="t-${f} ${f === otherField ? "other" : "home"}">${m}</mark>`;
+  });
+}
+
+function evidenceRanges(text) {
+  const out = [];
+  ((S.paper.llm && S.paper.llm.evidence) || []).forEach((ev, idx) => {
+    const words = ev.quote.match(/[\w']+/g) || [];
+    if (!words.length) return;
+    // tolerate differences in whitespace, punctuation and hyphenation at line breaks
+    const re = new RegExp(words.map(reRaw).join("[\\W_]{0,6}"), "i");
+    const m = re.exec(text);
+    if (m) out.push([m.index, m.index + m[0].length, idx]);
+  });
+  return out.sort((a, b) => a[0] - b[0]);
+}
+
+function renderText(text) {
+  let html = "", pos = 0;
+  for (const [a, b, idx] of evidenceRanges(text)) {
+    if (a < pos) continue;
+    html += highlight(text.slice(pos, a)) + `<span class="ev" id="ev${idx}">${highlight(text.slice(a, b))}</span>`;
+    pos = b;
+  }
+  return html + highlight(text.slice(pos));
+}
+
+function renderPaper() {
+  const p = S.paper, homeCls = p.home === "AI ethics" ? "ethics" : "safety";
+  const otherCls = homeCls === "ethics" ? "safety" : "ethics";
+  $("paper").innerHTML = `
+    <div class="terms">
+      <span>Highlight:</span>
+      <label><input type="checkbox" id="hlOther" ${recall("hlOther", true) ? "checked" : ""}> other field (${p.other})</label>
+      <label><input type="checkbox" id="hlHome" ${recall("hlHome", true) ? "checked" : ""}> own field</label>
+      <span style="margin-left:auto">Other-field mentions:</span>
+      <button id="hitPrev" title="K">▲</button><span id="hitPos">–</span><button id="hitNext" title="J">▼</button>
+    </div>
+    <div class="meta">
+      <span class="badge ${homeCls}">${p.home} corpus</span>
+      <span>other field: <span class="badge ${otherCls}">${p.other}</span></span>
+      <span>${p.year}</span>
+      ${p.doi ? `<a href="https://doi.org/${esc(p.doi)}" target="_blank" rel="noopener">doi:${esc(p.doi)}</a>` : ""}
+      <span class="status">${p.key}</span>
+    </div>
+    <h2>${esc(p.title)}</h2>
+    <h3>Abstract</h3><div class="abstract">${renderText(p.abstract || "(none)")}</div>
+    <h3>Full text</h3><div class="body">${renderText(p.text)}</div>
+    ${p.truncated ? `<div class="trunc">Text truncated here — the classifier saw the same text, up to this point.</div>` : ""}`;
+  $("hlOther").onchange = (e) => { store("hlOther", e.target.checked); applyHl(); };
+  $("hlHome").onchange = (e) => { store("hlHome", e.target.checked); applyHl(); };
+  $("hitNext").onclick = () => jumpHit(1);
+  $("hitPrev").onclick = () => jumpHit(-1);
+  applyHl();
+  S.hits = [...$("paper").querySelectorAll("mark.other")];
+  S.hit = -1;
+  $("hitPos").textContent = S.hits.length ? `0 / ${S.hits.length}` : "none";
+  $("paper").scrollTop = 0;
+}
+
+function applyHl() {
+  $("paper").classList.toggle("hide-other", !$("hlOther").checked);
+  $("paper").classList.toggle("hide-home", !$("hlHome").checked);
+}
+
+function jumpHit(d) {
+  if (!S.hits.length) return;
+  if (S.hits[S.hit]) S.hits[S.hit].classList.remove("current");
+  S.hit = (S.hit + d + S.hits.length) % S.hits.length;
+  const m = S.hits[S.hit];
+  m.classList.add("current");
+  m.scrollIntoView({block: "center", behavior: "smooth"});
+  $("hitPos").textContent = `${S.hit + 1} / ${S.hits.length}`;
+}
+
+function renderLlm() {
+  const L = S.paper.llm, box = $("llm");
+  if (!L) { box.style.display = "none"; return; }
+  const b = S.saved.blind, mark = (x, y) => x === y ? `<span class="agree">✓</span>` : `<span class="disagree">✗</span>`;
+  const hm = quadrant(b.engagement, b.integration);
+  box.style.display = "";
+  box.innerHTML = `<h4>Classifier (${S.init.version})</h4>
+    <div class="cmp"><span></span><b>You (blind)</b><b>Classifier</b>
+      <span>Engagement</span><span>${b.engagement}</span><span>${L.engagement} ${mark(b.engagement, L.engagement)}</span>
+      <span>Integration</span><span>${b.integration}</span><span>${L.integration} ${mark(b.integration, L.integration)}</span>
+      <span>Mode</span><span>${hm}</span><span>${L.mode} ${mark(hm, L.mode)}</span>
+      <span>Refers</span><span>${b.other_field_referenced ? "yes" : "no"}</span><span>${L.other_field_referenced ? "yes" : "no"} ${mark(b.other_field_referenced, L.other_field_referenced)}</span>
+    </div>
+    <p>${esc(L.rationale || "")}</p>
+    ${L.evidence.length ? `<b style="font-size:12.5px">Evidence</b><ul>${L.evidence.map((e, i) =>
+      `<li data-i="${i}">“${esc(e.quote)}”${e.verbatim ? "" : ` <span class="status">(not verbatim)</span>`}</li>`).join("")}</ul>` : ""}
+    <div class="warn">${S.saved.changed_after_reveal ? "You changed this judgement after seeing the classifier; " : "Edits now are recorded as made after seeing the classifier; "}the metrics use your blind judgement.</div>`;
+  box.querySelectorAll("li").forEach((li) => li.onclick = () => {
+    const el = $("ev" + li.dataset.i);
+    if (!el) return;
+    el.scrollIntoView({block: "center", behavior: "smooth"});
+    el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1200);
+  });
+}
+
+// ---- state -----------------------------------------------------------------------------
+function blankForm() { return {engagement: null, integration: null, other_field_referenced: false, unsure: false, notes: ""}; }
+function formFrom(a) {
+  return {...a.current, unsure: !!a.unsure, notes: a.notes || ""};
+}
+function isDirty() {
+  if (!S.saved) return !!(S.form.engagement || S.form.integration || S.form.notes || S.form.unsure);
+  const a = formFrom(S.saved);
+  return ["engagement", "integration", "other_field_referenced", "unsure", "notes"].some((k) => a[k] !== S.form[k]);
+}
+
+async function load(i) {
+  S.i = (i + S.init.order.length) % S.init.order.length;
+  store("pos", S.i);
+  S.paper = await api("/api/paper/" + S.init.order[S.i]);
+  S.saved = S.paper.annotation;
+  S.form = S.saved ? formFrom(S.saved) : blankForm();
+  renderPaper(); renderLlm(); render();
+}
+
+async function save(reveal) {
+  const f = S.form;
+  if (!(f.engagement && f.integration)) return false;
+  const res = await api("/api/annotate/" + S.paper.key, {...f, reveal});
+  S.saved = res.annotation;
+  if (res.llm) S.paper.llm = res.llm;
+  if (!S.init.done.includes(S.paper.key)) S.init.done.push(S.paper.key);
+  if (res.llm) { renderPaper(); renderLlm(); }
+  render();
+  return true;
+}
+
+async function leave(target) {
+  // keep complete judgements when moving on, without revealing the classifier
+  if (isDirty() && S.form.engagement && S.form.integration) await save(false);
+  else if (isDirty() && !confirm("This judgement is incomplete and will be discarded. Continue?")) return;
+  await load(target);
+}
+
+async function primary() {
+  if (!(S.form.engagement && S.form.integration)) return;
+  if (isDirty() || !S.saved) {
+    const reveal = $("reveal").checked;
+    await save(reveal);
+    if (!reveal) await nextTodo();  // nothing to look at: go straight on
+  } else {
+    await nextTodo();
+  }
+}
+
+async function nextTodo() {
+  const n = S.init.order.length;
+  for (let d = 1; d <= n; d++) {
+    const j = (S.i + d) % n;
+    if (!S.init.done.includes(S.init.order[j])) return leave(j);
+  }
+  return leave(S.i + 1);
+}
+
+function setLevel(axis, lv) { S.form[axis] = lv; render(); }
+
+// ---- agreement -------------------------------------------------------------------------------
+const pct = (x) => isFinite(x) ? (100 * x).toFixed(1) + "%" : "–";
+const num = (x) => isFinite(x) ? x.toFixed(2) : "–";
+
+async function showAgreement() {
+  $("agreeModal").classList.add("open");
+  $("agreeBody").innerHTML = "<h2>Agreement metrics</h2><p class='note'>Computing (bootstrap intervals take a few seconds)…</p>";
+  let r;
+  try { r = await api("/api/agreement"); } catch (e) { $("agreeBody").innerHTML += `<p>${esc(e.message)}</p>`; return; }
+  let h = `<div style="display:flex;justify-content:space-between"><h2>Agreement metrics</h2><button onclick="closeModals()">Close</button></div>
+    <p class="note">${r.n_annotated} of ${r.n_sample} papers annotated · ${r.changed_after_reveal} changed after seeing the
+    classifier · ${r.unsure} marked unsure. All metrics use your blind judgements. Brackets: 95% bootstrap intervals
+    (resampled within the classifier's modes).</p>`;
+  const sets = Object.entries(r.sets);
+  if (!sets.length) { $("agreeBody").innerHTML = h + "<p>Annotate at least two papers first.</p>"; return; }
+  h += `<table><tr><th>Metric</th>${sets.map(([n, s]) => `<th>${n}<br><span class="ci">n = ${s.n}</span></th>`).join("")}</tr>`;
+  let section = "";
+  Object.keys(sets[0][1].metrics).forEach((m) => {
+    const [sec, name] = m.split(": ");
+    if (sec !== section) { section = sec; h += `<tr><td class="sec" colspan="${sets.length + 1}">${sec}</td></tr>`; }
+    const fmt = /agreement|within/.test(name) ? pct : num;
+    h += `<tr><td>${name}</td>${sets.map(([, s]) => {
+      const v = s.metrics[m]; return v ? `<td>${fmt(v[0])} <span class="ci">[${fmt(v[1])}, ${fmt(v[2])}]</span></td>` : "<td>–</td>";
+    }).join("")}</tr>`;
+  });
+  h += "</table>";
+  const conf = (title, labels, M, rowLab) => `<div><b>${title}</b><table class="conf"><tr><th>${rowLab}</th>${labels.map((l) => `<th>${l}</th>`).join("")}</tr>
+    ${M.map((row, i) => `<tr><th>${labels[i]}</th>${row.map((v, j) => `<td class="${i === j ? "diag" : ""}">${v}</td>`).join("")}</tr>`).join("")}</table></div>`;
+  const short = r.modes.map((m) => m.split(" ")[0]);
+  h += `<div class="grids">
+    ${conf("Mode (rows: you, columns: classifier)", short, r.mode_confusion, "You \\ LLM")}
+    ${conf("Engagement", r.levels, r.engagement_confusion, "You \\ LLM")}
+    ${conf("Integration", r.levels, r.integration_confusion, "You \\ LLM")}</div>
+    <p class="note"><b>Per classifier mode</b> (how often you agree with the classifier's mode, i.e. its precision):
+    ${r.modes.map((m) => { const s = r.per_mode[m]; return `${m}: ${s.human_agrees}/${s.classifier_n}`; }).join(" · ")}<br>
+    <b>Spearman ρ</b>: engagement ${num(r.engagement_spearman[0])}, integration ${num(r.integration_spearman[0])}.</p>
+    <p class="note"><b>Sets.</b> <i>Annotated sample</i> over-represents the rare modes, so it shows agreement on a balanced
+    set. <i>Reweighted to the corpus</i> weights each classifier mode by its corpus size (post-stratification), estimating
+    agreement on the corpus as a whole; it is dominated by Disengagement. <i>Random subsample only</i> is a small
+    unweighted check of the same.<br>
+    <b>Kappa</b> corrects agreement for chance; weighted kappas give partial credit for near-misses on the ordinal scale
+    (quadratic weights penalise large misses most). Common reading: &lt; 0.2 slight, 0.2–0.4 fair, 0.4–0.6 moderate,
+    0.6–0.8 substantial, &gt; 0.8 almost perfect. Kappa is unstable when one category dominates, as in the reweighted set.
+    <b>Mean difference</b> &gt; 0: the classifier scores higher than you.</p>`;
+  $("agreeBody").innerHTML = h;
+}
+
+function closeModals() { document.querySelectorAll(".modal").forEach((m) => m.classList.remove("open")); }
+
+// ---- wiring -------------------------------------------------------------------------------
+document.addEventListener("keydown", async (e) => {
+  const typing = ["TEXTAREA", "INPUT", "SELECT"].includes(document.activeElement.tagName) &&
+                 document.activeElement.type !== "checkbox";
+  if (e.key === "Escape") { closeModals(); document.activeElement.blur(); return; }
+  if (typing) {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); document.activeElement.blur(); primary(); }
+    return;
+  }
+  if (document.querySelector(".modal.open") || e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key.toLowerCase(), digits = {"1": 1, "2": 2, "3": 3, "4": 4, "5": 5};
+  const qwer = {q: 1, w: 2, e: 3, r: 4, t: 5};
+  if (digits[k] && S.init.levels.includes(digits[k])) setLevel("engagement", digits[k]);
+  else if (qwer[k] && S.init.levels.includes(qwer[k])) setLevel("integration", qwer[k]);
+  else if (k === "o") { S.form.other_field_referenced = !S.form.other_field_referenced; render(); }
+  else if (k === "u") { S.form.unsure = !S.form.unsure; render(); }
+  else if (k === "m") { e.preventDefault(); $("notes").focus(); }
+  else if (k === "enter") { e.preventDefault(); primary(); }
+  else if (k === "arrowright") leave(S.i + 1);
+  else if (k === "arrowleft") leave(S.i - 1);
+  else if (k === "n") nextTodo();
+  else if (k === "j") jumpHit(1);
+  else if (k === "k") jumpHit(-1);
+  else if (k === "?") $("helpModal").classList.add("open");
+  else return;
+});
+document.querySelectorAll(".modal").forEach((m) => m.onclick = (e) => { if (e.target === m) closeModals(); });
+
+$("ref").onchange = (e) => { S.form.other_field_referenced = e.target.checked; render(); };
+$("unsure").onchange = (e) => { S.form.unsure = e.target.checked; render(); };
+$("notes").oninput = (e) => { S.form.notes = e.target.value; render(); };
+$("save").onclick = primary;
+$("revealNow").onclick = () => save(true);
+$("prev").onclick = () => leave(S.i - 1);
+$("next").onclick = () => leave(S.i + 1);
+$("nextTodo").onclick = nextTodo;
+$("jump").onchange = (e) => leave(+e.target.value);
+$("agreeBtn").onclick = showAgreement;
+$("helpBtn").onclick = () => $("helpModal").classList.add("open");
+$("reveal").checked = recall("reveal", true);
+$("reveal").onchange = (e) => store("reveal", e.target.checked);
+window.addEventListener("beforeunload", (e) => { if (S.form && isDirty()) e.preventDefault(); });
+
+(async () => {
+  S.init = await api("/api/init");
+  $("ver").textContent = `(${S.init.version} rubric)`;
+  buildAxes();
+  const first = S.init.order.findIndex((k) => !S.init.done.includes(k));
+  await load(recall("pos", first < 0 ? 0 : first));
+  if (!recall("seenHelp", false)) { $("helpModal").classList.add("open"); store("seenHelp", true); }
+})();
+</script>
+</body>
+</html>

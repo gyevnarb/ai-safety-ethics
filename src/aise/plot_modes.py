@@ -11,6 +11,7 @@ Figures (written to output/plots/modes/ as PDF and PNG):
    fig_modes_grid_combined   the same grid with both fields pooled into one panel
 2. fig_modes_shares      share of papers per mode by field, with a zoom on the rarer modes
    fig_modes_shares_rare     the zoom on its own, to sit beneath fig_modes_grid_combined
+   fig_modes_shares_compact  fig_modes_shares in one short row, without the mode legend
 3. fig_modes_time        share of papers in each non-disengaged mode over time, by field
    fig_modes_time_combined   the same in one panel, both fields pooled
    fig_modes_time_combined_yearly   the same by single year (2019 and earlier pooled)
@@ -29,6 +30,10 @@ Figures (written to output/plots/modes/ as PDF and PNG):
                          and the modes of those that do
 9. fig_modes_topics      share of each mode's papers in each high-level risk and
                          mitigation category, grouped by the taxonomy it comes from
+   fig_modes_topics_bars   the same as small multiples, one column per rare mode, with
+                         95% intervals and the Disengagement share for reference
+   fig_modes_topics_bars_min   the same without categories addressed by few papers of
+                         the rare modes (--topic-min)
 
 The existing annotations in data/ are only read, never modified.
 """
@@ -433,6 +438,56 @@ def fig_shares_rare(df: pd.DataFrame, out_dir: Path):
     ax.tick_params(labelsize=11)
     fig.tight_layout()
     _save(fig, "fig_modes_shares_rare", out_dir)
+
+
+def fig_shares_compact(df: pd.DataFrame, out_dir: Path):
+    """fig_shares in one short row without the mode legend: the disengaged segment is
+    labelled in the bar and the rare-mode labels wear their bar colours."""
+    fields = _fields(df)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 2.3), facecolor=SURFACE,
+                                   gridspec_kw={"width_ratios": [1, 1]})
+    for y, field in enumerate(fields):
+        sub = df[df["Retrieval"] == field]
+        left = 0.0
+        for mode in MODES:
+            share = (sub["category"] == mode).mean() * 100
+            ax1.barh(y, share, left=left, color=MODE_COLORS[mode], height=0.72,
+                     edgecolor=SURFACE, linewidth=1.5, zorder=2)
+            if mode == MODES[0]:
+                ax1.text(left + share / 2, y, f"{mode} {share:.0f}%", ha="center",
+                         va="center", fontsize=11, color=SURFACE)
+            left += share
+    ax1.set_yticks(range(len(fields)), [f"{FIELD_ABBREV[f]}\n(n = "
+                                        f"{(df['Retrieval'] == f).sum()})" for f in fields])
+    ax1.set_ylim(len(fields) - 0.5, -0.5)
+    ax1.set_xlim(0, 100)
+    ax1.set_xlabel("Share of papers (%)", fontsize=12, color=INK, fontweight="bold")
+    _style(ax1, "x")
+    ax1.tick_params(labelsize=11)
+    # zoom on the rarer modes, with 95% Wilson intervals
+    offsets = np.linspace(-0.17, 0.17, len(fields))
+    for off, field in zip(offsets, fields, strict=True):
+        sub = df[df["Retrieval"] == field]
+        k = np.array([(sub["category"] == m).sum() for m in RARE_MODES])
+        n = np.full(len(RARE_MODES), len(sub))
+        lo, hi = wilson(k, n)
+        ax2.errorbar(k / n * 100, np.arange(len(RARE_MODES)) + off,
+                     xerr=[(k / n - lo) * 100, (hi - k / n) * 100], fmt="o",
+                     color=FIELD_COLORS[field], ms=6, capsize=0, lw=1.6,
+                     label=FIELD_ABBREV[field], zorder=3)
+    ax2.set_yticks(range(len(RARE_MODES)), RARE_MODES)
+    ax2.set_ylim(len(RARE_MODES) - 0.5, -0.5)
+    ax2.set_xlim(left=0)
+    ax2.set_xlabel("Share of papers (%), 95% CI", fontsize=12, color=INK,
+                   fontweight="bold")
+    ax2.legend(frameon=False, fontsize=11, labelcolor=INK_2, loc="lower right",
+               handletextpad=0.2, borderaxespad=0.1)
+    _style(ax2, "x")
+    ax2.tick_params(labelsize=11)
+    for tick, mode in zip(ax2.get_yticklabels(), RARE_MODES, strict=True):
+        tick.set_color(MODE_COLORS[mode])  # after _style, which resets label colours
+    fig.tight_layout(w_pad=1.5)
+    _save(fig, "fig_modes_shares_compact", out_dir)
 
 
 # ---- figure 3: over time --------------------------------------------------------------------
@@ -936,10 +991,12 @@ def fig_reference(df: pd.DataFrame, out_dir: Path):
                bbox_to_anchor=(0.5, 1.0), ncol=2)
     _style(ax2, "x")
     ax2.tick_params(labelsize=11)
+    for tick, mode in zip(ax2.get_yticklabels(), RARE_MODES, strict=True):
+        tick.set_color(MODE_COLORS[mode])  # after _style, which resets label colours
     handles = [plt.Rectangle((0, 0), 1, 1, facecolor=colors[s], edgecolor=INK_3, lw=0.8,
                              label=s) for s in segments]
     fig.legend(handles=handles, loc="lower center", ncol=3, frameon=False, fontsize=11,
-               labelcolor=INK_2, bbox_to_anchor=(0.5, -0.3))
+               labelcolor=INK_2, bbox_to_anchor=(0.5, -0.19))
     fig.tight_layout()
     _save(fig, "fig_modes_reference", out_dir)
 
@@ -1000,6 +1057,67 @@ def fig_topics(joined: pd.DataFrame, out_dir: Path):
     _save(fig, "fig_modes_topics", out_dir)
 
 
+def fig_topics_bars(joined: pd.DataFrame, out_dir: Path, min_count: int = 0,
+                    name: str = "fig_modes_topics_bars"):
+    """The topic profile as small multiples: one column per rare mode, with 95% Wilson
+    intervals and the Disengagement share as a reference tick.
+
+    Categories addressed by fewer than min_count papers of the rare modes together are
+    left out.
+    """
+    tables = {kind: topic_profile(joined, kind) for kind in ("risk", "mitigation")}
+    counts = joined["category"].value_counts().reindex(MODES)
+    if min_count:
+        for kind, t in tables.items():
+            k = (t[RARE_MODES] * counts[RARE_MODES]).round().sum(axis=1)
+            tables[kind] = t[k >= min_count]
+            typer.secho(f"  {name} {kind}: left out {int((k < min_count).sum())} "
+                        f"categories with < {min_count} papers in the rare modes: "
+                        f"{', '.join(t.index[k < min_count])}")
+    xmax = max(wilson(t[m] * counts[m], counts[m])[1].max()
+               for t in tables.values() for m in RARE_MODES) * 100
+    fig, axes = plt.subplots(2, len(RARE_MODES), figsize=(18, 0.46 * sum(map(
+        len, tables.values())) + 3.5), sharex=True, sharey="row", facecolor=SURFACE,
+        gridspec_kw={"height_ratios": [len(t) for t in tables.values()]})
+    for row, (kind, t) in zip(axes, tables.items(), strict=True):
+        y = np.arange(len(t))
+        split = int((t["field"] == t["field"].iloc[0]).sum())
+        for ax, mode in zip(row, RARE_MODES, strict=True):
+            _style(ax, "x")
+            ax.tick_params(labelsize=15)
+            share, n = t[mode].to_numpy(), counts[mode]
+            lo, hi = wilson(np.round(share * n), n)
+            ax.barh(y, share * 100, height=0.66, color=MODE_COLORS[mode], zorder=2)
+            ax.hlines(y, lo * 100, hi * 100, color=INK_2, lw=1.8, zorder=3)
+            ax.scatter(t[MODES[0]] * 100, y, marker="|", s=330, lw=3, color=INK,
+                       zorder=4)
+            # separate the categories of the two taxonomies
+            ax.axhline(split - 0.5, color=INK_3, lw=1, ls="--", zorder=1)
+            ax.set_ylim(len(t) - 0.5, -0.5)
+            ax.set_xlim(0, xmax * 1.02)
+            if kind == "risk":
+                ax.set_title(f"{mode}\n(n = {n})", fontsize=17, fontweight="bold",
+                             color=MODE_COLORS[mode])
+            else:
+                ax.set_xlabel("Share of papers (%)", fontsize=16, color=INK,
+                              fontweight="bold")
+        row[0].set_yticks(y, [textwrap.shorten(c, 44, placeholder="…") for c in t.index],
+                          fontsize=15)
+        for tick, field in zip(row[0].get_yticklabels(), t["field"], strict=True):
+            tick.set_color(FIELD_COLORS[field])
+        row[0].set_ylabel(f"{kind.capitalize()} categories", fontsize=18, color=INK,
+                          fontweight="bold")
+    handles = [plt.Line2D([], [], marker="|", ls="none", color=INK, ms=18, mew=3,
+                          label=f"{MODES[0]} (n = {counts[MODES[0]]})"),
+               plt.Line2D([], [], color=INK_2, lw=1.8, label="95% CI")]
+    handles += [plt.Line2D([], [], ls="none", marker="s", color=FIELD_COLORS[f], ms=13,
+                           label=f"{FIELD_NAMES[f]} taxonomy") for f in FIELD_COLORS]
+    fig.legend(handles=handles, loc="lower center", ncol=4, frameon=False, fontsize=16,
+               labelcolor=INK_2)
+    fig.tight_layout(rect=(0, 0.035, 1, 1), h_pad=4, w_pad=2)  # gap between risk and mitigation
+    _save(fig, name, out_dir)
+
+
 # ---- commands ---------------------------------------------------------------------------------
 def _resolve(results: list[Path] | None, pilot: bool) -> list[Path]:
     if results:
@@ -1020,6 +1138,24 @@ def join(
 
 
 @app.command()
+def merge(
+    results: list[Path] = typer.Option(None, help="Parsed CSV or .jsonl result files."),
+    dest: Path = typer.Option(Path("data/annotated_papers_engagement.csv")),
+):
+    """Write a new CSV: data/annotated_papers.csv with the classification appended."""
+    res = load_results(_resolve(results, pilot=False))
+    cols = {"engagement": "engagement", "integration": "integration", "category": "mode",
+            "other_field_referenced": "other_field_referenced", "rationale": "rationale",
+            "evidence": "evidence", "input": "classified_from"}
+    merged = pd.read_csv(ANNOTATIONS, index_col=0).join(
+        res[list(cols)].rename(columns=cols), how="left")
+    merged["prompt_version"] = E.PROMPT_VERSION
+    merged.to_csv(dest)
+    typer.secho(f"Wrote {dest} ({len(merged)} papers, {merged['mode'].isna().sum()} "
+                f"without a classification; {ANNOTATIONS} left unchanged)")
+
+
+@app.command()
 def figures(
     results: list[Path] = typer.Option(None, help="Parsed CSV or .jsonl result files."),
     pilot: bool = typer.Option(False, help="Use the pilot CSV instead of the full run."),
@@ -1031,6 +1167,8 @@ def figures(
     min_period_papers: int = typer.Option(5, help="Hide periods with fewer papers."),
     level: str = typer.Option("high", help="Category level for figure 4: high or low."),
     min_papers: int = typer.Option(10, help="Minimum papers per category in figure 4."),
+    topic_min: int = typer.Option(
+        10, help="Minimum rare-mode papers per category in fig_modes_topics_bars_min."),
     problem_rows: int = typer.Option(
         5, help="Categories kept at each end of figure 4's panels; the middle is cut."),
     example: list[str] = typer.Option(
@@ -1053,6 +1191,7 @@ def figures(
     fig_grid_combined(df, out_dir)
     fig_shares(df, out_dir)
     fig_shares_rare(df, out_dir)
+    fig_shares_compact(df, out_dir)
     fig_time(df, out_dir, period_years, start_year, min_period_papers)
     fig_time_combined(df, out_dir, period_years, start_year, min_period_papers)
     # one point per year; everything up to 2019 pooled into the first point
@@ -1066,6 +1205,8 @@ def figures(
     fig_taxonomy(joined, out_dir)
     fig_reference(df, out_dir)
     fig_topics(joined, out_dir)
+    fig_topics_bars(joined, out_dir)
+    fig_topics_bars(joined, out_dir, topic_min, name="fig_modes_topics_bars_min")
 
 
 if __name__ == "__main__":
