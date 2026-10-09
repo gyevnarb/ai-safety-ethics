@@ -1,7 +1,7 @@
 """Figures for the engagement/integration classification (see aise.engagement).
 
     uv run python -m aise.plot_modes join                 # classifications + annotations
-    uv run python -m aise.plot_modes figures              # all six figures
+    uv run python -m aise.plot_modes figures              # all figures
     uv run python -m aise.plot_modes figures --pilot      # from the pilot CSV
     uv run python -m aise.plot_modes figures --results a.jsonl --results b.jsonl
 
@@ -22,6 +22,13 @@ Figures (written to output/plots/modes/ as PDF and PNG):
                          engagement: Radical confrontation or Critical bridging)
 5. fig_modes_levels      distribution of engagement and integration levels by field
 6. fig_modes_examples    one quoted example paper per mode, laid out like Figure 1
+7. fig_modes_taxonomy    share of each paper's annotated categories that come from the
+                         other field's taxonomy, by mode and field (a check on the
+                         classification that does not depend on it)
+8. fig_modes_reference   which papers refer to the other field, by direction (field),
+                         and the modes of those that do
+9. fig_modes_topics      share of each mode's papers in each high-level risk and
+                         mitigation category, grouped by the taxonomy it comes from
 
 The existing annotations in data/ are only read, never modified.
 """
@@ -812,6 +819,187 @@ def fig_examples(df: pd.DataFrame, examples: dict, out_dir: Path):
     _save(fig, "fig_modes_examples", out_dir)
 
 
+# ---- figure 7: taxonomy mixing --------------------------------------------------------------
+def taxonomy_mixing(joined: pd.DataFrame) -> pd.DataFrame:
+    """Per paper, how many of its low-level risk and mitigation categories come from the
+    other field's taxonomy in data/categories.csv (independent of the classifier)."""
+    low_field = pd.read_csv(CATEGORIES).drop_duplicates("low").set_index("low")["field"]
+    long = pd.concat([explode(joined, kind, "low") for kind in ("risk", "mitigation")])
+    long["other"] = long["cat"].map(low_field) != long["Retrieval"]
+    per = long.groupby(level=0).agg(n=("other", "size"), k=("other", "sum"))
+    per["share"] = per["k"] / per["n"]
+    return per.join(joined[["Retrieval", "category"]])
+
+
+def _bootstrap_mean(x: np.ndarray, rng, reps: int = 2000) -> tuple[float, float]:
+    """95% percentile bootstrap interval of the mean."""
+    means = rng.choice(x, (reps, len(x))).mean(axis=1)
+    return tuple(np.percentile(means, [2.5, 97.5]))
+
+
+def fig_taxonomy(joined: pd.DataFrame, out_dir: Path):
+    per = taxonomy_mixing(joined)
+    fields = _fields(per)
+    rng = np.random.default_rng(0)
+    fig, ax = plt.subplots(figsize=(5.4, 2.6), facecolor=SURFACE)
+    offsets = np.linspace(-0.17, 0.17, len(fields))
+    for off, field in zip(offsets, fields, strict=True):
+        sub = per[per["Retrieval"] == field]
+        means, los, his = [], [], []
+        for mode in MODES:
+            x = sub.loc[sub["category"] == mode, "share"].to_numpy()
+            lo, hi = _bootstrap_mean(x, rng) if len(x) else (np.nan, np.nan)
+            means.append(x.mean() if len(x) else np.nan)
+            los.append(lo)
+            his.append(hi)
+            typer.secho(f"  taxonomy {FIELD_ABBREV[field]} {mode}: {len(x)} papers, "
+                        f"{np.mean(x) * 100:.0f}% of categories from the other field")
+        means, los, his = (np.array(v) * 100 for v in (means, los, his))
+        ax.errorbar(means, np.arange(len(MODES)) + off, xerr=[means - los, his - means],
+                    fmt="o", color=FIELD_COLORS[field], ms=7, capsize=0, lw=1.8,
+                    label=f"{FIELD_ABBREV[field]} papers", zorder=3)
+    labels = [textwrap.fill(m, 16, break_long_words=False) for m in MODES]
+    ax.set_yticks(range(len(MODES)), labels)
+    for tick, mode in zip(ax.get_yticklabels(), MODES, strict=True):
+        tick.set_color(MODE_COLORS[mode])
+    ax.invert_yaxis()
+    ax.set_xlim(0, 100)
+    ax.set_xlabel("Categories from the other field's\ntaxonomy (%, mean, 95% CI)",
+                  fontsize=13, color=INK, fontweight="bold")
+    ax.legend(frameon=False, fontsize=11, labelcolor=INK_2, loc="lower center",
+              bbox_to_anchor=(0.5, 1.0), ncol=2)
+    _style(ax, "x")
+    ax.tick_params(labelsize=11)
+    fig.tight_layout()
+    _save(fig, "fig_modes_taxonomy", out_dir)
+
+
+# ---- figure 8: references to the other field ---------------------------------------------------
+def fig_reference(df: pd.DataFrame, out_dir: Path):
+    """Which papers refer to the other field at all, and how many of those that do go on
+    to engage or integrate it. The direction of reference follows from the field."""
+    fields = _fields(df)
+    ref = df["other_field_referenced"].astype(bool)
+    segments = {  # the few unreferencing papers outside Disengagement keep their mode
+        "No reference to the other field": (df["category"] == MODES[0]) & ~ref,
+        "References it, Disengagement": (df["category"] == MODES[0]) & ref,
+        **{m: df["category"] == m for m in RARE_MODES},
+    }
+    colors = {"No reference to the other field": MODE_FILLS[MODES[0]],
+              "References it, Disengagement": MODE_COLORS[MODES[0]], **MODE_COLORS}
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 3.4), facecolor=SURFACE,
+                                   gridspec_kw={"width_ratios": [3.2, 1]})
+    names = [f"{FIELD_ABBREV[f]} → {FIELD_ABBREV[o]}"
+             for f in fields for o in FIELD_ABBREV if o != f]
+    # left: 100% stacked bars
+    for y, field in enumerate(fields):
+        in_field = df["Retrieval"] == field
+        left = 0.0
+        for name, mask in segments.items():
+            share = (mask & in_field).sum() / in_field.sum() * 100
+            # the pale no-reference segment gets an outline so it reads on white
+            pale = name == "No reference to the other field"
+            ax1.barh(y, share, left=left, color=colors[name], height=0.6,
+                     edgecolor=INK_3 if pale else SURFACE, linewidth=0.8 if pale else 2,
+                     zorder=2)
+            if share >= 6:
+                ax1.text(left + share / 2, y, f"{share:.0f}%", ha="center", va="center",
+                         fontsize=11, color=INK if pale else SURFACE)
+            left += share
+    ax1.set_yticks(range(len(fields)), [f"{name}\n(n = {(df['Retrieval'] == f).sum()})"
+                                        for name, f in zip(names, fields, strict=True)])
+    ax1.invert_yaxis()
+    ax1.set_xlim(0, 100)
+    ax1.set_xlabel("Share of papers (%)", fontsize=13, color=INK)
+    _style(ax1, "x")
+    ax1.tick_params(labelsize=11)
+    # right: among papers that refer to the other field, the share in each rarer mode
+    offsets = np.linspace(-0.15, 0.15, len(fields))
+    for off, field, name in zip(offsets, fields, names, strict=True):
+        sub = df[(df["Retrieval"] == field) & ref]
+        k = np.array([(sub["category"] == m).sum() for m in RARE_MODES])
+        n = np.full(len(RARE_MODES), len(sub))
+        lo, hi = wilson(k, n)
+        typer.secho(f"  reference {name}: {len(sub)} of {(df['Retrieval'] == field).sum()} "
+                    f"papers refer to the other field, {k.sum()} of them not disengaged")
+        ax2.errorbar(k / n * 100, np.arange(len(RARE_MODES)) + off,
+                     xerr=[(k / n - lo) * 100, (hi - k / n) * 100], fmt="o",
+                     color=FIELD_COLORS[field], ms=6, capsize=0, lw=1.6, label=name,
+                     zorder=3)
+    ax2.set_yticks(range(len(RARE_MODES)),
+                   [textwrap.fill(m, 16, break_long_words=False) for m in RARE_MODES])
+    ax2.invert_yaxis()
+    ax2.set_xlim(left=0)
+    ax2.set_xlabel("Share of papers that refer to\nthe other field (%), 95% CI",
+                   fontsize=13, color=INK)
+    ax2.legend(frameon=False, fontsize=11, labelcolor=INK_2, loc="lower center",
+               bbox_to_anchor=(0.5, 1.0), ncol=2)
+    _style(ax2, "x")
+    ax2.tick_params(labelsize=11)
+    handles = [plt.Rectangle((0, 0), 1, 1, facecolor=colors[s], edgecolor=INK_3, lw=0.8,
+                             label=s) for s in segments]
+    fig.legend(handles=handles, loc="lower center", ncol=3, frameon=False, fontsize=11,
+               labelcolor=INK_2, bbox_to_anchor=(0.5, -0.3))
+    fig.tight_layout()
+    _save(fig, "fig_modes_reference", out_dir)
+
+
+# ---- figure 9: topic profile ---------------------------------------------------------------
+def topic_profile(joined: pd.DataFrame, kind: str) -> pd.DataFrame:
+    """Share of each mode's papers annotated with each high-level category (rows), with
+    the field whose taxonomy the category comes from."""
+    long = explode(joined, kind, "high").rename_axis("key").reset_index()
+    k = (long.drop_duplicates(["key", "cat"]).groupby(["cat", "category"]).size()
+         .unstack(fill_value=0).reindex(columns=MODES, fill_value=0))
+    t = k / joined["category"].value_counts().reindex(MODES)
+    cats = pd.read_csv(CATEGORIES)
+    origin = cats[cats["type"] == kind.capitalize()].drop_duplicates("high").set_index(
+        "high")["field"]
+    t = t[t.index.isin(origin.index)]  # drops the few labels from the other kind's taxonomy
+    t["field"] = origin.reindex(t.index)
+    return t.sort_values(["field", MODES[0]], ascending=[True, False])
+
+
+def fig_topics(joined: pd.DataFrame, out_dir: Path):
+    tables = {kind: topic_profile(joined, kind) for kind in ("risk", "mitigation")}
+    cmap = plt.matplotlib.colors.LinearSegmentedColormap.from_list(
+        "share", [SURFACE, LEVEL_RAMP[-1]])
+    vmax = max(t[MODES].to_numpy().max() for t in tables.values()) * 100
+    counts = joined["category"].value_counts()
+    fig, axes = plt.subplots(1, 2, figsize=(15, 0.36 * max(map(len, tables.values())) + 4),
+                             facecolor=SURFACE)
+    for ax, (kind, t) in zip(axes, tables.items(), strict=True):
+        v = t[MODES].to_numpy() * 100
+        ax.imshow(v, cmap=cmap, vmin=0, vmax=vmax, aspect="auto")
+        for (r, c), x in np.ndenumerate(v):
+            ax.text(c, r, f"{x:.0f}", ha="center", va="center", fontsize=10,
+                    color=SURFACE if x > vmax * 0.55 else INK)
+        ax.set_yticks(range(len(t)), [textwrap.shorten(c, 46, placeholder="…")
+                                      for c in t.index], fontsize=11)
+        for tick, field in zip(ax.get_yticklabels(), t["field"], strict=True):
+            tick.set_color(FIELD_COLORS[field])
+        ax.xaxis.tick_top()
+        ax.set_xticks(range(len(MODES)), [f"{m} (n = {counts[m]})" for m in MODES],
+                      fontsize=11, rotation=30, ha="left", rotation_mode="anchor")
+        for tick, mode in zip(ax.get_xticklabels(), MODES, strict=True):
+            tick.set_color(MODE_COLORS[mode])
+        ax.tick_params(length=0)
+        for spine in ax.spines.values():
+            spine.set_visible(False)
+        # separate the categories of the two taxonomies
+        split = int((t["field"] == t["field"].iloc[0]).sum())
+        ax.axhline(split - 0.5, color=INK_2, lw=1.2)
+        ax.set_title(f"{kind.capitalize()} categories", fontsize=14, color=INK, loc="left",
+                     fontweight="bold", pad=150)
+    handles = [plt.Line2D([], [], ls="none", marker="s", color=FIELD_COLORS[f], ms=9,
+                          label=f"{FIELD_NAMES[f]} taxonomy") for f in FIELD_COLORS]
+    fig.legend(handles=handles, loc="lower center", ncol=2, frameon=False, fontsize=12,
+               labelcolor=INK_2, title="Cells: share of each mode's papers (%). "
+               "Labels: category from the", title_fontsize=12)
+    fig.tight_layout(rect=(0, 0.07, 1, 1))
+    _save(fig, "fig_modes_topics", out_dir)
+
+
 # ---- commands ---------------------------------------------------------------------------------
 def _resolve(results: list[Path] | None, pilot: bool) -> list[Path]:
     if results:
@@ -872,9 +1060,12 @@ def figures(
                       name="fig_modes_time_combined_yearly")
     fig_problems(joined, out_dir, level, min_papers, problem_rows)
     fig_problems_adjusted(joined, out_dir, level, min_papers, problem_rows)
-    fig_problems_adjusted(joined, out_dir, level, min_papers, problem_rows, "engagement")
+    # fig_problems_adjusted(joined, out_dir, level, min_papers, problem_rows, "engagement")
     fig_levels(df, out_dir)
     fig_examples(df, examples, out_dir)
+    fig_taxonomy(joined, out_dir)
+    fig_reference(df, out_dir)
+    fig_topics(joined, out_dir)
 
 
 if __name__ == "__main__":
