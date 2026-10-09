@@ -13,7 +13,7 @@ Figures (written to output/plots/modes/ as PDF and PNG):
    fig_modes_shares_rare     the zoom on its own, to sit beneath fig_modes_grid_combined
 3. fig_modes_time        share of papers in each non-disengaged mode over time, by field
    fig_modes_time_combined   the same in one panel, both fields pooled
-   fig_modes_time_combined_yearly   the same by single year (before 2019 pooled)
+   fig_modes_time_combined_yearly   the same by single year (2019 and earlier pooled)
 4. fig_modes_problems    which risk / mitigation categories are over-represented among
                          papers that integrate both fields' concerns
    fig_modes_problems_adjusted_integration   the same from one Firth logistic regression of all
@@ -606,8 +606,8 @@ def problem_design(joined: pd.DataFrame, level: str, min_papers: int,
 
     One indicator per risk and per mitigation category with at least min_papers papers
     (all in one model, so each is adjusted for the others), plus controls: home field,
-    publication period and log full-text length in words (longer papers have more room
-    to take up both fields' concerns).
+    publication period, log full-text length in words (longer papers have more room
+    to take up both fields' concerns) and whether only the abstract was classified.
     """
     X = pd.DataFrame({"const": 1.0}, index=joined.index)
     terms = []
@@ -624,10 +624,15 @@ def problem_design(joined: pd.DataFrame, level: str, min_papers: int,
         name = f"Year: {lo}" if lo == hi else f"Year: {lo}+" if hi is None else \
             f"Year: {lo}-{hi}"
         X[name] = ((year >= lo) & (year <= (hi or year.max()))).astype(float)
-    words = pd.Series({k: len((E.TXT_DIR / f"{k}.txt").read_text(errors="ignore").split())
-                       for k in joined.index})
-    log_words = np.log(words.clip(lower=1))
-    X["Log words (centred)"] = log_words - log_words.mean()
+    # papers classified from the abstract alone have no full text: their length is
+    # set to the mean and an indicator absorbs the difference
+    txt = {k: E.TXT_DIR / f"{k}.txt" for k in joined.index}
+    abstract_only = pd.Series({k: not p.exists() for k, p in txt.items()})
+    log_words = pd.Series({k: np.log(max(len(p.read_text(errors="ignore").split()), 1))
+                           if p.exists() else np.nan for k, p in txt.items()})
+    X["Log words (centred)"] = (log_words - log_words.mean()).fillna(0.0)
+    if abstract_only.any():
+        X["Input: abstract only"] = abstract_only.astype(float)
     y = (joined[axis] >= AXIS_HIGH[axis]).astype(float)
     return X, y, terms
 
@@ -831,7 +836,8 @@ def figures(
     results: list[Path] = typer.Option(None, help="Parsed CSV or .jsonl result files."),
     pilot: bool = typer.Option(False, help="Use the pilot CSV instead of the full run."),
     include_abstract_only: bool = typer.Option(
-        False, help="Include papers classified from their abstract only."),
+        False, "--include-abstract-only/--exclude-abstract-only",
+        help="Include papers classified from their abstract only."),
     period_years: int = typer.Option(2, help="Years per period in the time figure."),
     start_year: int = typer.Option(2018, help="Earlier years join the first period."),
     min_period_papers: int = typer.Option(5, help="Hide periods with fewer papers."),
@@ -861,8 +867,8 @@ def figures(
     fig_shares_rare(df, out_dir)
     fig_time(df, out_dir, period_years, start_year, min_period_papers)
     fig_time_combined(df, out_dir, period_years, start_year, min_period_papers)
-    # one point per year; everything before 2019 pooled into the first point
-    fig_time_combined(df, out_dir, 1, 2018, min_period_papers,
+    # one point per year; everything up to 2019 pooled into the first point
+    fig_time_combined(df, out_dir, 1, 2019, min_period_papers,
                       name="fig_modes_time_combined_yearly")
     fig_problems(joined, out_dir, level, min_papers, problem_rows)
     fig_problems_adjusted(joined, out_dir, level, min_papers, problem_rows)
