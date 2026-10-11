@@ -34,6 +34,8 @@ Figures (written to output/plots/modes/ as PDF and PNG):
                          95% intervals and the Disengagement share for reference
    fig_modes_topics_bars_min   the same without categories addressed by few papers of
                          the rare modes (--topic-min)
+   fig_modes_topics_diff   fig_modes_topics_bars as differences from Disengagement
+                         (percentage points, 95% Newcombe intervals); also _min
 
 The existing annotations in data/ are only read, never modified.
 """
@@ -436,6 +438,8 @@ def fig_shares_rare(df: pd.DataFrame, out_dir: Path):
     ax.legend(frameon=False, fontsize=11, labelcolor=INK_2, loc="lower right")
     _style(ax, "x")
     ax.tick_params(labelsize=11)
+    for tick, mode in zip(ax.get_yticklabels(), RARE_MODES, strict=True):
+        tick.set_color(MODE_COLORS[mode])  # after _style, which resets label colours
     fig.tight_layout()
     _save(fig, "fig_modes_shares_rare", out_dir)
 
@@ -475,7 +479,8 @@ def fig_shares_compact(df: pd.DataFrame, out_dir: Path):
                      xerr=[(k / n - lo) * 100, (hi - k / n) * 100], fmt="o",
                      color=FIELD_COLORS[field], ms=6, capsize=0, lw=1.6,
                      label=FIELD_ABBREV[field], zorder=3)
-    ax2.set_yticks(range(len(RARE_MODES)), RARE_MODES)
+    ax2.set_yticks(range(len(RARE_MODES)), [m.replace(" ", "\n", 1) for m in RARE_MODES],
+                   linespacing=1.0)
     ax2.set_ylim(len(RARE_MODES) - 0.5, -0.5)
     ax2.set_xlim(left=0)
     ax2.set_xlabel("Share of papers (%), 95% CI", fontsize=12, color=INK,
@@ -1057,14 +1062,9 @@ def fig_topics(joined: pd.DataFrame, out_dir: Path):
     _save(fig, "fig_modes_topics", out_dir)
 
 
-def fig_topics_bars(joined: pd.DataFrame, out_dir: Path, min_count: int = 0,
-                    name: str = "fig_modes_topics_bars"):
-    """The topic profile as small multiples: one column per rare mode, with 95% Wilson
-    intervals and the Disengagement share as a reference tick.
-
-    Categories addressed by fewer than min_count papers of the rare modes together are
-    left out.
-    """
+def _topic_tables(joined: pd.DataFrame, min_count: int, name: str):
+    """Topic profiles for risk and mitigation, without the categories addressed by fewer
+    than min_count papers of the rare modes together, and the papers per mode."""
     tables = {kind: topic_profile(joined, kind) for kind in ("risk", "mitigation")}
     counts = joined["category"].value_counts().reindex(MODES)
     if min_count:
@@ -1074,6 +1074,18 @@ def fig_topics_bars(joined: pd.DataFrame, out_dir: Path, min_count: int = 0,
             typer.secho(f"  {name} {kind}: left out {int((k < min_count).sum())} "
                         f"categories with < {min_count} papers in the rare modes: "
                         f"{', '.join(t.index[k < min_count])}")
+    return tables, counts
+
+
+def fig_topics_bars(joined: pd.DataFrame, out_dir: Path, min_count: int = 0,
+                    name: str = "fig_modes_topics_bars"):
+    """The topic profile as small multiples: one column per rare mode, with 95% Wilson
+    intervals and the Disengagement share as a reference tick.
+
+    Categories addressed by fewer than min_count papers of the rare modes together are
+    left out.
+    """
+    tables, counts = _topic_tables(joined, min_count, name)
     xmax = max(wilson(t[m] * counts[m], counts[m])[1].max()
                for t in tables.values() for m in RARE_MODES) * 100
     fig, axes = plt.subplots(2, len(RARE_MODES), figsize=(18, 0.46 * sum(map(
@@ -1088,7 +1100,9 @@ def fig_topics_bars(joined: pd.DataFrame, out_dir: Path, min_count: int = 0,
             share, n = t[mode].to_numpy(), counts[mode]
             lo, hi = wilson(np.round(share * n), n)
             ax.barh(y, share * 100, height=0.66, color=MODE_COLORS[mode], zorder=2)
-            ax.hlines(y, lo * 100, hi * 100, color=INK_2, lw=1.8, zorder=3)
+            ax.errorbar(share * 100, y, xerr=[(share - lo) * 100, (hi - share) * 100],
+                        fmt="none", ecolor=INK_2, elinewidth=1.6, capsize=5,
+                        capthick=1.6, zorder=3)
             ax.scatter(t[MODES[0]] * 100, y, marker="|", s=330, lw=3, color=INK,
                        zorder=4)
             # separate the categories of the two taxonomies
@@ -1109,12 +1123,90 @@ def fig_topics_bars(joined: pd.DataFrame, out_dir: Path, min_count: int = 0,
                           fontweight="bold")
     handles = [plt.Line2D([], [], marker="|", ls="none", color=INK, ms=18, mew=3,
                           label=f"{MODES[0]} (n = {counts[MODES[0]]})"),
-               plt.Line2D([], [], color=INK_2, lw=1.8, label="95% CI")]
+               # a hidden one-point errorbar, so the legend glyph has caps
+               axes[0, 0].errorbar([np.nan], [np.nan], xerr=[[1], [1]], fmt="none",
+                                   ecolor=INK_2, elinewidth=1.6, capsize=7,
+                                   capthick=1.6, label="95% CI")]
     handles += [plt.Line2D([], [], ls="none", marker="s", color=FIELD_COLORS[f], ms=13,
                            label=f"{FIELD_NAMES[f]} taxonomy") for f in FIELD_COLORS]
     fig.legend(handles=handles, loc="lower center", ncol=4, frameon=False, fontsize=16,
                labelcolor=INK_2)
     fig.tight_layout(rect=(0, 0.035, 1, 1), h_pad=4, w_pad=2)  # gap between risk and mitigation
+    _save(fig, name, out_dir)
+
+
+def newcombe(k1, n1, k2, n2) -> tuple[np.ndarray, np.ndarray]:
+    """95% interval for the difference of two proportions, k1/n1 - k2/n2, from their
+    Wilson intervals (Newcombe's hybrid score method)."""
+    p1, p2 = np.asarray(k1, float) / n1, np.asarray(k2, float) / n2
+    (l1, u1), (l2, u2) = wilson(k1, np.full_like(p1, n1)), wilson(k2, np.full_like(p2, n2))
+    d = p1 - p2
+    return (d - np.sqrt((p1 - l1) ** 2 + (u2 - p2) ** 2),
+            d + np.sqrt((u1 - p1) ** 2 + (p2 - l2) ** 2))
+
+
+def fig_topics_diff(joined: pd.DataFrame, out_dir: Path, min_count: int = 0,
+                    name: str = "fig_modes_topics_diff"):
+    """fig_topics_bars as deviations from Disengagement: each bar is a rare mode's share
+    of papers in a category minus Disengagement's, in percentage points, with a 95%
+    Newcombe interval. Bars whose interval includes 0 are drawn faded. Within each
+    taxonomy, rows are sorted by the pooled difference of the rare modes, largest first."""
+    tables, counts = _topic_tables(joined, min_count, name)
+    base = MODES[0]
+    for kind, t in tables.items():
+        pooled = ((t[RARE_MODES] * counts[RARE_MODES]).sum(axis=1)
+                  / counts[RARE_MODES].sum() - t[base])
+        tables[kind] = t.assign(pooled=pooled).sort_values(
+            ["field", "pooled"], ascending=[True, False])
+    diffs = {}
+    for kind, t in tables.items():
+        for mode in RARE_MODES:
+            k1, k2 = np.round(t[mode] * counts[mode]), np.round(t[base] * counts[base])
+            lo, hi = newcombe(k1, counts[mode], k2, counts[base])
+            diffs[kind, mode] = ((t[mode] - t[base]).to_numpy() * 100, lo * 100, hi * 100)
+    xmax = max(max(abs(lo).max(), abs(hi).max()) for _, lo, hi in diffs.values())
+    fig, axes = plt.subplots(2, len(RARE_MODES), figsize=(18, 0.46 * sum(map(
+        len, tables.values())) + 3.5), sharex=True, sharey="row", facecolor=SURFACE,
+        gridspec_kw={"height_ratios": [len(t) for t in tables.values()]})
+    for row, (kind, t) in zip(axes, tables.items(), strict=True):
+        y = np.arange(len(t))
+        split = int((t["field"] == t["field"].iloc[0]).sum())
+        for ax, mode in zip(row, RARE_MODES, strict=True):
+            _style(ax, "x")
+            ax.tick_params(labelsize=15)
+            d, lo, hi = diffs[kind, mode]
+            sig = (lo > 0) | (hi < 0)
+            for mask, alpha in ((sig, 1.0), (~sig, 0.35)):
+                ax.barh(y[mask], d[mask], height=0.66, color=MODE_COLORS[mode],
+                        alpha=alpha, zorder=2)
+            ax.errorbar(d, y, xerr=[d - lo, hi - d], fmt="none", ecolor=INK_2,
+                        elinewidth=1.6, capsize=5, capthick=1.6, zorder=3)
+            ax.axvline(0, color=INK, lw=1.5, zorder=4)
+            ax.axhline(split - 0.5, color=INK_3, lw=1, ls="--", zorder=1)
+            ax.set_ylim(len(t) - 0.5, -0.5)
+            ax.set_xlim(-xmax * 1.03, xmax * 1.03)
+            if kind == "risk":
+                ax.set_title(f"{mode}\n(n = {counts[mode]})", fontsize=17,
+                             fontweight="bold", color=MODE_COLORS[mode])
+            else:
+                ax.set_xlabel("Difference (pp)", fontsize=16, color=INK,
+                              fontweight="bold")
+        row[0].set_yticks(y, [textwrap.shorten(c, 44, placeholder="…") for c in t.index],
+                          fontsize=15)
+        for tick, field in zip(row[0].get_yticklabels(), t["field"], strict=True):
+            tick.set_color(FIELD_COLORS[field])
+        row[0].set_ylabel(f"{kind.capitalize()} categories", fontsize=18, color=INK,
+                          fontweight="bold")
+    # a hidden one-point errorbar, so the legend glyph has caps
+    ci = axes[0, 0].errorbar([np.nan], [np.nan], xerr=[[1], [1]], fmt="none", ecolor=INK_2,
+                             elinewidth=1.6, capsize=7, capthick=1.6, label="95% CI")
+    handles = [plt.Line2D([], [], ls="none", marker="|", ms=24, mew=1.5, color=INK,
+                          label=f"0 = {base} share (n = {counts[base]})"), ci]
+    handles += [plt.Line2D([], [], ls="none", marker="s", color=FIELD_COLORS[f], ms=16,
+                           label=f"{FIELD_NAMES[f]} taxonomy") for f in FIELD_COLORS]
+    fig.legend(handles=handles, loc="lower center", ncol=4, frameon=False, fontsize=20,
+               labelcolor=INK_2)
+    fig.tight_layout(rect=(0, 0.06, 1, 1), h_pad=4, w_pad=2)
     _save(fig, name, out_dir)
 
 
@@ -1207,6 +1299,8 @@ def figures(
     fig_topics(joined, out_dir)
     fig_topics_bars(joined, out_dir)
     fig_topics_bars(joined, out_dir, topic_min, name="fig_modes_topics_bars_min")
+    fig_topics_diff(joined, out_dir)
+    fig_topics_diff(joined, out_dir, topic_min, name="fig_modes_topics_diff_min")
 
 
 if __name__ == "__main__":
