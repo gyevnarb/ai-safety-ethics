@@ -1,11 +1,13 @@
 # Bridging the Gap in the Responsible AI Divides
 Bridging research problems of the fields AI safety and AI ethics.
 
-The package name is shortened to `aise` (short for AI Safety and Ethics).
+Supplementary materials for the titular paper is found in [supplementary.pdf](supplementary.pdf).
+
+The software package name is shortened to `aise` (short for AI Safety and Ethics).
 
 # Installation
 
-The setup process uses the super-fast and lightweight Python project manager `uv`, although you can use other solutions too (e.g. pip).
+The setup process uses the superfast and lightweight Python project manager `uv`, although you can use other solutions too (e.g. pip).
 
 - Make sure that `uv` is installed from [here](https://docs.astral.sh/uv/getting-started/installation/).
 - For plotting graphs, you will also need to install [Graphviz](https://www.graphviz.org/download/) separately.
