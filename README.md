@@ -2,6 +2,7 @@
 Bridging research problems of the fields AI safety and AI ethics.
 
 Supplementary materials for the titular paper are found in [supplementary.pdf](supplementary.pdf).
+Supporting figures are found in [output.zip](output.zip).
 
 The software package name is shortened to `aise` (short for AI Safety and Ethics).
 
@@ -62,6 +63,6 @@ Inputs are read from `data/` and results are written to `output/`; the paths are
 
 Each LLM run gets its own folder, selected with environment variables:
 
-- `AISE_PROMPT_VERSION` (default `v7`): engagement classification, in `output/engagement/<version>/`;
+- `AISE_PROMPT_VERSION` (default `v1`): engagement classification, in `output/engagement/<version>/`;
 - `AISE_QUAL_VERSION` (default `v1`): qualitative coding, in `output/qualitative/<version>/`;
 - `AISE_QUAL_TEST_N`: if set, codes only this many papers per mode (for testing the pipeline).

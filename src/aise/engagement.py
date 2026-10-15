@@ -31,7 +31,7 @@ Full run through the OpenAI Batch API::
 Needs ``OPENAI_API_KEY`` in the environment and ``pdftotext`` (poppler) on the path.
 Outputs go to ``output/engagement/<PROMPT_VERSION>/`` so prompt iterations never
 overwrite each other. Set ``AISE_PROMPT_VERSION`` to fetch, parse or plot another
-run (default v7).
+run (default v1).
 """
 
 import json

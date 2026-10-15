@@ -3,7 +3,7 @@
 Paths are relative to the repository root, so commands are run from there. Two
 environment variables select earlier runs:
 
-- ``AISE_PROMPT_VERSION`` (default v7): the engagement classification run, in
+- ``AISE_PROMPT_VERSION`` (default v1): the engagement classification run, in
   output/engagement/<version>/;
 - ``AISE_QUAL_VERSION`` (default v1): the qualitative coding run, in
   output/qualitative/<version>/; with ``AISE_QUAL_TEST_N`` > 0, it codes only that
@@ -29,7 +29,7 @@ PDF_DIR = Path("pdf")
 OUTPUT_DIR = Path("output")
 PROCESSED_DATA = OUTPUT_DIR / "processed_data.csv"  # written by ``aise analyze``
 
-PROMPT_VERSION = os.environ.get("AISE_PROMPT_VERSION", "v7")
+PROMPT_VERSION = os.environ.get("AISE_PROMPT_VERSION", "v1")
 ENGAGEMENT_DIR = OUTPUT_DIR / "engagement" / PROMPT_VERSION
 ENGAGEMENT_PLOTS_DIR = OUTPUT_DIR / "plots" / "modes"
 
