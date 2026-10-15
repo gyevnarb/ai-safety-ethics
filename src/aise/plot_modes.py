@@ -31,7 +31,8 @@ Figures (written to output/plots/modes/ as PDF and PNG):
 9. fig_modes_topics      share of each mode's papers in each high-level risk and
                          mitigation category, grouped by the taxonomy it comes from
    fig_modes_topics_bars   the same as small multiples, one column per rare mode, with
-                         95% intervals and the Disengagement share for reference
+                         95% intervals and the Disengagement share for reference; only
+                         the categories in PAPER_TOPICS (all of them: _all)
    fig_modes_topics_bars_min   the same without categories addressed by few papers of
                          the rare modes (--topic-min)
    fig_modes_topics_diff   fig_modes_topics_bars as differences from Disengagement
@@ -1077,26 +1078,59 @@ def _topic_tables(joined: pd.DataFrame, min_count: int, name: str):
     return tables, counts
 
 
+# The categories fig_modes_topics_bars shows in the paper: those its text discusses, plus
+# a few that balance the two taxonomies (the full set is in fig_modes_topics_bars_all)
+PAPER_TOPICS = {
+    "risk": [
+        "Discrimination, exclusion, toxicity",
+        "Automation, access, and environmental harms",
+        "Misinformation harms",
+        "Lack of monitoring",
+        "Non-stationary distribution",
+        "Noise and outliers",
+    ],
+    "mitigation": [
+        "Fairness, justice, and inclusive design",
+        "Transparency, explainability and interpretability",
+        "Robustness, reliability and uncertainty estimation",
+        "Normative and moral reasoning",
+        "Robustness and adversarial resilience",
+        "Forecasting and metascience",
+        "Reward modelling and learning",
+        "Mechanistic interpretability",
+    ],
+}
+
+
 def fig_topics_bars(joined: pd.DataFrame, out_dir: Path, min_count: int = 0,
-                    name: str = "fig_modes_topics_bars"):
+                    name: str = "fig_modes_topics_bars",
+                    keep: dict[str, list[str]] | None = None):
     """The topic profile as small multiples: one column per rare mode, with 95% Wilson
     intervals and the Disengagement share as a reference tick.
 
     Categories addressed by fewer than min_count papers of the rare modes together are
-    left out.
+    left out, and so are those not in keep (by kind), if given.
     """
     tables, counts = _topic_tables(joined, min_count, name)
+    if keep:
+        for kind, t in tables.items():
+            missing = set(keep[kind]) - set(t.index)
+            if missing:
+                raise typer.BadParameter(f"unknown {kind} categories: {missing}")
+            tables[kind] = t[t.index.isin(keep[kind])]
     xmax = max(wilson(t[m] * counts[m], counts[m])[1].max()
                for t in tables.values() for m in RARE_MODES) * 100
-    fig, axes = plt.subplots(2, len(RARE_MODES), figsize=(18, 0.46 * sum(map(
-        len, tables.values())) + 3.5), sharex=True, sharey="row", facecolor=SURFACE,
+    # 15in wide, so that at text width (~6.5in) the fonts below print at 7.5 to 8pt
+    height = 0.55 * sum(map(len, tables.values())) + 3.2
+    fig, axes = plt.subplots(2, len(RARE_MODES), figsize=(15, height), sharex=True,
+        sharey="row", facecolor=SURFACE,
         gridspec_kw={"height_ratios": [len(t) for t in tables.values()]})
     for row, (kind, t) in zip(axes, tables.items(), strict=True):
         y = np.arange(len(t))
         split = int((t["field"] == t["field"].iloc[0]).sum())
         for ax, mode in zip(row, RARE_MODES, strict=True):
             _style(ax, "x")
-            ax.tick_params(labelsize=15)
+            ax.tick_params(labelsize=17)
             share, n = t[mode].to_numpy(), counts[mode]
             lo, hi = wilson(np.round(share * n), n)
             ax.barh(y, share * 100, height=0.66, color=MODE_COLORS[mode], zorder=2)
@@ -1110,16 +1144,14 @@ def fig_topics_bars(joined: pd.DataFrame, out_dir: Path, min_count: int = 0,
             ax.set_ylim(len(t) - 0.5, -0.5)
             ax.set_xlim(0, xmax * 1.02)
             if kind == "risk":
-                ax.set_title(f"{mode}\n(n = {n})", fontsize=17, fontweight="bold",
+                first, rest = mode.split(" ", 1)  # mode names on two lines
+                ax.set_title(f"{first}\n{rest}\n(n = {n})", fontsize=18, fontweight="bold",
                              color=MODE_COLORS[mode])
-            else:
-                ax.set_xlabel("Share of papers (%)", fontsize=16, color=INK,
-                              fontweight="bold")
-        row[0].set_yticks(y, [textwrap.shorten(c, 44, placeholder="…") for c in t.index],
-                          fontsize=15)
+        row[0].set_yticks(y, [textwrap.fill(c, 36) for c in t.index], fontsize=17,
+                          linespacing=1.0)
         for tick, field in zip(row[0].get_yticklabels(), t["field"], strict=True):
             tick.set_color(FIELD_COLORS[field])
-        row[0].set_ylabel(f"{kind.capitalize()} categories", fontsize=18, color=INK,
+        row[0].set_ylabel(f"{kind.capitalize()} categories", fontsize=19, color=INK,
                           fontweight="bold")
     handles = [plt.Line2D([], [], marker="|", ls="none", color=INK, ms=18, mew=3,
                           label=f"{MODES[0]} (n = {counts[MODES[0]]})"),
@@ -1129,9 +1161,12 @@ def fig_topics_bars(joined: pd.DataFrame, out_dir: Path, min_count: int = 0,
                                    capthick=1.6, label="95% CI")]
     handles += [plt.Line2D([], [], ls="none", marker="s", color=FIELD_COLORS[f], ms=13,
                            label=f"{FIELD_NAMES[f]} taxonomy") for f in FIELD_COLORS]
-    fig.legend(handles=handles, loc="lower center", ncol=4, frameon=False, fontsize=16,
+    # one label for the three columns, under the middle one
+    axes[1, 1].set_xlabel("Share of papers (%)", fontsize=18, color=INK,
+                          fontweight="bold")
+    fig.legend(handles=handles, loc="lower center", ncol=4, frameon=False, fontsize=17,
                labelcolor=INK_2)
-    fig.tight_layout(rect=(0, 0.035, 1, 1), h_pad=4, w_pad=2)  # gap between risk and mitigation
+    fig.tight_layout(rect=(0, 0.5 / height, 1, 1), h_pad=3, w_pad=2)  # gap between risk and mitigation
     _save(fig, name, out_dir)
 
 
@@ -1297,7 +1332,8 @@ def figures(
     fig_taxonomy(joined, out_dir)
     fig_reference(df, out_dir)
     fig_topics(joined, out_dir)
-    fig_topics_bars(joined, out_dir)
+    fig_topics_bars(joined, out_dir, keep=PAPER_TOPICS)
+    fig_topics_bars(joined, out_dir, name="fig_modes_topics_bars_all")
     fig_topics_bars(joined, out_dir, topic_min, name="fig_modes_topics_bars_min")
     fig_topics_diff(joined, out_dir)
     fig_topics_diff(joined, out_dir, topic_min, name="fig_modes_topics_diff_min")
