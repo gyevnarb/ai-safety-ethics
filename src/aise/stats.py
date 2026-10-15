@@ -1,6 +1,7 @@
-"""Firth's penalized logistic regression with profile-likelihood intervals.
+"""Statistical methods for the figures: intervals for proportions and Firth regression.
 
-Firth's penalty (the Jeffreys prior, 0.5 log det of the Fisher information) removes the
+Firth's penalized logistic regression with profile-likelihood intervals: Firth's
+penalty (the Jeffreys prior, 0.5 log det of the Fisher information) removes the
 first-order small-sample bias of maximum likelihood and keeps estimates finite under
 separation, which matters when events are rare and some predictors have few or no
 events (Heinze & Schemper 2002, Statistics in Medicine 21:2409). Wald intervals are
@@ -99,3 +100,33 @@ def holm(p: pd.Series) -> pd.Series:
     adj = np.minimum(1, np.maximum.accumulate(
         [(m - i) * p[t] for i, t in enumerate(order)]))
     return pd.Series(adj, index=order).reindex(p.index)
+
+
+def wilson(k: np.ndarray, n: np.ndarray,
+           z: float = 1.96) -> tuple[np.ndarray, np.ndarray]:
+    """95% Wilson score interval for k successes out of n."""
+    k, n = np.asarray(k, float), np.asarray(n, float)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        p = k / n
+        centre = (p + z**2 / (2 * n)) / (1 + z**2 / n)
+        half = z * np.sqrt(p * (1 - p) / n + z**2 / (4 * n**2)) / (1 + z**2 / n)
+    return np.clip(centre - half, 0, 1), np.clip(centre + half, 0, 1)
+
+
+def newcombe(k1, n1, k2, n2) -> tuple[np.ndarray, np.ndarray]:
+    """95% interval for the difference of two proportions, k1/n1 - k2/n2.
+
+    From the two Wilson intervals (Newcombe's hybrid score method).
+    """
+    p1, p2 = np.asarray(k1, float) / n1, np.asarray(k2, float) / n2
+    l1, u1 = wilson(k1, np.full_like(p1, n1))
+    l2, u2 = wilson(k2, np.full_like(p2, n2))
+    d = p1 - p2
+    return (d - np.sqrt((p1 - l1) ** 2 + (u2 - p2) ** 2),
+            d + np.sqrt((u1 - p1) ** 2 + (p2 - l2) ** 2))
+
+
+def bootstrap_mean(x: np.ndarray, rng, reps: int = 2000) -> tuple[float, float]:
+    """95% percentile bootstrap interval of the mean."""
+    means = rng.choice(x, (reps, len(x))).mean(axis=1)
+    return tuple(np.percentile(means, [2.5, 97.5]))

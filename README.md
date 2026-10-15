@@ -1,75 +1,67 @@
 # Bridging the Gap in the Responsible AI Divides
 Bridging research problems of the fields AI safety and AI ethics.
 
-Supplementary materials for the titular paper is found in [supplementary.pdf](supplementary.pdf).
+Supplementary materials for the titular paper are found in [supplementary.pdf](supplementary.pdf).
 
 The software package name is shortened to `aise` (short for AI Safety and Ethics).
 
-# Installation
+## Installation
 
-The setup process uses the superfast and lightweight Python project manager `uv`, although you can use other solutions too (e.g. pip).
+The project uses the Python project manager [uv](https://docs.astral.sh/uv/getting-started/installation/).
 
-- Make sure that `uv` is installed from [here](https://docs.astral.sh/uv/getting-started/installation/).
-- For plotting graphs, you will also need to install [Graphviz](https://www.graphviz.org/download/) separately.
-- This codebase uses [Spacy](https://spacy.io/) and [BERTopic](https://maartengr.github.io/BERTopic/index.html) for preprocessing and topic analysis. The prerequisities for these can take more than 1 GiB of storage.
+1. Clone the repo: `git clone https://github.com/gyevnarb/ai-safety-ethics.git`
+2. Install dependencies from the repository root: `uv sync`
+3. Install the spaCy model used for preprocessing: `uv pip install "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"` (`uv sync` removes it again, so rerun this after syncing)
 
-### Follow the steps below to get started with the project:
-1. Clone the repo using `git clone https://github.com/gyevnarb/ai-safety-ethics.git` (or using an SSH key).
+You will also need:
+- [Graphviz](https://www.graphviz.org/download/) for the co-word network plots;
+- `pdftotext` ([Poppler](https://poppler.freedesktop.org/)) to extract the papers' full text;
+- `OPENAI_API_KEY` in the environment for the LLM classification and coding stages.
 
-2. Install dependencies with `uv` by running: `uv sync` from the root folder of the repository, you have just cloned.
+spaCy and [BERTopic](https://maartengr.github.io/BERTopic/index.html) can take more than 1 GiB of storage.
 
-Here is a short script to run everything above:
-```bash
-# Run all conditions in interventions.json for DATA_ID 6jmfx with k=7 iterations per condition,
-# each iteration running sequentially (-s), the Docker image rebuilt (--build), using Codex (-a),
-# in dry-run mode (-n).
-bash batch_run.sh -n -s --build 6jmfx -a codex -k 7
+## Usage
 
-# Run all dataset experiments for all conditions in interventions.json with k=3 iterations
-# per condition, in sequential mode.
-bash all_experiments.sh -s claude -- -k 3
-```
-
-### 4. Evaluate the experiments
-
-Perform the following steps to run the LLM-as-a-judge evaluation setup:
-
-1. Run `bash copy_results.sh [negative|positive]`.
-    - The positional argument corresponds to the adversary goal you selected earlier.
-    - This script creates a new folder, `results`, and copies data from the `workspace` and `logs` folders into it.
-2. For each DATA_ID, separately run `bash evaluate_batch.sh <DATA_ID> <EVAL_CONFIG_PATH>` to evaluate the experiments for that DATA_ID. The `EVAL_CONFIG_PATH` argument refers to the evaluation schema:
-    - For the reject (negative) adversary goal, use `eval_schema_negative.json`.
-    - For the exaggerate (positive) adversary goal, use `eval_schema_positive.json`.
-3. Collect the results into a CSV by running:
-    ```bash
-    python3 annotation_app/export_eval_csv.py -o full.csv
-    ```
-    This produces a CSV file called `full.csv` containing all evaluation results in tabular format.
-
-### 5. Plot the experiments
-
-You can use the scripts in the `analysis` folder to reproduce all figures from the paper using your experimental results.
-The script currently reproduces figures for our experimental data.
-To point it at your own data file, replace the following line in `plots.R` (line 39):
-
-```r
-in_path <- here("..", "results", "full.csv") # <-- Replace this to point to your path
-```
-
----
-
-## Dataset Wrapper
-
-This repository includes a small helper package that wraps several sources for dataset loading.
-The currently supported providers are GitHub, Open Science Framework (OSF), Kaggle, HuggingFace (HF), and OpenML (not used in the experiments; hidden from the AI).
-
-### Usage
-
-To use the package locally, I recommend [uv](https://docs.astral.sh/uv/getting-started/installation/).
-Run the following command from the repo root to start using the package:
+Run every command from the repository root. All stages are available through a single CLI:
 
 ```bash
 uv run aise --help
 ```
 
-The `--help` option will output a helpful description of how to use the command, and list all possible command line options that can be passed to the CLI.
+| Command | Purpose |
+| --- | --- |
+| `aise analyze` | Preprocess papers, topic modelling and co-word networks |
+| `aise plot` | Word and category figures comparing the two corpora |
+| `aise engagement` | Classify papers into the four engagement modes (OpenAI Batch API) |
+| `aise engagement-plots` | Figures of the classification |
+| `aise qualitative` | Qualitative coding and thematic analysis of the rare-mode papers |
+| `aise qualitative-plots` | Figures and LaTeX table of the qualitative analysis |
+
+Add `--help` to any command for its subcommands and options. Each group can also be run as a module, e.g. `uv run python -m aise.engagement`.
+
+A typical end-to-end run:
+
+```bash
+uv run aise engagement extract            # PDFs in pdf/ -> text in data/txt/
+uv run aise engagement prepare            # write batch requests
+uv run aise engagement submit
+uv run aise engagement fetch              # repeat until all batches complete
+uv run aise engagement parse
+uv run aise engagement-plots figures
+
+uv run aise qualitative code --stage 1    # then: code --stage 2, freeze, themes,
+                                          # spans, representatives, report
+uv run aise qualitative-plots figures
+```
+
+### Inputs, outputs and runs
+
+Inputs are read from `data/` and results are written to `output/`; the paths are defined in [`src/aise/config.py`](src/aise/config.py). Human corrections of the engagement classification are kept in `data/engagement_human_labels.csv`; `aise engagement parse` applies them when the file exists.
+
+`data/full_data.csv` combines everything per paper: the risk and mitigation annotations of `data/annotated_papers.csv` plus its engagement classification (levels, mode, rationale and evidence). Regenerate it with `aise engagement-plots merge`.
+
+Each LLM run gets its own folder, selected with environment variables:
+
+- `AISE_PROMPT_VERSION` (default `v7`): engagement classification, in `output/engagement/<version>/`;
+- `AISE_QUAL_VERSION` (default `v1`): qualitative coding, in `output/qualitative/<version>/`;
+- `AISE_QUAL_TEST_N`: if set, codes only this many papers per mode (for testing the pipeline).

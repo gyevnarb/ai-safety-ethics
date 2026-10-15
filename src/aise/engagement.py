@@ -7,30 +7,31 @@ The model scores each paper on two axes, in one call:
 * ``integration``, an integer level from 1 to 4: how far it brings AIE and AIS
   concerns into one frame.
 
-Prompts up to v6 used a 1 to 5 scale; v7 drops their middle level 3 and renumbers
-levels 4 and 5 as 3 and 4.
-
 The model is not told about the four modes of Figure 1. ``parse`` assigns each paper
 its ``category`` (quadrant) from the two levels: high means engagement >= 3 and
-integration >= 3 (v6: engagement >= 4 and integration >= 3).
+integration >= 3. Where data/engagement_human_labels.csv has a human label for a
+paper, ``parse`` uses it instead of the model's, keeping the model's in
+``classifier_*`` columns.
 
 Typical loop while iterating on the prompt::
 
-    uv run python -m aise.engagement extract            # PDFs -> text (once)
-    uv run python -m aise.engagement pilot --n 20       # quick synchronous run
-    uv run python -m aise.engagement parse --pilot      # inspect results
+    uv run aise engagement extract            # PDFs -> text (once)
+    uv run aise engagement pilot --n 20       # quick synchronous run
+    uv run aise engagement parse --pilot      # inspect results
 
 Full run through the OpenAI Batch API::
 
-    uv run python -m aise.engagement prepare
-    uv run python -m aise.engagement submit
-    uv run python -m aise.engagement fetch              # re-run until all complete
-    uv run python -m aise.engagement parse
+    uv run aise engagement prepare
+    uv run aise engagement submit
+    uv run aise engagement fetch              # re-run until all complete
+    uv run aise engagement parse
+
+(``uv run python -m aise.engagement <command>`` works too.)
 
 Needs ``OPENAI_API_KEY`` in the environment and ``pdftotext`` (poppler) on the path.
 Outputs go to ``output/engagement/<PROMPT_VERSION>/`` so prompt iterations never
-overwrite each other. Set ``AISE_PROMPT_VERSION=v6`` to fetch, parse or plot an
-earlier run.
+overwrite each other. Set ``AISE_PROMPT_VERSION`` to fetch, parse or plot another
+run (default v7).
 """
 
 import json
@@ -44,10 +45,12 @@ import pandas as pd
 import typer
 from openai import Client
 
+from aise import config
+
 # AISE_PROMPT_VERSION selects an earlier run's folder for fetch / parse / plotting;
 # prepare and pilot always send the PROMPT below (earlier prompts are kept in the
 # request files of their run)
-PROMPT_VERSION = os.environ.get("AISE_PROMPT_VERSION", "v7")
+PROMPT_VERSION = config.PROMPT_VERSION
 MODEL = "gpt-6-luna"
 REASONING_EFFORT = "medium"
 MAX_COMPLETION_TOKENS = 8000  # includes reasoning tokens
@@ -55,19 +58,11 @@ MAX_CHARS = 60_000  # ~15k tokens of body text per paper
 MIN_TEXT_CHARS = 1000  # less than this means extraction failed (e.g. scanned PDF)
 MAX_SHARD_BYTES = 150_000_000  # OpenAI batch input files are capped at 200 MB
 MAX_SHARD_REQUESTS = 1000
-FIVE_LEVELS = int(PROMPT_VERSION[1:]) <= 6  # v6 and earlier scored 1 to 5
-LEVELS = (1, 2, 3, 4, 5) if FIVE_LEVELS else (1, 2, 3, 4)  # integer scale of both axes
-# lowest level that counts as "high" on each axis when computing the quadrant
-# v7: level 3 is a major thread / explicitly connected concerns
-# v6: engagement 3 was one substantive passage, not a thread; integration 3 was both
-#     fields' concerns side by side
-ENGAGEMENT_HIGH = 4 if FIVE_LEVELS else 3
+LEVELS = (1, 2, 3, 4)  # integer scale of both axes
+# lowest level that counts as "high" on each axis when computing the quadrant: level 3
+# is a major thread of engagement / explicitly connected concerns
+ENGAGEMENT_HIGH = 3
 INTEGRATION_HIGH = 3
-
-PAPERS = Path("data/papers_all_fields.csv")
-PDF_DIR = Path("pdf")
-TXT_DIR = Path("data/txt")
-OUT_ROOT = Path("output/engagement")
 
 CATEGORIES = [
     "Disengagement",
@@ -138,7 +133,7 @@ Return JSON with:
 
 ### Full text
 {body}
-"""
+"""  # noqa: E501
 
 SCHEMA = {
     "name": "engagement_classification",
@@ -167,20 +162,37 @@ app = typer.Typer(rich_markup_mode="rich", help=__doc__.split("\n\n")[0])
 
 
 def out_dir() -> Path:
-    path = OUT_ROOT / PROMPT_VERSION
-    path.mkdir(parents=True, exist_ok=True)
-    return path
+    """The folder of the run selected by AISE_PROMPT_VERSION (created if missing)."""
+    config.ENGAGEMENT_DIR.mkdir(parents=True, exist_ok=True)
+    return config.ENGAGEMENT_DIR
 
 
 def client() -> Client:
+    """An OpenAI client; fails early without an API key."""
     if not os.environ.get("OPENAI_API_KEY"):
         raise typer.BadParameter("Set OPENAI_API_KEY in the environment.")
     return Client()
 
 
 def load_papers() -> pd.DataFrame:
-    papers = pd.read_csv(PAPERS, index_col="Key")
+    """Metadata of all papers, indexed by key."""
+    papers = pd.read_csv(config.PAPERS, index_col="Key")
     return papers[["Retrieval", "Publication_Year", "DOI", "Title", "Abstract"]]
+
+
+def load_classified() -> pd.DataFrame:
+    """The parsed classifications of the selected run (engagement.csv), indexed by key."""
+    return pd.read_csv(out_dir() / "engagement.csv", index_col=0)
+
+
+def text_path(key: str) -> Path:
+    """Where the extracted full text of a paper is (it may not exist)."""
+    return config.TXT_DIR / f"{key}.txt"
+
+
+def input_kinds(keys) -> list[str]:
+    """Per paper: "full text" if its text was extracted, else "abstract only"."""
+    return ["full text" if text_path(k).exists() else "abstract only" for k in keys]
 
 
 # ---- text extraction --------------------------------------------------------
@@ -207,6 +219,7 @@ APPENDIX = re.compile(
 
 
 def is_appendix_heading(text: str, match: re.Match) -> bool:
+    """Whether a candidate appendix heading starts a section (not a wrapped sentence)."""
     title = match.group("title")
     if title and (not title[0].isupper() or "," in title or title[-1] in ".,;)"):
         return False
@@ -216,7 +229,7 @@ def is_appendix_heading(text: str, match: re.Match) -> bool:
     if before.endswith(("\n\n", "\f")) or match.group().lstrip(" \t").startswith("\f"):
         return True
     prev = before.rstrip("\n").rsplit("\n", 1)[-1].strip()
-    return not prev or prev.isdigit() or prev[-1] in ".!?:)]\"”"
+    return not prev or prev.isdigit() or prev[-1] in '.!?:)]"”'
 
 
 # Appendices without an "Appendix" heading usually start with a lettered section,
@@ -276,16 +289,16 @@ def clean_text(text: str) -> str:
 
 @app.command()
 def extract(force: bool = typer.Option(False, help="Re-extract existing text files.")):
-    """Extract text from pdf/<Key>.pdf into output/engagement/txt/<Key>.txt."""
-    TXT_DIR.mkdir(parents=True, exist_ok=True)
-    pdfs = sorted(PDF_DIR.glob("*.pdf"))
+    """Extract text from pdf/<Key>.pdf into data/txt/<Key>.txt."""
+    config.TXT_DIR.mkdir(parents=True, exist_ok=True)
+    pdfs = sorted(config.PDF_DIR.glob("*.pdf"))
     done = failed = 0
     for pdf in pdfs:
-        dest = TXT_DIR / f"{pdf.stem}.txt"
+        dest = text_path(pdf.stem)
         if dest.exists() and not force:
             continue
         result = subprocess.run(
-            ["pdftotext", "-enc", "UTF-8", str(pdf), "-"],
+            ["pdftotext", "-enc", "UTF-8", str(pdf), "-"],  # noqa: S607 (poppler on PATH)
             capture_output=True,
             text=True,
             check=False,
@@ -302,7 +315,8 @@ def extract(force: bool = typer.Option(False, help="Re-extract existing text fil
 
 # ---- requests ---------------------------------------------------------------
 def build_messages(key: str, row: pd.Series, max_chars: int) -> tuple[list, str]:
-    txt = TXT_DIR / f"{key}.txt"
+    """The chat messages classifying one paper, and the source used (full text or not)."""
+    txt = text_path(key)
     if txt.exists():
         body, source = txt.read_text()[:max_chars], "full text"
     else:
@@ -326,6 +340,7 @@ def build_messages(key: str, row: pd.Series, max_chars: int) -> tuple[list, str]
 
 
 def request_body(messages: list) -> dict:
+    """The chat completion request for the messages."""
     return {
         "model": MODEL,
         "messages": messages,
@@ -336,6 +351,7 @@ def request_body(messages: list) -> dict:
 
 
 def select(papers: pd.DataFrame, keys: str | None, n: int | None, seed: int):
+    """The papers with the given comma-separated keys, else a sample of n, else all."""
     if keys:
         return papers.loc[[k.strip() for k in keys.split(",")]]
     if n:
@@ -420,11 +436,13 @@ def pilot(
 
 # ---- batch submission ---------------------------------------------------------
 def load_state() -> dict:
+    """The submitted batches by shard name."""
     path = out_dir() / "batches.json"
     return json.loads(path.read_text()) if path.exists() else {}
 
 
 def save_state(state: dict):
+    """Save the submitted batches by shard name."""
     (out_dir() / "batches.json").write_text(json.dumps(state, indent=2))
 
 
@@ -475,6 +493,7 @@ def quadrant(engagement: int, integration: int) -> str:
 
 
 def parse_line(line: str) -> dict:
+    """One Batch API output line as a row of results, with an error if it is invalid."""
     obj = json.loads(line)
     row = {"key": obj["custom_id"], "error": None}
     body = (obj.get("response") or {}).get("body") or {}
@@ -500,9 +519,34 @@ def parse_line(line: str) -> dict:
     return row
 
 
+def apply_human_labels(df: pd.DataFrame) -> pd.DataFrame:
+    """Replace the model's labels with the human ones in data/engagement_human_labels.csv.
+
+    Adds ``label_source`` (human or classifier) and the model's own levels and category
+    as ``classifier_*``. Without the file, df is returned unchanged.
+    """
+    if not config.HUMAN_LABELS.exists():
+        return df
+    human = pd.read_csv(config.HUMAN_LABELS, index_col="key")
+    human = human[human.index.isin(df.index)]
+    df["label_source"] = ["human" if k in human.index else "classifier" for k in df.index]
+    for col in ("engagement", "integration", "category"):
+        df[f"classifier_{col}"] = df[col]
+    for col in ("engagement", "integration", "other_field_referenced"):
+        df.loc[human.index, col] = human[col]
+    df.loc[human.index, "category"] = [
+        quadrant(e, i) for e, i in zip(human["engagement"], human["integration"],
+                                       strict=True)]
+    return df
+
+
 @app.command()
 def parse(pilot_only: bool = typer.Option(False, "--pilot", help="Parse pilot.jsonl.")):
-    """Combine outputs into output/engagement/<version>/engagement[_pilot].csv."""
+    """Combine outputs into output/engagement/<version>/engagement[_pilot].csv.
+
+    Outside the pilot, human labels in data/engagement_human_labels.csv replace the
+    model's (see apply_human_labels).
+    """
     out = out_dir()
     files = [out / "pilot.jsonl"] if pilot_only else sorted(out.glob("output_*.jsonl"))
     lines = [line for f in files if f.exists() for line in f.read_text().splitlines()]
@@ -513,8 +557,12 @@ def parse(pilot_only: bool = typer.Option(False, "--pilot", help="Parse pilot.js
     df = df.drop_duplicates("key", keep="last").set_index("key")
     papers = load_papers()
     df = papers[["Retrieval", "Publication_Year", "Title"]].join(df, how="inner")
-    df["input"] = ["full text" if (TXT_DIR / f"{k}.txt").exists() else "abstract only"
-                   for k in df.index]
+    df["input"] = input_kinds(df.index)
+    if not pilot_only:
+        df = apply_human_labels(df)
+        if "label_source" in df:
+            typer.secho(f"Applied {(df['label_source'] == 'human').sum()} human labels "
+                        f"from {config.HUMAN_LABELS}.")
     dest = out / ("engagement_pilot.csv" if pilot_only else "engagement.csv")
     df.to_csv(dest)
 
@@ -528,14 +576,16 @@ def parse(pilot_only: bool = typer.Option(False, "--pilot", help="Parse pilot.js
         }
         typer.secho(pd.DataFrame(levels).to_string())
         typer.secho("\nCategory by corpus:")
-        typer.secho(pd.crosstab(ok["category"], ok["Retrieval"], margins=True).to_string())
+        typer.secho(pd.crosstab(ok["category"], ok["Retrieval"], margins=True)
+                    .to_string())
         typer.secho("\nMean scores by corpus:")
         typer.secho(ok.groupby("Retrieval")[["engagement", "integration"]]
                     .describe().round(2).to_string())
     if not pilot_only:
         missing = set(papers.index) - set(df.index)
         if missing:
-            typer.secho(f"{len(missing)} papers have no result yet.", fg=typer.colors.YELLOW)
+            typer.secho(f"{len(missing)} papers have no result yet.",
+                        fg=typer.colors.YELLOW)
 
 
 @app.command()
@@ -544,7 +594,7 @@ def sample_for_validation(
     seed: int = typer.Option(0),
 ):
     """Draw a stratified sample of classified papers for manual checking."""
-    df = pd.read_csv(out_dir() / "engagement.csv", index_col=0)
+    df = load_classified()
     rng = random.Random(seed)
     picks = []
     for _, group in df.groupby("category"):

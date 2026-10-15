@@ -4,6 +4,11 @@ This script will read a CSV file containing paper metadata, preprocess the text 
 perform topic modeling using BERTopic, and analyze term co-occurrence networks.
 It also includes visualization of topic distributions and network graphs.
 
+    uv run aise analyze --topic-modeling --plot
+
+The heavy NLP libraries are imported only by the commands that use them, so that the
+rest of the ``aise`` CLI starts quickly.
+
 The input CSV file is expected to have at least the following columns:
 - title: The title of the paper.
 - abstract: The abstract of the paper.
@@ -18,36 +23,21 @@ import pickle
 import re
 from collections import defaultdict
 from itertools import combinations
-from pathlib import Path
+from pathlib import Path  # noqa: TC003 (typer reads the annotations at runtime)
+from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
-import networkx as nx
-import nltk
 import numpy as np
 import pandas as pd
-import seaborn as sns
-import spacy
 import typer
-import umap
-from adjustText import adjust_text
-from bertopic import BERTopic
-from hdbscan import HDBSCAN
-from networkx.drawing.nx_pydot import graphviz_layout
 from rich.console import Console
-from sentence_transformers import SentenceTransformer
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 
-from aise.plot import app as plot_app
+from aise import config
 from aise.util import pandas_to_rich, word_freqs
 
-app = typer.Typer(rich_markup_mode="rich")
-app.add_typer(
-    plot_app,
-    name="plot",
-    help="Plotting utilities.",
-    invoke_without_command=True,
-)
+if TYPE_CHECKING:
+    import networkx as nx
+    from bertopic import BERTopic
 
 console = Console()
 
@@ -104,6 +94,9 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
 
     Includes tokenization, lemmatization, and stopword removal.
     """
+    import nltk
+    import spacy
+
     nltk.download("stopwords")
 
     nlp = spacy.load("en_core_web_sm", disable=["parser", "ner"])
@@ -136,8 +129,12 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def get_statistics(df: pd.DataFrame, plot: bool = False) -> None:
+def get_statistics(
+    df: pd.DataFrame, plot: bool = False, output_dir: Path = config.OUTPUT_DIR
+) -> None:
     """Compute and display basic statistics about the dataset."""
+    import seaborn as sns
+
     console.print("Dataset statistics:")
 
     # Counts by corpus
@@ -190,14 +187,14 @@ def get_statistics(df: pd.DataFrame, plot: bool = False) -> None:
         ),
     )
     console.print(
-        pandas_to_rich(freq_diff[freq_diff["safety_count"] < 10].head(25)),
-        "Top 25 words only in Ethics corpus",
+        pandas_to_rich(freq_diff[freq_diff["safety_count"] < 10].head(25),
+                       "Top 25 words only in Ethics corpus"),
     )
     console.print(
-        pandas_to_rich(freq_diff[freq_diff["ethics_count"] < 10].tail(25)),
-        "Top 25 words only in Safety corpus",
+        pandas_to_rich(freq_diff[freq_diff["ethics_count"] < 10].tail(25),
+                       "Top 25 words only in Safety corpus"),
     )
-    freq_diff.to_csv("output/word_freq_differences.csv", index=True)
+    freq_diff.to_csv(output_dir / "word_freq_differences.csv", index=True)
 
     # Keyness: log-likelihood ratio to find distinctive words
     results = []
@@ -221,7 +218,7 @@ def get_statistics(df: pd.DataFrame, plot: bool = False) -> None:
         columns=["word", "LL", "ethics_count", "safety_count"],
     )
     keyness_df = keyness_df.sort_values("LL", ascending=False).reset_index(drop=True)
-    keyness_df.to_csv("output/word_keyness.csv", index=False)
+    keyness_df.to_csv(output_dir / "word_keyness.csv", index=False)
     console.print(
         pandas_to_rich(
             keyness_df.head(30), "Top 30 distinctive words by log-likelihood ratio:"
@@ -243,7 +240,7 @@ def get_statistics(df: pd.DataFrame, plot: bool = False) -> None:
         plt.title("Publication Year Distribution by Corpus")
         plt.xlabel("Year")
         plt.ylabel("Number of Papers")
-        plt.savefig("output/year_distribution.png", dpi=300)
+        plt.savefig(output_dir / "year_distribution.png", dpi=300)
         plt.show()
 
 
@@ -251,9 +248,13 @@ def model_topic(
     df: pd.DataFrame,
     min_cluster_size: int = 10,
     plot: bool = True,
-    output_dir: Path = Path("output"),
+    output_dir: Path = config.OUTPUT_DIR,
 ) -> BERTopic:
     """Perform topic modeling using BERTopic and visualize results."""
+    from bertopic import BERTopic
+    from hdbscan import HDBSCAN
+    from sentence_transformers import SentenceTransformer
+
     # Initialize embedding model
     texts = df["clean_text"].tolist()
     embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
@@ -278,7 +279,7 @@ def model_topic(
     else:
         console.print("Loading existing topic model and embeddings")
         with (output_dir / "topic_model.pkl").open("rb") as f:
-            embeddings, topic_model = pickle.load(f)
+            embeddings, topic_model = pickle.load(f)  # noqa: S301 (our own cache)
 
     topics, _ = topic_model.fit_transform(
         texts,
@@ -331,7 +332,7 @@ def model_topic(
 
     # Visualize top 10 topics by combined frequency (BERTopic visualization)
     if plot:
-        plot_topic_analysis(df, topic_model, embeddings, embedding_model, output_dir)
+        plot_topic_analysis(df, topic_model, embeddings, output_dir)
 
     return topic_model
 
@@ -340,9 +341,11 @@ def analyze_network(
     df: pd.DataFrame,
     plot: bool = True,
     topic_model: BERTopic = None,
-    output_dir: Path = Path("output"),
+    output_dir: Path = config.OUTPUT_DIR,
 ) -> None:
     """Analyze term co-occurrence networks and visualize."""
+    import networkx as nx
+    from sklearn.feature_extraction.text import TfidfVectorizer
 
     def build_cooccurrence_graph(
         series: pd.Series,
@@ -376,9 +379,8 @@ def analyze_network(
             df[df.corpus == "Ethics"]["clean_text"],
             top_n=1000,
         )
-        console.print(
-            f"Ethics graph nodes: {G_eth.number_of_nodes()} edges: {G_eth.number_of_edges()}"
-        )
+        console.print(f"Ethics graph nodes: {G_eth.number_of_nodes()} "
+                      f"edges: {G_eth.number_of_edges()}")
 
     G_saf = None
     if any(df["corpus"] == "Safety"):
@@ -386,9 +388,8 @@ def analyze_network(
             df[df.corpus == "Safety"]["clean_text"],
             top_n=1000,
         )
-        console.print(
-            f"Safety graph nodes: {G_saf.number_of_nodes()} edges: {G_saf.number_of_edges()}"
-        )
+        console.print(f"Safety graph nodes: {G_saf.number_of_nodes()} "
+                      f"edges: {G_saf.number_of_edges()}")
 
     if plot:
         if G_eth is not None:
@@ -413,10 +414,13 @@ def plot_topic_analysis(
     df: pd.DataFrame,
     topic_model: BERTopic,
     embeddings: np.ndarray,
-    embedding_model: SentenceTransformer,
-    output_dir: Path = Path("output"),
+    output_dir: Path = config.OUTPUT_DIR,
 ) -> None:
-    """Plot UMAP projections and temporal semantic drift analysis."""
+    """Plot BERTopic's topic views and a UMAP projection of the documents."""
+    import seaborn as sns
+    import umap
+    from adjustText import adjust_text
+
     fig = topic_model.visualize_topics(use_ctfidf=True)
     fig.write_html(output_dir / "bertopic_topics.html")
 
@@ -431,120 +435,6 @@ def plot_topic_analysis(
 
     fig = topic_model.visualize_barchart(top_n_topics=12)
     fig.write_html(output_dir / "bertopic_barchart.html")
-
-    # Temporal semantic drift: average embedding by year &
-    # cosine similarity between corpora per year
-    if False and "Ethics" in df["corpus"].to_numpy() and "Safety" in df["corpus"].to_numpy():
-        min_docs_per_year = 2
-        if "year" in df.columns:
-            years = sorted(df["year"].dropna().unique())
-            year_sims = []
-            average_safety_embedding = embedding_model.encode(
-                df[df.corpus == "Safety"]["clean_text"].tolist(),
-            ).mean(axis=0)
-            average_ethics_embedding = embedding_model.encode(
-                df[df.corpus == "Ethics"]["clean_text"].tolist(),
-            ).mean(axis=0)
-            for y in years:
-                sub = df[df["year"] == y]
-                if (
-                    len(sub[sub.corpus == "Ethics"]) < min_docs_per_year
-                    or len(sub[sub.corpus == "Safety"]) < min_docs_per_year
-                ):
-                    year_sims.append((np.nan, np.nan, np.nan, np.nan, np.nan, np.nan))
-                    continue
-                e_vec = embedding_model.encode(
-                    sub[sub.corpus == "Ethics"]["clean_text"].tolist(),
-                )
-                s_vec = embedding_model.encode(
-                    sub[sub.corpus == "Safety"]["clean_text"].tolist(),
-                )
-                e_to_s_vec = cosine_similarity(e_vec, average_safety_embedding[None, :])
-                s_to_e_vec = cosine_similarity(s_vec, average_ethics_embedding[None, :])
-                sim = cosine_similarity(e_vec, s_vec)
-                year_sims.append(
-                    (
-                        np.nanmean(sim),
-                        np.nanstd(sim) / np.sqrt(np.sum(~np.isnan(sim))),
-                        np.nanmean(e_to_s_vec),
-                        np.nanstd(e_to_s_vec) / np.sqrt(np.sum(~np.isnan(e_to_s_vec))),
-                        np.nanmean(s_to_e_vec),
-                        np.nanstd(s_to_e_vec) / np.sqrt(np.sum(~np.isnan(s_to_e_vec))),
-                    )
-                )
-            plt.figure(figsize=(7, 3))
-            plt.plot(
-                years,
-                [sim[0] for sim in year_sims],
-                marker="o",
-                label="Ethics vs Safety",
-            )
-            plt.fill_between(
-                years,
-                [sim[0] - sim[1] for sim in year_sims],
-                [sim[0] + sim[1] for sim in year_sims],
-                alpha=0.2,
-            )
-            plt.plot(
-                years,
-                [sim[2] for sim in year_sims],
-                marker="o",
-                label="Ethics vs Avg. Safety",
-            )
-            plt.fill_between(
-                years,
-                [sim[2] - sim[3] for sim in year_sims],
-                [sim[2] + sim[3] for sim in year_sims],
-                alpha=0.2,
-            )
-            plt.plot(
-                years,
-                [sim[4] for sim in year_sims],
-                marker="o",
-                label="Safety vs Avg. Ethics",
-            )
-            plt.fill_between(
-                years,
-                [sim[4] - sim[5] for sim in year_sims],
-                [sim[4] + sim[5] for sim in year_sims],
-                alpha=0.2,
-            )
-            plt.xlabel("Year")
-            plt.ylabel("Mean Corpus Cosine Similarity")
-            plt.grid(axis="y", alpha=0.3)
-            # Place legend beneath the x-axis with three columns
-            plt.legend(
-                loc="upper center",
-                bbox_to_anchor=(0.5, -0.2),
-                ncol=3,
-                frameon=False,
-            )
-            # Ensure there's enough bottom margin for the legend
-            plt.subplots_adjust(bottom=0.25)
-            plt.savefig(output_dir / "plots" / "temporal_semantic_drift.pdf")
-            plt.show()
-        else:
-            console.print("No year column found; skipping temporal drift analysis")
-
-        # Corpus-level centroid similarity
-        ethics_vec = np.mean(
-            [
-                emb
-                for emb, c in zip(embeddings, df["corpus"], strict=True)
-                if c == "Ethics"
-            ],
-            axis=0,
-        )
-        safety_vec = np.mean(
-            [
-                emb
-                for emb, c in zip(embeddings, df["corpus"], strict=True)
-                if c == "Safety"
-            ],
-            axis=0,
-        )
-        corp_sim = cosine_similarity([ethics_vec], [safety_vec])[0][0]
-        console.print(f"Corpus-level cosine similarity: {corp_sim}")
 
     # UMAP projection of embeddings and corpus scatter
     reducer = umap.UMAP(
@@ -611,7 +501,8 @@ def plot_topic_analysis(
     plt.xlabel("UMAP-1")
     plt.ylabel("UMAP-2")
     plt.tight_layout()
-    adjust_text(texts, arrowprops=dict(arrowstyle="-", color="gray", lw=0.5, alpha=0.6))
+    adjust_text(texts, arrowprops={"arrowstyle": "-", "color": "gray", "lw": 0.5,
+                                   "alpha": 0.6})
     plt.savefig(output_dir / "umap_topics.png", dpi=300)
     plt.show()
 
@@ -621,9 +512,12 @@ def plot_top_subgraph(
     top_k: int = 30,
     title: str = "Co-word subgraph",
     topic_model: BERTopic = None,
-    output_dir: Path = Path("output"),
+    output_dir: Path = config.OUTPUT_DIR,
 ) -> None:
     """Visualize a subgraph of the co-word network (top-degree nodes)."""
+    import networkx as nx
+    from networkx.drawing.nx_pydot import graphviz_layout
+
     deg = dict(G.degree(weight="weight"))
     top_nodes = sorted(deg.items(), key=lambda x: x[1], reverse=True)[:top_k]
     nodes = [n for n, _ in top_nodes]
@@ -687,16 +581,15 @@ def plot_top_subgraph(
     plt.show()
 
 
-@app.command()
 def analyze(
     file_path: Path = typer.Option(
-        Path("data/annotated_papers.csv"),
+        config.ANNOTATIONS,
         "-p",
         "--path",
         help="Path to the CSV file containing paper metadata.",
     ),
     output_path: Path = typer.Option(
-        Path("output/"),
+        config.OUTPUT_DIR,
         "-o",
         "--output",
         help="Directory to save analysis results and visualizations.",
@@ -731,6 +624,10 @@ def analyze(
     plot: bool = typer.Option(
         default=False,
         help="Whether to plot visualizations.",
+    ),
+    statistics: bool = typer.Option(
+        default=False,
+        help="Whether to print word statistics of the corpora (and save them as CSVs).",
     ),
 ) -> int:
     """AI safety and ethics paper analysis tool.
@@ -773,7 +670,8 @@ def analyze(
 
     console.print(f"Using only corpus: {corpus}" if corpus else "Using both corpora")
 
-    # get_statistics(df, plot)
+    if statistics:
+        get_statistics(df, plot, output_path)
 
     # Topic modeling with BERTopic
     topic_model = None
@@ -792,10 +690,7 @@ def analyze(
     raise typer.Exit(0)
 
 
-def cli() -> None:
-    """Entry point for the CLI."""
-    app()
-
-
 if __name__ == "__main__":
+    from aise.cli import app
+
     app()

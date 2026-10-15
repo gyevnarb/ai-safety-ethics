@@ -1,18 +1,30 @@
+"""Figures comparing the AI ethics and AI safety corpora: words and annotated categories.
+
+Reads the preprocessed papers that ``aise analyze`` writes (output/processed_data.csv)
+and the taxonomies in data/categories.csv; figures go to <output>/plots/.
+
+    uv run aise plot all -d output/categories/processed_data.csv
+"""
+
 import re
 import textwrap
 from collections import Counter
 from pathlib import Path
+from typing import Annotated
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import typer
 from adjustText import adjust_text
-from matplotlib import cm, rcParams
 from matplotlib.colors import Normalize
 from matplotlib.offsetbox import HPacker
 from matplotlib.transforms import blended_transform_factory, offset_copy
+
+from aise import config
+from aise.style import FIELD_COLORS, GRID, INK, INK_2
 
 ABBREVIATIONS = {
     "rl": "reinforcement learning",
@@ -25,13 +37,16 @@ ABBREVIATIONS = {
     "dnn": "deep neural network",
 }
 
-HATCHES = ["///", "\\\\", "...", "xxx", "+++", "***"]
 
-get_color = lambda z: cm.get_cmap("seismic")(Normalize(vmin=z.min(), vmax=z.max())(z))  # noqa: E731
-get_tops = lambda df, n: pd.concat([df.head(n), df.tail(n)]).sort_values("z_score")  # noqa: E731
 
-rcParams["pdf.fonttype"] = 42
-rcParams["ps.fonttype"] = 42
+def get_color(z: pd.Series) -> np.ndarray:
+    """Diverging colours for z-scores, from the lowest (blue) to the highest (red)."""
+    return mpl.colormaps["seismic"](Normalize(vmin=z.min(), vmax=z.max())(z))
+
+
+def get_tops(df: pd.DataFrame, n: int) -> pd.DataFrame:
+    """The n first and n last rows, sorted by z-score."""
+    return pd.concat([df.head(n), df.tail(n)]).sort_values("z_score")
 
 
 def _ensure_plots_dir(output_dir: Path) -> Path:
@@ -41,15 +56,17 @@ def _ensure_plots_dir(output_dir: Path) -> Path:
 
 
 def load_inputs(
-    data_path: Path = Path("output/processed_data.csv"),
-    categories_path: Path = Path("data/categories.csv"),
+    data_path: Path = config.PROCESSED_DATA,
+    categories_path: Path = config.CATEGORIES,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """The preprocessed papers and the category taxonomies."""
     data = pd.read_csv(data_path, index_col=0)
     categories = pd.read_csv(categories_path)
     return data, categories
 
 
 def compute_log_odds_df(data: pd.DataFrame, alpha: float = 0.01) -> pd.DataFrame:
+    """Per word, the z-scored log odds ratio of Ethics vs Safety, with prior alpha."""
     corpus_ethics = data[data["corpus"] == "Ethics"]["clean_text"].tolist()
     corpus_safety = data[data["corpus"] == "Safety"]["clean_text"].tolist()
 
@@ -93,12 +110,8 @@ def compute_log_odds_df(data: pd.DataFrame, alpha: float = 0.01) -> pd.DataFrame
     ).sort_values("z_score", ascending=False)
 
 
-# corpus colours shared with aise.plot_modes, and the ink used for text
-FIELD_COLORS = {"Ethics": "#1f77b4", "Safety": "#d62728"}
 # hatching tells the corpora apart in greyscale print
 FIELD_HATCHES = {"Ethics": None, "Safety": "//////"}
-FIELD_NAMES = {"Ethics": "AI ethics", "Safety": "AI safety"}
-INK, INK_2, GRID = "#0b0b0b", "#52514e", "#e6e5e1"
 
 # Overlap figures are sized to sit two abreast (one per field) on a ~7in text width.
 OVERLAP_WIDTH = 3.4
@@ -119,6 +132,22 @@ OVERLAP_RC = {
 }
 
 
+def _inline_legend_title(leg, fig, ax):
+    """Put a legend's title on the same line as its entries.
+
+    Matplotlib always stacks the title above them, so this swaps in a horizontal box
+    (it relies on private Legend attributes).
+    """
+    box = leg._legend_box  # noqa: SLF001
+    leg._legend_box = HPacker(  # noqa: SLF001
+        pad=box.pad, sep=leg.columnspacing * leg._fontsize, align="center",  # noqa: SLF001
+        children=[leg._legend_title_box, leg._legend_handle_box],  # noqa: SLF001
+    )
+    leg._legend_box.set_figure(fig)  # noqa: SLF001
+    leg._legend_box.axes = ax  # noqa: SLF001
+    leg._legend_box.set_offset(leg._findoffset)  # noqa: SLF001
+
+
 def _overlap_label(text: str, width: int = 28, max_lines: int = 2) -> str:
     text = re.sub(r"\(.*\)$", "", text).strip()
     lines = textwrap.wrap(text, width)
@@ -131,7 +160,7 @@ def _overlap_label(text: str, width: int = 28, max_lines: int = 2) -> str:
 def plot_category_overlap(
     data: pd.DataFrame,
     categories: pd.DataFrame,
-    output_dir: Path = Path("output"),
+    output_dir: Path = config.OUTPUT_DIR,
     n_labels: int = 10,
     ordering: str = "diff",  # or "sim"
     show: bool = False,
@@ -203,10 +232,9 @@ def plot_category_overlap(
                 for side in ["top", "right", "left"]:
                     ax.spines[side].set_visible(False)
                 ax.spines["bottom"].set_linewidth(0.6)
-                ax.set_xlabel(
-                    rf"Number of $\bf{{{field}}}$ $\bf{{{cat_type.capitalize()}}}$ Categories",
-                    color=INK_2,
-                )
+                kind = cat_type.capitalize()
+                ax.set_xlabel(rf"Number of $\bf{{{field}}}$ $\bf{{{kind}}}$ Categories",
+                              color=INK_2)
                 # centred on the canvas like the legend, so a label wider than the bar
                 # area is not pushed off the right edge
                 below_ticks = offset_copy(
@@ -224,16 +252,7 @@ def plot_category_overlap(
                     borderaxespad=0.3, handlelength=1.2, handleheight=0.8,
                     columnspacing=1.2, title_fontproperties={"size": 6.5},
                 )
-                # put the title on the same line as the entries (matplotlib always
-                # stacks it above them)
-                box = leg._legend_box
-                leg._legend_box = HPacker(
-                    pad=box.pad, sep=leg.columnspacing * leg._fontsize, align="center",
-                    children=[leg._legend_title_box, leg._legend_handle_box],
-                )
-                leg._legend_box.set_figure(fig)
-                leg._legend_box.axes = ax
-                leg._legend_box.set_offset(leg._findoffset)
+                _inline_legend_title(leg, fig, ax)
                 # the legend spans the canvas, so lay out the axes below its strip
                 leg.set_in_layout(False)
                 fig.tight_layout(rect=(0, 0, 1, 1 - OVERLAP_LEGEND / height))
@@ -249,11 +268,11 @@ def plot_category_overlap(
 def plot_categories(
     data: pd.DataFrame,
     categories: pd.DataFrame,
-    output_dir: Path = Path("output"),
+    output_dir: Path = config.OUTPUT_DIR,
     level: str = "high",
-    n_labels: int = 10,
     show: bool = False,
 ) -> None:
+    """Papers per risk and mitigation category at the given taxonomic level, by field."""
     cat_df = []
     for cat_type in ["risk", "mitigation"]:
         cat_col = f"{cat_type}_categories"
@@ -273,7 +292,6 @@ def plot_categories(
     plots_dir = _ensure_plots_dir(output_dir)
     for field, cat_type in counts[["field", "type"]].drop_duplicates().to_numpy():
         sub_counts = counts[(counts["field"] == field) & (counts["type"] == cat_type)]
-        # sub_counts = sub_counts.head(n_labels)
         plt.figure(figsize=(6, 4))
         sns.barplot(
             data=sub_counts,
@@ -284,7 +302,6 @@ def plot_categories(
         )
         ax = plt.gca()
         for i, bar in enumerate(ax.patches):
-            # bar.set_hatch(HATCHES[i % len(HATCHES)])
             bar.set_edgecolor("black")
             # Add count labels next to bars (or inside for the first bar)
             width = bar.get_width()
@@ -333,11 +350,12 @@ def plot_categories(
 
 def plot_log_odds(
     df: pd.DataFrame,
-    output_dir: Path = Path("output"),
+    output_dir: Path = config.OUTPUT_DIR,
     labels_top_n: int = 10,
     tops_n: int = 20,
     show: bool = False,
 ) -> None:
+    """Log odds ratio of each word against its frequency, labelling the extremes."""
     plot_df = get_tops(df, tops_n)
     score_type = "z_score"
 
@@ -383,7 +401,8 @@ def plot_log_odds(
     plt.ylabel("Normalized log-odds ratio (z-score)", fontsize=14)
     plt.grid(axis="both", linestyle=":", alpha=0.7)
     plt.tight_layout()
-    adjust_text(texts, arrowprops=dict(arrowstyle="-", color="gray", lw=0.5, alpha=0.6))
+    adjust_text(texts, arrowprops={"arrowstyle": "-", "color": "gray", "lw": 0.5,
+                                   "alpha": 0.6})
     plt.savefig(plots_dir / "fig_log_odds.pdf")
     if show:
         plt.show()
@@ -392,9 +411,10 @@ def plot_log_odds(
 
 def plot_total_freq(
     df: pd.DataFrame,
-    output_dir: Path = Path("output"),
+    output_dir: Path = config.OUTPUT_DIR,
     show: bool = False,
 ) -> None:
+    """Relative frequencies of the words most distinctive of each corpus."""
     pA = df.sort_values("ethics_count", ascending=False)[df["safety_count"] < 5].head(20)
     pB = df.sort_values("safety_count", ascending=False)[df["ethics_count"] < 5].head(20)
     plot_df = pd.concat([pA, pB])
@@ -437,84 +457,65 @@ def plot_total_freq(
     plt.close()
 
 
-app = typer.Typer(rich_markup_mode="rich")
+# ---- commands -------------------------------------------------------------------------
+DataPath = Annotated[
+    Path, typer.Option("--data", "-d", help="Path to processed data CSV")]
+CategoriesPath = Annotated[
+    Path, typer.Option("--categories", "-c", help="Path to categories CSV")]
+OutputDir = Annotated[Path, typer.Option("--output", "-o", help="Output directory")]
+Alpha = Annotated[float, typer.Option("--alpha", help="Dirichlet prior strength")]
+NLabels = Annotated[
+    int, typer.Option("--n-labels", help="Number of categories in each overlap plot")]
+Ordering = Annotated[
+    str, typer.Option(help="Ordering method for overlap plots: 'diff' or 'sim'")]
+Level = Annotated[str, typer.Option(help="The taxonomic level of the category plots.")]
+Show = Annotated[bool, typer.Option("--show", help="Show plots interactively")]
+
+app = typer.Typer(rich_markup_mode="rich", help=__doc__.split("\n\n")[0])
 
 
 @app.command()
 def overlap(
-    data_path: Path = typer.Option(
-        Path("output/processed_data.csv"),
-        "--data",
-        "-d",
-        help="Path to processed data CSV",
-    ),
-    categories_path: Path = typer.Option(
-        Path("data/categories.csv"), "--categories", "-c", help="Path to categories CSV"
-    ),
-    output_dir: Path = typer.Option(
-        Path("output"), "--output", "-o", help="Output directory"
-    ),
-    n_labels: int = typer.Option(
-        10, "--n-labels", help="Number of category labels to show in each plot"
-    ),
-    ordering: str = typer.Option(
-        "diff", help="Ordering method for overlap plots: 'diff' or 'sim'"
-    ),
-    show: bool = typer.Option(False, "--show", help="Show plots interactively"),
-    png: bool = typer.Option(False, "--png", help="Also save PNG copies of the PDFs"),
+    data_path: DataPath = config.PROCESSED_DATA,
+    categories_path: CategoriesPath = config.CATEGORIES,
+    output_dir: OutputDir = config.OUTPUT_DIR,
+    n_labels: NLabels = 10,
+    ordering: Ordering = "diff",
+    show: Show = False,
+    png: Annotated[bool, typer.Option("--png", help="Also save PNG copies")] = False,
 ) -> None:
     """Plot category overlap between Safety and Ethics corpora."""
     data, cats = load_inputs(data_path, categories_path)
     plot_category_overlap(
-        data, cats, output_dir=output_dir, show=show, n_labels=n_labels, ordering=ordering,
-        png=png,
+        data, cats, output_dir=output_dir, show=show, n_labels=n_labels,
+        ordering=ordering, png=png,
     )
     typer.secho("Generated category overlap plots.")
 
 
 @app.command()
 def categories(
-    data_path: Path = typer.Option(
-        Path("output/processed_data.csv"),
-        "--data",
-        "-d",
-        help="Path to processed data CSV",
-    ),
-    categories_path: Path = typer.Option(
-        Path("data/categories.csv"), "--categories", "-c", help="Path to categories CSV"
-    ),
-    output_dir: Path = typer.Option(
-        Path("output"), "--output", "-o", help="Output directory"
-    ),
-    level: str = typer.Option("high", help="The taxonomic level to use for plotting."),
-    n_labels: int = typer.Option(
-        10, "--n-labels", help="Number of category labels to show in each plot"
-    ),
-    show: bool = typer.Option(False, "--show", help="Show plots interactively"),
+    data_path: DataPath = config.PROCESSED_DATA,
+    categories_path: CategoriesPath = config.CATEGORIES,
+    output_dir: OutputDir = config.OUTPUT_DIR,
+    level: Level = "high",
+    show: Show = False,
 ) -> None:
     """Plot category counts for Risk Types and Mitigation Strategies."""
     data, cats = load_inputs(data_path, categories_path)
-    plot_categories(
-        data, cats, output_dir=output_dir, level=level, n_labels=n_labels, show=show
-    )
+    plot_categories(data, cats, output_dir=output_dir, level=level, show=show)
     typer.secho("Generated category counts plot.")
 
 
 @app.command()
 def log_odds(
-    data_path: Path = typer.Option(
-        Path("output/processed_data.csv"),
-        "--data",
-        "-d",
-        help="Path to processed data CSV",
-    ),
-    output_dir: Path = typer.Option(
-        Path("output"), "--output", "-o", help="Output directory"
-    ),
-    alpha: float = typer.Option(0.01, "--alpha", help="Dirichlet prior strength"),
-    labels_top_n: int = typer.Option(10, "--labels-top-n", help="Top labels annotated"),
-    tops_n: int = typer.Option(20, "--tops-n", help="Top/Bottom words listed"),
-    show: bool = typer.Option(False, "--show", help="Show plots interactively"),
+    data_path: DataPath = config.PROCESSED_DATA,
+    output_dir: OutputDir = config.OUTPUT_DIR,
+    alpha: Alpha = 0.01,
+    labels_top_n: Annotated[
+        int, typer.Option("--labels-top-n", help="Top labels annotated")] = 10,
+    tops_n: Annotated[int, typer.Option("--tops-n", help="Top/Bottom words listed")] = 20,
+    show: Show = False,
 ) -> None:
     """Plot log-odds ratios of words between Ethics and Safety corpora."""
     data, _ = load_inputs(data_path)
@@ -527,17 +528,10 @@ def log_odds(
 
 @app.command()
 def freqs(
-    data_path: Path = typer.Option(
-        Path("output/processed_data.csv"),
-        "--data",
-        "-d",
-        help="Path to processed data CSV",
-    ),
-    output_dir: Path = typer.Option(
-        Path("output"), "--output", "-o", help="Output directory"
-    ),
-    alpha: float = typer.Option(0.01, "--alpha", help="Dirichlet prior strength"),
-    show: bool = typer.Option(False, "--show", help="Show plots interactively"),
+    data_path: DataPath = config.PROCESSED_DATA,
+    output_dir: OutputDir = config.OUTPUT_DIR,
+    alpha: Alpha = 0.01,
+    show: Show = False,
 ) -> None:
     """Plot total frequencies of most distinctive words."""
     data, _ = load_inputs(data_path)
@@ -546,31 +540,16 @@ def freqs(
     typer.secho("Generated total frequencies plot.")
 
 
-@app.command()
-def all(
-    data_path: Path = typer.Option(
-        Path("output/processed_data.csv"),
-        "--data",
-        "-d",
-        help="Path to processed data CSV",
-    ),
-    categories_path: Path = typer.Option(
-        Path("data/categories.csv"), "--categories", "-c", help="Path to categories CSV"
-    ),
-    output_dir: Path = typer.Option(
-        Path("output"), "--output", "-o", help="Output directory"
-    ),
-    alpha: float = typer.Option(0.01, "--alpha", help="Dirichlet prior strength"),
-    n_labels: int = typer.Option(
-        10, "--n-labels", help="Number of category labels to show in overlap plots"
-    ),
-    ordering: str = typer.Option(
-        "diff", help="Ordering method for overlap plots: 'diff' or 'sim'"
-    ),
-    level: str = typer.Option(
-        "high", help="The taxonomic level to use for tacetogory plotting."
-    ),
-    show: bool = typer.Option(False, "--show", help="Show plots interactively"),
+@app.command("all")
+def all_plots(
+    data_path: DataPath = config.PROCESSED_DATA,
+    categories_path: CategoriesPath = config.CATEGORIES,
+    output_dir: OutputDir = config.OUTPUT_DIR,
+    alpha: Alpha = 0.01,
+    n_labels: NLabels = 10,
+    ordering: Ordering = "diff",
+    level: Level = "high",
+    show: Show = False,
 ) -> None:
     """Run all plotting commands."""
     data, cats = load_inputs(data_path, categories_path)
@@ -578,15 +557,9 @@ def all(
     plot_category_overlap(
         data, cats, output_dir=output_dir, show=show, n_labels=n_labels, ordering=ordering
     )
-    plot_categories(
-        data, cats, output_dir=output_dir, level=level, n_labels=n_labels, show=show
-    )
+    plot_categories(data, cats, output_dir=output_dir, level=level, show=show)
     plot_log_odds(df, output_dir=output_dir, show=show)
     plot_total_freq(df, output_dir=output_dir, show=show)
-
-
-def cli() -> None:
-    app()
 
 
 if __name__ == "__main__":

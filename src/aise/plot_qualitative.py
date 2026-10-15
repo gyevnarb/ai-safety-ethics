@@ -1,7 +1,9 @@
 """Figures for the qualitative coding and thematic analysis (see aise.qualitative).
 
-    uv run python -m aise.plot_qualitative                 # AISE_QUAL_VERSION, default v1
-    AISE_QUAL_VERSION=test4 uv run python -m aise.plot_qualitative
+    uv run aise qualitative-plots figures                 # AISE_QUAL_VERSION, default v1
+    AISE_QUAL_VERSION=test4 uv run aise qualitative-plots figures
+
+(``uv run python -m aise.plot_qualitative`` works too.)
 
 Needs the outputs of ``aise.qualitative`` up to ``report`` (assignments.csv, themes.json;
 theme_spans.csv for --theme-source spans). Several versions of each view are drawn, to
@@ -41,10 +43,24 @@ import pandas as pd
 import typer
 from matplotlib.patches import Patch
 
-from aise import plot_modes as P
-from aise import qualitative as Q
+from aise import config
+from aise import engagement as E
+from aise.qualitative import read_jsonl
+from aise.stats import wilson
+from aise.style import (
+    FIELD_ABBREV,
+    FIELD_COLORS,
+    FIELD_NAMES,
+    INK,
+    INK_2,
+    INK_3,
+    MODE_COLORS,
+    RARE_MODES,
+    SURFACE,
+    save_figure,
+)
 
-MODES = P.RARE_MODES
+MODES = RARE_MODES  # the qualitative analysis covers the rare modes only
 MODE_ABBREV = dict(zip(MODES, ["CC", "RC", "CB"], strict=True))
 # the mode colours of Figure 1 are hard to tell apart for protanopes (orange, green),
 # so modes also differ in marker shape and are labelled directly
@@ -53,7 +69,7 @@ STANCES = ["contests", "qualifies", "describes", "endorses"]
 # diverging: warm for contesting, cool for endorsing, neutral gray between
 STANCE_COLORS = dict(zip(STANCES, ["#9e3a24", "#e07650", "#cfcec8", "#2c6e9e"],
                          strict=True))
-STANCE_INK = dict(zip(STANCES, ["#ffffff", P.INK, P.INK, "#ffffff"], strict=True))
+STANCE_INK = dict(zip(STANCES, ["#ffffff", INK, INK, "#ffffff"], strict=True))
 HEAT_RAMP = "Blues"  # single-hue sequential
 
 app = typer.Typer(help=__doc__.split("\n\n")[0])
@@ -64,16 +80,17 @@ class Data:
     """Code applications, paper-theme incidence and paper counts for one run."""
 
     def __init__(self, out: Path, theme_source: str):
+        """Read the run in out; theme_source is "codes" or "spans" (see the module)."""
         self.out = out
         self.assignments = pd.read_csv(out / "assignments.csv")
         self.themes = json.loads((out / "themes.json").read_text())["themes"]
-        keys = [c["key"] for c in Q.read_jsonl(out / "codings_final.jsonl")]
-        meta = pd.read_csv(Q.E.out_dir() / "engagement.csv", index_col=0)
+        keys = [c["key"] for c in read_jsonl(out / "codings_final.jsonl")]
+        meta = E.load_classified()
         self.papers = meta.loc[keys, ["category", "Retrieval"]].rename(
             columns={"category": "mode", "Retrieval": "field"})
         self.n_mode = self.papers["mode"].value_counts().reindex(MODES, fill_value=0)
         fields = self.papers["field"].value_counts()
-        self.n_field = fields.reindex([f for f in P.FIELD_COLORS if f in fields.index])
+        self.n_field = fields.reindex([f for f in FIELD_COLORS if f in fields.index])
 
         if theme_source == "spans":
             spans = pd.read_csv(out / "theme_spans.csv")
@@ -102,8 +119,8 @@ def _style(ax, grid_axis: str = "x"):
     for side in ("top", "right"):
         ax.spines[side].set_visible(False)
     for side in ("left", "bottom"):
-        ax.spines[side].set_color(P.INK_3)
-    ax.tick_params(colors=P.INK_2, labelcolor=P.INK, length=0)
+        ax.spines[side].set_color(INK_3)
+    ax.tick_params(colors=INK_2, labelcolor=INK, length=0)
     ax.grid(axis=grid_axis, color="#e6e5e0", lw=0.8, zorder=0)
     ax.set_axisbelow(True)
 
@@ -119,11 +136,12 @@ def _mode_label(mode: str, n: int) -> str:
 
 # ---- 1: codebook growth ----------------------------------------------------------------
 def fig_growth(d: Data, out_dir: Path):
+    """Codebook size as papers are coded in stages 1 and 2 (a saturation check)."""
     fig, ax = plt.subplots(figsize=(6.4, 3.4))
     _style(ax, "y")
     ends = []
-    for stage, color, ls in ((1, P.INK, "-"), (2, P.INK_2, (0, (4, 2)))):
-        rows = Q.read_jsonl(d.out / f"stage{stage}" / "codings.jsonl")
+    for stage, color, ls in ((1, INK, "-"), (2, INK_2, (0, (4, 2)))):
+        rows = read_jsonl(d.out / f"stage{stage}" / "codings.jsonl")
         if not rows:
             continue
         x = np.arange(1, len(rows) + 1)
@@ -131,31 +149,33 @@ def fig_growth(d: Data, out_dir: Path):
         ax.plot(x, y, color=color, lw=2, ls=ls, zorder=3)
         ends.append((x[-1], y[-1], f"Stage {stage}: {y[-1]} codes"))
     final = len(json.loads((d.out / "codebook_final.json").read_text())["codes"])
-    ax.axhline(final, color=P.INK_3, lw=1, ls=(0, (1, 2)), zorder=2)
+    ax.axhline(final, color=INK_3, lw=1, ls=(0, (1, 2)), zorder=2)
     for x, y, label in ends:
         ax.annotate(label, (x, y), xytext=(-2, 5), textcoords="offset points",
-                    ha="right", va="bottom", fontsize=8.5, color=P.INK)
+                    ha="right", va="bottom", fontsize=8.5, color=INK)
     # at the left, under its line, where the stage-1 curve is still low
     ax.annotate(f"Fixed codebook: {final} codes", (0, final),
                 xycoords=("axes fraction", "data"), xytext=(4, -4),
                 textcoords="offset points", ha="left", va="top", fontsize=8.5,
-                color=P.INK)
+                color=INK)
     ax.set_xlim(0, None)
     ax.set_ylim(0, None)
-    ax.set_xlabel("Papers coded (in each stage's random order)", color=P.INK_2)
-    ax.set_ylabel("Codes in the codebook", color=P.INK_2)
-    ax.set_title("Codebook growth during coding", loc="left", fontsize=11, color=P.INK)
-    P._save(fig, "fig_qual_growth", out_dir)
+    ax.set_xlabel("Papers coded (in each stage's random order)", color=INK_2)
+    ax.set_ylabel("Codes in the codebook", color=INK_2)
+    ax.set_title("Codebook growth during coding", loc="left", fontsize=11, color=INK)
+    save_figure(fig, "fig_qual_growth", out_dir)
 
 
 # ---- 2: themes by mode -----------------------------------------------------------------
 def _dots(d: Data, out_dir: Path, by: str, name: str):
+    """Share of each mode's (or field's) papers per theme, a dot per group."""
     table, n = d.theme_table(by)
     groups = list(n.index)
-    colors = P.MODE_COLORS if by == "mode" else P.FIELD_COLORS
-    markers = MODE_MARKERS if by == "mode" else dict(zip(groups, ["o", "s"], strict=False))
+    colors = MODE_COLORS if by == "mode" else FIELD_COLORS
+    markers = (MODE_MARKERS if by == "mode"
+               else dict(zip(groups, ["o", "s"], strict=False)))
     labels = ({g: _mode_label(g, n[g]) for g in groups} if by == "mode"
-              else {g: f"{P.FIELD_NAMES[g]} (n={n[g]})" for g in groups})
+              else {g: f"{FIELD_NAMES[g]} (n={n[g]})" for g in groups})
     rows = len(table)
     fig, ax = plt.subplots(figsize=(7.2, 0.62 * rows + 1.2))
     _style(ax)
@@ -163,10 +183,10 @@ def _dots(d: Data, out_dir: Path, by: str, name: str):
     for g, off in zip(groups, offsets, strict=True):
         k = table[g].to_numpy()
         p = k / max(n[g], 1)
-        lo, hi = P.wilson(k, np.full(rows, n[g]))
+        lo, hi = wilson(k, np.full(rows, n[g]))
         y = np.arange(rows) + off
         ax.hlines(y, lo, hi, color=colors[g], lw=1.2, alpha=0.55, zorder=2)
-        ax.scatter(p, y, s=34, marker=markers[g], color=colors[g], edgecolor=P.SURFACE,
+        ax.scatter(p, y, s=34, marker=markers[g], color=colors[g], edgecolor=SURFACE,
                    lw=1.2, zorder=3, label=labels[g])
     ax.set_yticks(np.arange(rows), [_wrap(t) for t in table.index], fontsize=8.5)
     ax.set_ylim(rows - 0.5, -0.5)
@@ -174,13 +194,14 @@ def _dots(d: Data, out_dir: Path, by: str, name: str):
     _percent(ax)
     what = "mode" if by == "mode" else "field"
     ax.set_xlabel(f"Share of the {what}'s papers engaging with the theme (95% CI)",
-                  color=P.INK_2)
+                  color=INK_2)
     ax.legend(loc="lower center", bbox_to_anchor=(0.4, 1.0), ncol=len(groups),
               frameon=False, fontsize=8.5, handletextpad=0.3, columnspacing=1.2)
-    P._save(fig, name, out_dir)
+    save_figure(fig, name, out_dir)
 
 
 def fig_themes_bars(d: Data, out_dir: Path):
+    """Share of each mode's papers per theme, one column per mode."""
     table, n = d.theme_table()
     rows = len(table)
     fig, axes = plt.subplots(1, len(MODES), figsize=(9.6, 0.5 * rows + 1.2), sharey=True)
@@ -188,41 +209,42 @@ def fig_themes_bars(d: Data, out_dir: Path):
         _style(ax)
         k = table[mode].to_numpy()
         p = k / max(n[mode], 1)
-        lo, hi = P.wilson(k, np.full(rows, n[mode]))
+        lo, hi = wilson(k, np.full(rows, n[mode]))
         y = np.arange(rows)
-        ax.barh(y, p, height=0.68, color=P.MODE_COLORS[mode], zorder=2)
-        ax.errorbar(p, y, xerr=[p - lo, hi - p], fmt="none", ecolor=P.INK_2, lw=0.9,
+        ax.barh(y, p, height=0.68, color=MODE_COLORS[mode], zorder=2)
+        ax.errorbar(p, y, xerr=[p - lo, hi - p], fmt="none", ecolor=INK_2, lw=0.9,
                     capsize=0, zorder=3)
         ax.set_xlim(0, 1)
         _percent(ax)
-        ax.set_title(_wrap(_mode_label(mode, n[mode]), 24), fontsize=9.5, color=P.INK,
+        ax.set_title(_wrap(_mode_label(mode, n[mode]), 24), fontsize=9.5, color=INK,
                      loc="left")
     axes[0].set_yticks(np.arange(rows), [_wrap(t) for t in table.index], fontsize=8.5)
     axes[0].set_ylim(rows - 0.5, -0.5)
     fig.supxlabel("Share of the mode's papers engaging with the theme (95% CI)",
-                  fontsize=9.5, color=P.INK_2)
+                  fontsize=9.5, color=INK_2)
     fig.tight_layout()
-    P._save(fig, "fig_qual_themes_bars", out_dir)
+    save_figure(fig, "fig_qual_themes_bars", out_dir)
 
 
 def _heatmap(ax, shares: pd.DataFrame, counts: pd.DataFrame):
     im = ax.imshow(shares.to_numpy(float), cmap=HEAT_RAMP, vmin=0, vmax=1, aspect="auto")
     for (i, j), p in np.ndenumerate(shares.to_numpy(float)):
-        k = counts.iat[i, j]
+        k = counts.iloc[i, j]
         ax.text(j, i, f"{p:.0%}" if k else "–", ha="center", va="center", fontsize=8,
-                color="#ffffff" if p > 0.55 else P.INK)
+                color="#ffffff" if p > 0.55 else INK)
     for side in ax.spines.values():
         side.set_visible(False)
-    ax.tick_params(length=0, labelcolor=P.INK)
+    ax.tick_params(length=0, labelcolor=INK)
     # 2px surface gaps between cells
     ax.set_xticks(np.arange(-0.5, shares.shape[1]), minor=True)
     ax.set_yticks(np.arange(-0.5, shares.shape[0]), minor=True)
-    ax.grid(which="minor", color=P.SURFACE, lw=2)
+    ax.grid(which="minor", color=SURFACE, lw=2)
     ax.tick_params(which="minor", length=0)
     return im
 
 
 def fig_themes_heatmap(d: Data, out_dir: Path):
+    """Share of each mode's papers per theme, as a heatmap with counts."""
     table, n = d.theme_table()
     shares = table / n.replace(0, np.nan)
     fig, ax = plt.subplots(figsize=(6.6, 0.48 * len(table) + 1.4))
@@ -234,15 +256,18 @@ def fig_themes_heatmap(d: Data, out_dir: Path):
     bar = fig.colorbar(im, ax=ax, fraction=0.04, pad=0.03, format=plt.FuncFormatter(
         lambda v, _: f"{v:.0%}"))
     bar.outline.set_visible(False)
-    bar.ax.tick_params(length=0, labelsize=8, labelcolor=P.INK_2)
-    bar.set_label("Share of the mode's papers", fontsize=8.5, color=P.INK_2)
-    P._save(fig, "fig_qual_themes_heatmap", out_dir)
+    bar.ax.tick_params(length=0, labelsize=8, labelcolor=INK_2)
+    bar.set_label("Share of the mode's papers", fontsize=8.5, color=INK_2)
+    save_figure(fig, "fig_qual_themes_heatmap", out_dir)
 
 
 # ---- 3: stance -------------------------------------------------------------------------
-def _stance_bars(ax, y, counts: pd.DataFrame, diverging: bool, height=0.7, label_min=0.07):
+def _stance_bars(ax, y, counts: pd.DataFrame, diverging: bool, height=0.7,
+                 label_min=0.07):
     """Horizontal 100% stance bars, one per row of counts (columns are STANCES).
-    Diverging puts contests and qualifies left of zero, describes and endorses right."""
+
+    Diverging puts contests and qualifies left of zero, describes and endorses right.
+    """
     totals = counts.sum(axis=1).to_numpy(float)
     shares = counts.div(np.where(totals == 0, np.nan, totals), axis=0).fillna(0)
     left = (-(shares["contests"] + shares["qualifies"])).to_numpy() if diverging \
@@ -250,7 +275,7 @@ def _stance_bars(ax, y, counts: pd.DataFrame, diverging: bool, height=0.7, label
     for stance in STANCES:
         w = shares[stance].to_numpy()
         ax.barh(y, w, left=left, height=height, color=STANCE_COLORS[stance],
-                edgecolor=P.SURFACE, lw=1.5, zorder=2)
+                edgecolor=SURFACE, lw=1.5, zorder=2)
         for yi, li, wi in zip(y, left, w, strict=True):
             if wi >= label_min:
                 ax.text(li + wi / 2, yi, f"{wi:.0%}", ha="center", va="center",
@@ -266,6 +291,7 @@ def _stance_legend(fig, y=1.0, x=0.5):
 
 
 def fig_stance_modes(d: Data, out_dir: Path):
+    """Stance mix of all code applications, per mode."""
     a = d.assignments
     counts = pd.crosstab(a["mode"], a["stance"]).reindex(index=MODES, columns=STANCES,
                                                          fill_value=0)
@@ -278,25 +304,25 @@ def fig_stance_modes(d: Data, out_dir: Path):
     ax.set_yticks(y, labels, fontsize=8.5)
     ax.set_ylim(len(counts) - 0.5, -0.6)
     for yi, t in zip(y, totals, strict=True):
-        ax.text(1.01, yi, f"{int(t)}", va="center", fontsize=8, color=P.INK_2)
-    ax.text(1.01, -0.75, "codes\napplied", fontsize=7.5, color=P.INK_3, va="bottom")
+        ax.text(1.01, yi, f"{int(t)}", va="center", fontsize=8, color=INK_2)
+    ax.text(1.01, -0.75, "codes\napplied", fontsize=7.5, color=INK_3, va="bottom")
     ax.set_xlim(0, 1)
     _percent(ax)
-    ax.set_xlabel("Share of code applications", color=P.INK_2)
+    ax.set_xlabel("Share of code applications", color=INK_2)
     _stance_legend(fig, y=0.98)
     fig.tight_layout()
-    P._save(fig, "fig_qual_stance_modes", out_dir)
+    save_figure(fig, "fig_qual_stance_modes", out_dir)
 
 
 def fig_stance_themes(d: Data, out_dir: Path, by: str = "mode"):
     """Stance mix per theme, one bar per mode (by="mode") or field (by="field")."""
     if by == "mode":
-        groups, abbrev, colors = MODES, MODE_ABBREV, P.MODE_COLORS
+        groups, abbrev, colors = MODES, MODE_ABBREV, MODE_COLORS
         names = {m: m for m in MODES}
         name = "fig_qual_stance_themes"
     else:
         groups = list(d.n_field.index)
-        abbrev, colors, names = P.FIELD_ABBREV, P.FIELD_COLORS, P.FIELD_NAMES
+        abbrev, colors, names = FIELD_ABBREV, FIELD_COLORS, FIELD_NAMES
         name = "fig_qual_stance_themes_fields"
     a = d.assignments.dropna(subset=["theme"])
     counts = pd.crosstab([a["theme"], a[by]], a["stance"]).reindex(
@@ -308,33 +334,36 @@ def fig_stance_themes(d: Data, out_dir: Path, by: str = "mode"):
     fig, ax = plt.subplots(figsize=(8.2, 0.21 * len(y) + 1.4))
     _style(ax)
     totals = _stance_bars(ax, y, counts, diverging=True, height=0.78, label_min=0.12)
-    ax.axvline(0, color=P.INK_2, lw=1, zorder=3)
+    ax.axvline(0, color=INK_2, lw=1, zorder=3)
     ax.set_yticks(y, [abbrev[g] for _, g in counts.index], fontsize=7.5)
     for tick, (_, g) in zip(ax.get_yticklabels(), counts.index, strict=True):
         tick.set_color(colors[g])
     for yi, t in zip(y, totals, strict=True):
         ax.text(1.02, yi, f"{int(t)}" if t else "–", va="center", fontsize=7,
-                color=P.INK_3)
+                color=INK_3)
     for i, theme in enumerate(d.theme_order):
         top = y[i * len(groups)]
-        ax.text(-1.0, top - 0.75, _wrap(theme, 90), fontsize=8.5, color=P.INK,
+        ax.text(-1.0, top - 0.75, _wrap(theme, 90), fontsize=8.5, color=INK,
                 fontweight="bold", va="bottom")
     ax.set_xlim(-1, 1.1)
     ax.set_ylim(y[-1] + 0.6, -1.9)
     ax.set_xticks([-1, -0.5, 0, 0.5, 1], ["100%", "50%", "0", "50%", "100%"])
     ax.set_xlabel("← contests or qualifies      Share of the theme's code applications"
-                  "      describes or endorses →", color=P.INK_2, fontsize=8.5)
+                  "      describes or endorses →", color=INK_2, fontsize=8.5)
     key = "   ".join(f"{abbrev[g]} = {names[g]}" for g in groups)
     fig.text(0.5, 0.0, f"{key};  numbers at right: codes applied", ha="center",
-             va="top", fontsize=7.5, color=P.INK_2)
+             va="top", fontsize=7.5, color=INK_2)
     fig.tight_layout(rect=(0, 0.01, 1, 0.97))
     _stance_legend(fig, y=0.965)
-    P._save(fig, name, out_dir)
+    save_figure(fig, name, out_dir)
 
 
 def fig_themes_overview(d: Data, out_dir: Path):
-    """For the paper: per theme, the share of each mode's papers engaging with it (left)
-    and the stance of each field's code applications (right), on one shared theme axis."""
+    """For the paper: themes by mode (left) next to stance by field (right).
+
+    Per theme, the share of each mode's papers engaging with it and the stance of each
+    field's code applications, on one shared theme axis.
+    """
     table, n = d.theme_table()
     rows = len(table)
     fig, (left, right) = plt.subplots(
@@ -345,18 +374,18 @@ def fig_themes_overview(d: Data, out_dir: Path):
     _style(left)
     for mode, off in zip(MODES, (-0.25, 0, 0.25), strict=True):
         k = table[mode].to_numpy()
-        lo, hi = P.wilson(k, np.full(rows, n[mode]))
-        left.hlines(y + off, lo, hi, color=P.MODE_COLORS[mode], lw=1.6, alpha=0.6,
+        lo, hi = wilson(k, np.full(rows, n[mode]))
+        left.hlines(y + off, lo, hi, color=MODE_COLORS[mode], lw=1.6, alpha=0.6,
                     zorder=2)
         left.scatter(k / n[mode], y + off, s=40, marker=MODE_MARKERS[mode],
-                     color=P.MODE_COLORS[mode], edgecolor=P.SURFACE, lw=1, zorder=3,
+                     color=MODE_COLORS[mode], edgecolor=SURFACE, lw=1, zorder=3,
                      label=_mode_label(mode, n[mode]))
     left.set_yticks(y, [_wrap(t, 30) for t in table.index], fontsize=11.5)
     left.set_ylim(rows - 0.5, -0.5)
     left.set_xlim(0, 1)
     # no label at 100%, which would run into the right panel's first tick label
     left.set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1], ["0%", "20%", "40%", "60%", "80%", ""])
-    left.set_xlabel("Share of papers", color=P.INK_2, fontsize=13,
+    left.set_xlabel("Share of papers", color=INK_2, fontsize=13,
                     fontweight="bold")
     left.legend(loc="lower right", bbox_to_anchor=(1.0, 1.0), ncol=2, frameon=False,
                 fontsize=12, handletextpad=0.2, columnspacing=0.9, borderaxespad=0.2,
@@ -371,14 +400,14 @@ def fig_themes_overview(d: Data, out_dir: Path):
     offsets = dict(zip(fields, (-0.19, 0.19), strict=False))
     ys = np.array([i + offsets[f] for i in range(rows) for f in fields])
     totals = _stance_bars(right, ys, counts, diverging=True, height=0.34, label_min=1.1)
-    right.axvline(0, color=P.INK_2, lw=1, zorder=3)
+    right.axvline(0, color=INK_2, lw=1, zorder=3)
     for yi, (_, f), t in zip(ys, counts.index, totals, strict=True):
-        right.text(-0.99, yi, P.FIELD_ABBREV[f], va="center", fontsize=10.5,
-                   color=P.FIELD_COLORS[f])
-        right.text(1.01, yi, f"{int(t)}", va="center", fontsize=10.5, color=P.INK_2)
+        right.text(-0.99, yi, FIELD_ABBREV[f], va="center", fontsize=10.5,
+                   color=FIELD_COLORS[f])
+        right.text(1.01, yi, f"{int(t)}", va="center", fontsize=10.5, color=INK_2)
     right.set_xlim(-1, 1.1)
     right.set_xticks([-1, -0.5, 0, 0.5, 1], ["100%", "50%", "0", "50%", "100%"])
-    right.set_xlabel("Share of code applications", color=P.INK_2, fontsize=13,
+    right.set_xlabel("Share of code applications", color=INK_2, fontsize=13,
                      fontweight="bold")
     handles = [Patch(color=STANCE_COLORS[s], label=s.capitalize()) for s in STANCES]
     right.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=2,
@@ -395,17 +424,19 @@ def fig_themes_overview(d: Data, out_dir: Path):
     mode_legend = left.get_legend()
     mode_legend.set_loc("lower left")
     mode_legend.set_bbox_to_anchor((x0, 1.0), transform=left.transAxes)
-    P._save(fig, "fig_qual_themes_overview", out_dir)
+    save_figure(fig, "fig_qual_themes_overview", out_dir)
 
 
 def fig_stance_codes(d: Data, out_dir: Path, max_codes: int):
+    """The codes some papers contest or qualify: papers per stance, a column per mode."""
     a = d.assignments
     papers = (a.groupby(["code", "mode", "stance"])["key"].nunique()
               .unstack("stance").reindex(columns=STANCES, fill_value=0).fillna(0))
     pooled = papers.groupby("code").sum()
     against = pooled["contests"] + pooled["qualifies"]
     codes = against[against > 0].index
-    order = (pd.DataFrame({"against": against[codes], "all": pooled.loc[codes].sum(axis=1)})
+    order = (pd.DataFrame({"against": against[codes],
+                           "all": pooled.loc[codes].sum(axis=1)})
              .sort_values(["against", "all"], ascending=False).index[:max_codes])
     if not len(order):
         typer.secho("  no contested or qualified codes; skipped fig_qual_stance_codes")
@@ -425,21 +456,21 @@ def fig_stance_codes(d: Data, out_dir: Path, max_codes: int):
         for stance in STANCES:
             w = m[stance].to_numpy(float)
             ax.barh(y, w, left=left, height=0.72, color=STANCE_COLORS[stance],
-                    edgecolor=P.SURFACE, lw=1.2, zorder=2)
+                    edgecolor=SURFACE, lw=1.2, zorder=2)
             left = left + w
-        ax.axvline(0, color=P.INK_2, lw=1, zorder=3)
+        ax.axvline(0, color=INK_2, lw=1, zorder=3)
         ax.set_xlim(-lim_left - 0.5, lim_right + 0.5)
         ax.xaxis.set_major_locator(plt.MaxNLocator(integer=True, nbins=5))
         ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{abs(int(v))}"))
         ax.set_title(_wrap(_mode_label(mode, d.n_mode[mode]), 26), fontsize=9.5,
-                     color=P.INK, loc="left")
+                     color=INK, loc="left")
     axes[0].set_yticks(np.arange(rows), [_wrap(c, 48) for c in order], fontsize=8)
     axes[0].set_ylim(rows - 0.5, -0.5)
     fig.supxlabel("Papers: ← contesting or qualifying | describing or endorsing →",
-                  fontsize=9, color=P.INK_2)
+                  fontsize=9, color=INK_2)
     fig.tight_layout()
     _stance_legend(fig, y=0.995)
-    P._save(fig, "fig_qual_stance_codes", out_dir)
+    save_figure(fig, "fig_qual_stance_codes", out_dir)
 
 
 # ---- 4: codes by mode ------------------------------------------------------------------
@@ -456,17 +487,19 @@ def _codes_by_mode(d: Data, min_papers: int) -> tuple[pd.DataFrame, pd.Series]:
 
 
 def fig_codes_heatmap(d: Data, out_dir: Path, min_papers: int):
+    """Share of each mode's papers per code, codes grouped by theme."""
     counts, theme_of = _codes_by_mode(d, min_papers)
     order = list(counts.index)
     if not order:
-        typer.secho(f"  no code with {min_papers}+ papers; skipped fig_qual_codes_heatmap")
+        typer.secho(f"  no code with {min_papers}+ papers; "
+                    "skipped fig_qual_codes_heatmap")
         return
     shares = counts / d.n_mode.replace(0, np.nan)
     fig, ax = plt.subplots(figsize=(7.6, 0.27 * len(order) + 1.6))
     im = _heatmap(ax, shares, counts)
     ax.set_xticks(range(len(MODES)), [MODE_ABBREV[m] for m in MODES], fontsize=8.5)
     for tick, m in zip(ax.get_xticklabels(), MODES, strict=True):
-        tick.set_color(P.MODE_COLORS[m])
+        tick.set_color(MODE_COLORS[m])
     ax.xaxis.tick_top()
     ax.set_yticks(range(len(order)), [_wrap(c, 60) for c in order], fontsize=7.5)
     # theme brackets left of the code labels
@@ -475,20 +508,20 @@ def fig_codes_heatmap(d: Data, out_dir: Path, min_papers: int):
     for i in range(1, len(themes) + 1):
         if i == len(themes) or themes[i] != themes[start]:
             if i < len(themes):
-                ax.axhline(i - 0.5, color=P.INK_2, lw=1.2)
+                ax.axhline(i - 0.5, color=INK_2, lw=1.2)
             ax.annotate(_wrap(themes[start], 28), xy=(1.04, (start + i - 1) / 2),
-                        xycoords=("axes fraction", "data"), fontsize=7.5, color=P.INK,
+                        xycoords=("axes fraction", "data"), fontsize=7.5, color=INK,
                         va="center", ha="left")
             start = i
     bar = fig.colorbar(im, ax=ax, fraction=0.6 / len(order), pad=0.01,
                        location="bottom", aspect=30,
                        format=plt.FuncFormatter(lambda v, _: f"{v:.0%}"))
     bar.outline.set_visible(False)
-    bar.ax.tick_params(length=0, labelsize=7.5, labelcolor=P.INK_2)
-    bar.set_label("Share of the mode's papers", fontsize=8, color=P.INK_2)
+    bar.ax.tick_params(length=0, labelsize=7.5, labelcolor=INK_2)
+    bar.set_label("Share of the mode's papers", fontsize=8, color=INK_2)
     abbrev = "   ".join(f"{v} = {k} (n={d.n_mode[k]})" for k, v in MODE_ABBREV.items())
-    ax.set_title(abbrev, fontsize=7.5, color=P.INK_2, pad=22)
-    P._save(fig, "fig_qual_codes_heatmap", out_dir)
+    ax.set_title(abbrev, fontsize=7.5, color=INK_2, pad=22)
+    save_figure(fig, "fig_qual_codes_heatmap", out_dir)
 
 
 def _tex(text: str) -> str:
@@ -582,13 +615,13 @@ def figures(
     max_codes: int = typer.Option(30, help="Most rows in fig_qual_stance_codes."),
     min_papers: int = typer.Option(3, help="Fewest papers for a code in "
                                    "fig_qual_codes_heatmap."),
-    run_dir: Path = typer.Option(None, help="Default: output/qualitative/<v>."),
+    run_dir: Path = typer.Option(None, help="Default: output/qualitative/<version>."),
     out_dir: Path = typer.Option(None, help="Default: <run-dir>/plots."),
 ):
     """Draw all figures."""
     if theme_source not in ("codes", "spans"):
         raise typer.BadParameter("theme-source is codes or spans")
-    run_dir = run_dir or Q.OUT
+    run_dir = run_dir or config.QUALITATIVE_DIR
     d = Data(run_dir, theme_source)
     out_dir = out_dir or run_dir / "plots"
     typer.secho(f"{len(d.papers)} papers, {len(d.assignments)} code applications, "

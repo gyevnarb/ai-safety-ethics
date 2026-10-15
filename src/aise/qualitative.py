@@ -10,15 +10,17 @@ corpus or taxonomy labels. Modes and fields are joined back in only by ``report`
 
 Every stage visits the papers in its own random order (saved in its order.json)::
 
-    uv run python -m aise.qualitative code --stage 1   # open coding; the codebook grows
-    uv run python -m aise.qualitative code --stage 2   # recode with the full codebook,
-                                                       # adding, merging, redefining codes
-    uv run python -m aise.qualitative freeze           # drop stale codes, consolidate,
-                                                       # fix the codebook
-    uv run python -m aise.qualitative themes           # group the fixed codes into themes
-    uv run python -m aise.qualitative spans            # theme spans in every paper
-    uv run python -m aise.qualitative representatives  # representative spans per theme
-    uv run python -m aise.qualitative report           # CSVs joined with mode and field
+    uv run aise qualitative code --stage 1   # open coding; the codebook grows
+    uv run aise qualitative code --stage 2   # recode with the full codebook, adding,
+                                             # merging, redefining codes
+    uv run aise qualitative freeze           # drop stale codes, consolidate, fix the
+                                             # codebook
+    uv run aise qualitative themes           # group the fixed codes into themes
+    uv run aise qualitative spans            # theme spans in every paper
+    uv run aise qualitative representatives  # representative spans per theme
+    uv run aise qualitative report           # CSVs joined with mode and field
+
+(``uv run python -m aise.qualitative <command>`` works too.)
 
 Stages 1 and 2 are sequential, since each paper is coded against the codebook as the
 papers before it left it; both resume where they stopped. Outputs go to
@@ -26,7 +28,6 @@ output/qualitative/<QUAL_VERSION>/. Needs ``OPENAI_API_KEY`` in the environment.
 """
 
 import json
-import os
 import random
 import re
 import shutil
@@ -40,16 +41,15 @@ import openai
 import pandas as pd
 import typer
 
+from aise import config
 from aise import engagement as E
 
-QUAL_VERSION = os.environ.get("AISE_QUAL_VERSION", "v1")
 MODEL = "gpt-6.1-sol"
 REASONING_EFFORT = "high"
 MAX_COMPLETION_TOKENS = 32_000  # includes reasoning tokens
 MAX_CHARS = 250_000  # ~62k tokens; cuts only the three longest papers
 SEED = 20261011
-OUT = Path("output/qualitative") / QUAL_VERSION
-TEST_N = int(os.environ.get("AISE_QUAL_TEST_N", "0"))
+OUT = config.QUALITATIVE_DIR
 SPAN_WORKERS = 8  # the spans stage has no shared state, so it runs in parallel
 
 FOCI = ["risk", "mitigation", "risk-mitigation relation"]
@@ -62,7 +62,7 @@ SYSTEM = (
 )
 
 AIM = """\
-We are analysing how research papers engage with the risks of AI systems and the strategies for mitigating them: which particular risks and mitigation strategies a paper addresses, how it frames them, and what positions it takes on them (for instance, which risks it treats as serious, neglected, overstated or misframed, and which mitigations it advocates, criticises, considers insufficient or harmful, and why). The analysis will be used to compare where papers agree and disagree."""
+We are analysing how research papers engage with the risks of AI systems and the strategies for mitigating them: which particular risks and mitigation strategies a paper addresses, how it frames them, and what positions it takes on them (for instance, which risks it treats as serious, neglected, overstated or misframed, and which mitigations it advocates, criticises, considers insufficient or harmful, and why). The analysis will be used to compare where papers agree and disagree."""  # noqa: E501
 
 CODING_RULES = """\
 ## Coding rules
@@ -78,7 +78,7 @@ CODING_RULES = """\
   - "qualifies": a conditional or mixed position (e.g. a mitigation is useful only under some conditions);
   - "describes": reports the risk or mitigation without taking a position.
 - For every code you apply, write the paper's position in one sentence, and quote 1 to 3 spans that support it. Spans must be copied verbatim from the title, abstract or full text, each under 50 words.
-- A paper typically has between 2 and 8 codes."""
+- A paper typically has between 2 and 8 codes."""  # noqa: E501
 
 STAGE1 = """\
 {aim}
@@ -95,7 +95,7 @@ Return JSON with:
 - "codes": every code you apply to this paper. For an existing code, copy its name exactly, set "new" to false, and leave "definition" empty (its "focus" is ignored). For a new code, set "new" to true, give a short name, its focus, and a one- or two-sentence definition that would let another coder apply it to other papers.
 - "memo": 1-3 sentences on how the paper engages with risks and mitigations overall.
 
-{paper}"""
+{paper}"""  # noqa: E501
 
 STAGE2 = """\
 {aim}
@@ -120,7 +120,7 @@ Return JSON with:
 - "revisions": merges and redefinitions of existing codes. For a merge, "code" is the code to remove, "into" the existing code it merges into, and "definition" the definition of the merged code (empty to keep it). For a redefinition, "code" is the code, "into" is empty, and "definition" the new definition. Give the reason in one sentence.
 - "memo": 1-3 sentences on how the paper engages with risks and mitigations overall.
 
-{paper}"""
+{paper}"""  # noqa: E501
 
 CONSOLIDATE = """\
 {aim}
@@ -136,7 +136,7 @@ Two passes over the corpus coded every paper with the codebook below. For each c
 ## Output
 Return JSON with:
 - "merges": each with "codes" (two or more existing code names, copied exactly), "into" (the name of the resulting code), "focus", "definition" and a one-sentence "reason".
-- "redefinitions": each with "code", the new "definition" and a one-sentence "reason"."""
+- "redefinitions": each with "code", the new "definition" and a one-sentence "reason"."""  # noqa: E501
 
 THEMES = """\
 {aim}
@@ -151,7 +151,7 @@ Every code must be in exactly one theme. Use as many themes as the codes call fo
 {codebook}
 
 ## Output
-Return JSON with "themes": each with a short "name", a "description" of 3-6 sentences, and "codes" (the names of its codes, copied exactly)."""
+Return JSON with "themes": each with a short "name", a "description" of 3-6 sentences, and "codes" (the names of its codes, copied exactly)."""  # noqa: E501
 
 SPANS = """\
 {aim}
@@ -171,7 +171,7 @@ Skip themes the paper touches only in passing. For orientation, the codes assign
 ## Output
 Return JSON with "themes": one entry per theme the paper engages with, with the theme "name" copied exactly, "position" and "spans".
 
-{paper}"""
+{paper}"""  # noqa: E501
 
 REPRESENT = """\
 {aim}
@@ -187,7 +187,7 @@ Select the {k} spans that together best represent the theme: each should be clea
 {spans}
 
 ## Output
-Return JSON with "selected": each with the span "id" and a one-sentence "why" it represents the theme."""
+Return JSON with "selected": each with the span "id" and a one-sentence "why" it represents the theme."""  # noqa: E501
 
 
 def _strict(name: str, properties: dict) -> dict:
@@ -263,28 +263,33 @@ app = typer.Typer(help=__doc__.split("\n\n")[0])
 
 # ---- files and state ------------------------------------------------------------------
 def stage_dir(stage: int) -> Path:
+    """The folder of coding stage 1 or 2 (created if missing)."""
     path = OUT / f"stage{stage}"
     path.mkdir(parents=True, exist_ok=True)
     return path
 
 
 def read_json(path: Path):
+    """The JSON object in a file."""
     return json.loads(path.read_text())
 
 
 def write_json(path: Path, obj):
+    """Write obj as JSON, atomically, so a crash never leaves a half-written file."""
     tmp = path.with_suffix(".tmp")
     tmp.write_text(json.dumps(obj, indent=2, ensure_ascii=False))
     tmp.replace(path)
 
 
 def read_jsonl(path: Path) -> list[dict]:
+    """The objects in a JSON Lines file; none if it does not exist."""
     if not path.exists():
         return []
     return [json.loads(line) for line in path.read_text().splitlines() if line]
 
 
 def append_jsonl(path: Path, obj):
+    """Append obj to a JSON Lines file."""
     with path.open("a") as f:
         f.write(json.dumps(obj, ensure_ascii=False) + "\n")
 
@@ -304,17 +309,17 @@ def order(name: str, keys: list[str]) -> list[str]:
 # ---- the corpus (blind) ---------------------------------------------------------------
 def corpus() -> pd.DataFrame:
     """Title and abstract of the rare-mode papers, indexed by key; nothing else."""
-    modes = pd.read_csv(E.out_dir() / "engagement.csv", index_col=0)["category"]
+    modes = E.load_classified()["category"]
     keys = modes.index[modes != E.CATEGORIES[0]]
-    if TEST_N:  # a small corpus for checking the pipeline end to end: TEST_N per mode
+    if config.QUAL_TEST_N:  # a small corpus for testing: QUAL_TEST_N papers per mode
         rare = modes.loc[keys].sort_index()
-        keys = rare.groupby(rare).sample(TEST_N, random_state=SEED).index
+        keys = rare.groupby(rare).sample(config.QUAL_TEST_N, random_state=SEED).index
     return E.load_papers().loc[keys, ["Title", "Abstract"]]
 
 
 def paper_text(key: str, row: pd.Series) -> tuple[str, str]:
     """The paper section of a prompt, and the source text spans are checked against."""
-    txt = E.TXT_DIR / f"{key}.txt"
+    txt = E.text_path(key)
     body = txt.read_text()[:MAX_CHARS] if txt.exists() else "(not available)"
     abstract = row["Abstract"] if isinstance(row["Abstract"], str) else "(none)"
     section = (
@@ -330,25 +335,27 @@ def _norm(text: str) -> str:
 
 
 def verbatim(span: str, source: str) -> bool:
-    """Whether every part of a span (split at ellipses) occurs in the source text,
-    ignoring case, punctuation and whitespace."""
+    """Whether every part of a span (split at ellipses) occurs in the source text.
+
+    Ignores case, punctuation and whitespace.
+    """
     norm_source = _norm(source)
     parts = [_norm(p) for p in re.split(r"\.\.\.|…|\[\.\.\.\]", span)]
     parts = [p for p in parts if p]
     return bool(parts) and all(p in norm_source for p in parts)
 
 
-# ---- the model --------------------------------------------------------------------------
+# ---- the model -------------------------------------------------------------------------
 _client = None
 
 
 def call(prompt: str, schema: dict) -> tuple[dict, dict]:
+    """The model's JSON answer to the prompt, and the token usage; retries on errors."""
     global _client  # noqa: PLW0603
     if _client is None:
-        if not os.environ.get("OPENAI_API_KEY"):
-            raise typer.BadParameter("Set OPENAI_API_KEY in the environment.")
-        _client = openai.Client()
-    messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": prompt}]
+        _client = E.client()
+    messages = [{"role": "system", "content": SYSTEM},
+                {"role": "user", "content": prompt}]
     for attempt in range(5):
         try:
             response = _client.chat.completions.create(
@@ -368,7 +375,7 @@ def call(prompt: str, schema: dict) -> tuple[dict, dict]:
     raise RuntimeError("The model call failed five times.")
 
 
-# ---- the codebook -----------------------------------------------------------------------
+# ---- the codebook ----------------------------------------------------------------------
 # A codebook is {"codes": {name: {"focus", "definition", "created"}},
 # "aliases": {merged name: name it was merged into}, "retired": {name: entry}}
 def resolve(book: dict, name: str) -> str | None:
@@ -386,11 +393,13 @@ def resolve(book: dict, name: str) -> str | None:
     return None
 
 
-def render(book: dict, stats: dict | None = None, rng: random.Random | None = None) -> str:
+def render(book: dict, stats: dict | None = None,
+           rng: random.Random | None = None) -> str:
     """The codebook as prompt text: sorted by focus and name, or shuffled given rng."""
     if not book["codes"]:
         return "(empty: this is the first paper)"
-    names = sorted(book["codes"], key=lambda n: (FOCI.index(book["codes"][n]["focus"]), n))
+    names = sorted(book["codes"],
+                   key=lambda n: (FOCI.index(book["codes"][n]["focus"]), n))
     if rng:
         rng.shuffle(names)
     lines = []
@@ -405,7 +414,7 @@ def render(book: dict, stats: dict | None = None, rng: random.Random | None = No
     return "\n".join(lines)
 
 
-def apply_codes(book: dict, key: str, stage: int, codes: list, log) -> list[dict]:
+def apply_codes(book: dict, stage: int, codes: list, log) -> list[dict]:
     """Resolve the codes the model applied, adding new ones to the codebook."""
     applied = []
     for c in codes:
@@ -416,18 +425,21 @@ def apply_codes(book: dict, key: str, stage: int, codes: list, log) -> list[dict
                      "reason": "unknown code without a definition"})
                 continue
             name = c["code"].strip()
-            book["codes"][name] = {"focus": c["focus"], "definition": c["definition"].strip(),
+            book["codes"][name] = {"focus": c["focus"],
+                                   "definition": c["definition"].strip(),
                                    "created": f"stage{stage}"}
             log({"event": "add", "code": name, "focus": c["focus"],
                  "definition": c["definition"].strip()})
         elif c["new"]:
-            log({"event": "new code matched existing", "code": c["code"], "existing": name})
+            log({"event": "new code matched existing", "code": c["code"],
+                 "existing": name})
         applied.append({"code": name, "stance": c["stance"], "position": c["position"],
                         "spans": c["spans"]})
     return applied
 
 
 def merge(book: dict, code: str, into: str, definition: str = "", focus: str = ""):
+    """Merge code into another, optionally redefining the result."""
     if code != into:
         del book["codes"][code]
         book["aliases"][code] = into
@@ -438,6 +450,7 @@ def merge(book: dict, code: str, into: str, definition: str = "", focus: str = "
 
 
 def apply_revisions(book: dict, revisions: list, log):
+    """Apply the merges and redefinitions the model proposed in stage 2."""
     for r in revisions:
         code = resolve(book, r["code"])
         if code is None:
@@ -458,9 +471,11 @@ def apply_revisions(book: dict, revisions: list, log):
                  "definition": r["definition"], "reason": r["reason"]})
 
 
-def code_stats(book: dict, codings: list[dict], rng: random.Random, n_positions=3) -> dict:
+def code_stats(book: dict, codings: list[dict], rng: random.Random,
+               n_positions: int = 3) -> dict:
     """Papers, stances and a few sample positions per current code."""
-    stats = {n: {"papers": set(), "stances": Counter(), "positions": []} for n in book["codes"]}
+    stats = {n: {"papers": set(), "stances": Counter(), "positions": []}
+             for n in book["codes"]}
     for coding in codings:
         for c in coding["codes"]:
             name = resolve(book, c["code"])
@@ -476,13 +491,14 @@ def code_stats(book: dict, codings: list[dict], rng: random.Random, n_positions=
 
 
 def final_codings() -> tuple[dict, list[dict]]:
+    """The fixed codebook and the codings in its terms; fails before ``freeze``."""
     final = OUT / "codebook_final.json"
     if not final.exists():
         raise typer.BadParameter("Run `freeze` first.")
     return read_json(final), read_jsonl(OUT / "codings_final.jsonl")
 
 
-# ---- stages 1 and 2: coding -------------------------------------------------------------
+# ---- stages 1 and 2: coding ------------------------------------------------------------
 @app.command()
 def code(
     stage: int = typer.Option(..., help="1: open coding; 2: recoding with the codebook."),
@@ -528,7 +544,7 @@ def code(
             events.append(event)
             append_jsonl(out / "history.jsonl", {"key": key, **event})
 
-        applied = apply_codes(book, key, stage, result["codes"], log)
+        applied = apply_codes(book, stage, result["codes"], log)
         apply_revisions(book, result.get("revisions", []), log)
         append_jsonl(codings_path, {
             "key": key, "codes": applied, "revisions": result.get("revisions", []),
@@ -537,10 +553,11 @@ def code(
         write_json(book_path, book)  # after the coding, so a crash only redoes the paper
         changes = Counter(e["event"] for e in events)
         typer.secho(f"[{i}/{len(keys)}] {key}: {len(applied)} codes, "
-                    f"{dict(changes) or 'no codebook changes'}; codebook {len(book['codes'])}")
+                    f"{dict(changes) or 'no codebook changes'}; "
+                    f"codebook {len(book['codes'])}")
 
 
-# ---- fixing the codebook ------------------------------------------------------------------
+# ---- fixing the codebook ---------------------------------------------------------------
 @app.command()
 def freeze():
     """Retire codes unused in stage 2, consolidate the codebook once, and fix it."""
@@ -613,8 +630,9 @@ def freeze():
     typer.secho(f"Fixed the codebook at {len(book['codes'])} codes: {final}")
 
 
-# ---- thematic analysis ----------------------------------------------------------------------
+# ---- thematic analysis -----------------------------------------------------------------
 def final_stats(book: dict, codings: list[dict], rng: random.Random) -> dict:
+    """code_stats for codings in terms of the fixed codebook."""
     flat = [{"key": c["key"], "codes": [
         {"code": code["code"], **a} for code in c["codes"] for a in code["applications"]
     ]} for c in codings]
@@ -627,7 +645,8 @@ def themes():
     book, codings = final_codings()
     rng = random.Random(f"{SEED}-themes")
     stats = final_stats(book, codings, rng)
-    prompt = THEMES.format(aim=AIM, n=len(book["codes"]), codebook=render(book, stats, rng))
+    prompt = THEMES.format(aim=AIM, n=len(book["codes"]),
+                           codebook=render(book, stats, rng))
     for attempt in range(3):
         result, usage = call(prompt, THEMES_SCHEMA)
         assigned, problems = {}, []
@@ -643,15 +662,16 @@ def themes():
         problems += [f"{c!r} is in no theme" for c in book["codes"] if c not in assigned]
         if not problems:
             break
-        typer.secho(f"Attempt {attempt + 1}: {len(problems)} problems, e.g. {problems[:3]}",
-                    fg="yellow")
+        typer.secho(f"Attempt {attempt + 1}: {len(problems)} problems, "
+                    f"e.g. {problems[:3]}", fg="yellow")
         prompt += ("\n\n## Your previous answer had these problems; fix them\n"
                    + "\n".join(f"- {p}" for p in problems))
     for theme in result["themes"]:
         theme["codes"] = [c for c in book["codes"] if assigned.get(c) == theme["name"]]
     unassigned = [c for c in book["codes"] if c not in assigned]
     if unassigned:
-        result["themes"].append({"name": "Unassigned", "description": "", "codes": unassigned})
+        result["themes"].append({"name": "Unassigned", "description": "",
+                                 "codes": unassigned})
         typer.secho(f"{len(unassigned)} codes left unassigned.", fg="red")
     write_json(OUT / "themes.json", {"themes": result["themes"], "usage": usage})
     for theme in result["themes"]:
@@ -684,7 +704,8 @@ def spans(limit: int = typer.Option(None, help="Stop after this many papers.")):
             for c in by_key[key]["codes"] for a in c["applications"]
         )
         result, usage = call(
-            SPANS.format(aim=AIM, themes=rendered, codes=codes, paper=section), SPANS_SCHEMA)
+            SPANS.format(aim=AIM, themes=rendered, codes=codes, paper=section),
+            SPANS_SCHEMA)
         entries = []
         for t in result["themes"]:
             name = names.get(t["name"].strip().lower())
@@ -729,25 +750,26 @@ def representatives(k: int = typer.Option(8, help="Spans to select per theme."))
         listing = "\n".join(
             f"- [{s['id']}] {anon[s['key']]} (position: {s['position']}): \"{s['text']}\""
             for s in pool)
-        result, _ = call(REPRESENT.format(aim=AIM, k=min(k, len(pool)), name=theme["name"],
-                                          description=theme["description"], spans=listing),
-                         REPRESENT_SCHEMA)
+        prompt = REPRESENT.format(aim=AIM, k=min(k, len(pool)), name=theme["name"],
+                                  description=theme["description"], spans=listing)
+        result, _ = call(prompt, REPRESENT_SCHEMA)
         ids = {s["id"]: s for s in pool}
         selected[theme["name"]] = [
             {"key": ids[x["id"]]["key"], "text": ids[x["id"]]["text"],
              "position": ids[x["id"]]["position"], "why": x["why"]}
             for x in result["selected"] if x["id"] in ids
         ]
-        typer.secho(f"{theme['name']}: {len(selected[theme['name']])} of {len(pool)} spans")
+        typer.secho(f"{theme['name']}: {len(selected[theme['name']])} of {len(pool)} "
+                    "spans")
     write_json(OUT / "representatives.json", selected)
 
 
-# ---- report (the only place modes and fields appear) -----------------------------------------
+# ---- report (the only place modes and fields appear) -----------------------------------
 @app.command()
 def report():
     """Write CSVs of codes, themes and spans joined with each paper's mode and field."""
     book, codings = final_codings()
-    meta = pd.read_csv(E.out_dir() / "engagement.csv", index_col=0)[["category", "Retrieval"]]
+    meta = E.load_classified()[["category", "Retrieval"]]
     meta = meta.rename(columns={"category": "mode", "Retrieval": "field"})
     theme_of = {}
     if (OUT / "themes.json").exists():
@@ -769,17 +791,20 @@ def report():
     papers = assignments.drop_duplicates(["key", "code"])
     by_mode = pd.crosstab(papers["code"], papers["mode"])
     shares = (by_mode / n_mode).add_suffix(" share")
-    codebook = pd.DataFrame.from_dict(book["codes"], orient="index")[["focus", "definition"]]
+    codebook = pd.DataFrame.from_dict(book["codes"], orient="index")[
+        ["focus", "definition"]]
     codebook["theme"] = codebook.index.map(theme_of)
     codebook["papers"] = papers["code"].value_counts()
-    codebook = codebook.join(by_mode).join(shares).sort_values(["theme", "papers"],
-                                                               ascending=[True, False])
+    codebook = codebook.join(by_mode).join(shares).sort_values(
+        ["theme", "papers"], ascending=[True, False])
     codebook.index.name = "code"
     codebook.to_csv(OUT / "codebook_final.csv")
-    stances = pd.crosstab([assignments["code"], assignments["mode"]], assignments["stance"])
+    stances = pd.crosstab([assignments["code"], assignments["mode"]],
+                          assignments["stance"])
     stances.to_csv(OUT / "stances_by_code_mode.csv")
-    typer.secho(f"{len(assignments)} code applications on {assignments['key'].nunique()} "
-                f"papers; {assignments['spans_verbatim'].mean():.1%} with verbatim spans.")
+    typer.secho(f"{len(assignments)} code applications on "
+                f"{assignments['key'].nunique()} papers; "
+                f"{assignments['spans_verbatim'].mean():.1%} with verbatim spans.")
 
     spans_path = OUT / "spans" / "theme_spans.jsonl"
     if spans_path.exists():
@@ -792,12 +817,14 @@ def report():
         reps = read_json(OUT / "representatives.json") \
             if (OUT / "representatives.json").exists() else {}
         chosen = {(r["key"], r["text"]) for v in reps.values() for r in v}
-        theme_spans["representative"] = [(k, s) in chosen for k, s in
-                                          zip(theme_spans["key"], theme_spans["span"])]
+        theme_spans["representative"] = [
+            (k, s) in chosen
+            for k, s in zip(theme_spans["key"], theme_spans["span"], strict=True)]
         theme_spans.to_csv(OUT / "theme_spans.csv", index=False)
         tp = theme_spans.drop_duplicates(["key", "theme"])
         table = pd.crosstab(tp["theme"], tp["mode"])
-        table.join((table / n_mode).add_suffix(" share")).to_csv(OUT / "themes_by_mode.csv")
+        table.join((table / n_mode).add_suffix(" share")).to_csv(
+            OUT / "themes_by_mode.csv")
         typer.secho(f"{len(theme_spans)} theme spans; "
                     f"{theme_spans['verbatim'].mean():.1%} verbatim.")
         typer.secho(table.to_string())
@@ -807,7 +834,7 @@ def report():
 @app.command()
 def reset_test():
     """Delete the outputs of a test run (only when AISE_QUAL_VERSION starts with test)."""
-    if not QUAL_VERSION.startswith("test"):
+    if not config.QUAL_VERSION.startswith("test"):
         raise typer.BadParameter("Set AISE_QUAL_VERSION=test... to use this.")
     shutil.rmtree(OUT, ignore_errors=True)
 
